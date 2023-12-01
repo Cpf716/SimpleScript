@@ -1,0 +1,28 @@
+//  Author: Corey Ferguson
+//  Date:   August 31, 2023
+//  File:   example_5.txt
+//
+//  Descriptions:   print the current 12-hour time
+//
+
+include("@/datetime/time/meridianTime")
+include("@/search/string/split")
+include("@/datetime/parseTime")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+        
+    time = meridianTime(parseTime(local()))
+
+    arr = split(time, " ")
+
+    arr.0 = ((first arr) slice 0, 5)
+
+    time = arr join " "
+
+    echo "{}\n" format time
+end func
+
+main()

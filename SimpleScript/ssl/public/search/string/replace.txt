@@ -1,0 +1,64 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   replace.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 4
+        expectExcept("3 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    text = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf text !== "string"
+        typeExcept(typeOf text, "string")
+    end if
+
+    if text === null
+        throw "null"
+    end if
+
+    pattern = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if typeOf pattern !== "string"
+        typeExcept(typeOf pattern, "string")
+    end if
+
+    if pattern === null
+        throw "null"
+    end if
+
+    newPattern = ((argv row 3) slice 1, argv cell 3, 0)
+
+    if typeOf newPattern !== "string"
+        typeExcept(typeOf newPattern, "string")
+    end if
+
+    if newPattern === null
+        throw "null"
+    end if
+
+    i = 0
+    for , i <= count text - count pattern, i += 1
+        j = 0
+        while j < count pattern && text.(i + j) === pattern.j
+            j += 1
+        end while
+        
+        if j === count pattern
+            break
+        end if
+    end for
+
+    if i !== count text - count pattern + 1
+        result = (text slice 0, i) + newPattern + (text substr i + count pattern)
+        
+        return result
+    end if
+
+    return text
+end func
+
+return main()

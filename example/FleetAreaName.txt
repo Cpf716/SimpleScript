@@ -1,0 +1,51 @@
+//  Author: Corey Ferguson
+//  Date:   August 7, 2023
+//  File:   FleetAreaName.txt
+//
+
+include("@/search/string/padStart")
+
+func main
+    echo "Path:\t"
+
+    path = input()
+
+    arr = read(path, "csv")
+
+    assert arr
+
+    for i = 0, i < (count arr - 1) / first arr, i += 1
+        for j = 0, j < (arr cell i, 0), j += 1
+            echo "{}\t\t" format (arr cell i, j + 1)
+        end for
+
+        echo "\n"
+    end for
+
+    echo "\n"
+
+    array sql = "start transaction;"
+
+    a = (arr row 0) indexOf "fleetAreaName"
+    b = (arr row 0) indexOf "storeNumber"
+
+    for i = 1, i < (count arr - 1) / first arr, i += 1
+        stmt = "UPDATE store_org.stores SET fleetAreaName = '{}' WHERE storeNumber = '{}';"
+        
+        arr = array((arr cell i, a), (arr cell i, b))
+        
+        fleetAreaName = first arr
+        storeNumber = padStart(string(last arr), 4, "0")
+        
+        sql += stmt format array(fleetAreaName, storeNumber)
+    end for
+
+    sql += "end transaction;"
+    sql = sql join "\n"
+
+    echo "{}\n" format sql
+
+    write("/tmp/FleetAreaName.sql", first sql)
+end func
+
+main()

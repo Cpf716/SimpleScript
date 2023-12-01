@@ -1,0 +1,42 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   multMat.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if (count argv - 1) / first argv !== 3
+        expectExcept("2 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    a = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if subtypeOf a !== "table"
+        typeExcept(subtypeOf a, "table")
+    end if
+
+    b = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if subtypeOf b !== "table"
+        typeExcept(subtypeOf b, "table")
+    end if
+
+    assert first a === (count b - 1) / first b
+
+    array c = first b
+
+    for i = 0, i < (count a - 1) / first a, i += 1
+        for j = 0, j < first b, j += 1
+            c.(i * first c + j + 1) = 0
+            
+            for k = 0, k < first a, k += 1
+                c.(i * first c + j + 1) += a.(i * first a + k + 1) * b.(k * first b + j + 1)
+            end for
+        end for
+    end for
+
+    return c
+end func
+
+return main()

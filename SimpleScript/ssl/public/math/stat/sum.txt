@@ -1,0 +1,18 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   sum.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if (count argv - 1) / first argv !== 2
+        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    array arr = (argv row 1) slice 1
+
+    return arr aggregate val, first val + last val
+end func
+
+return main()

@@ -1,0 +1,26 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   isLeapYear.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    year = (argv row 1) slice 1
+
+    if subtypeOf year !== "int"
+        typeExcept(subtypeOf year, "int")
+    end if
+
+    if year < 1970
+        return
+    end if
+
+    return year % 4 ? false, year % 100 ? true, !(year % 400)
+end func
+
+return main()

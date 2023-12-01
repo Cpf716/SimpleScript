@@ -1,0 +1,47 @@
+//  Author: Corey Ferguson
+//  Date:   August 24, 2023
+//  File:   month.txt
+//
+
+include((dir = "@/datetime/") + "data/months")
+include(dir + "date/isLeapYear")
+include("@/search/string/padStart")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("Expected 1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    timestamp = (argv row 1) slice 1
+
+    if subtypeOf timestamp !== "int"
+        typeExcept(subtypeOf timestamp, "int")
+    end if
+
+    if timestamp < 0
+        rangeExcept(string(timestamp))
+    end if
+
+    seconds = 0, secondsInYear = 0, year = 1970
+    while timestamp >= seconds + (secondsInYear = (365 + isLeapYear(year)) * 86400)
+        seconds += secondsInYear
+        year += 1
+    end while
+
+    timestamp -= seconds
+
+    seconds = 0, secondsInMonth = 0, `month` = 0
+    
+    consume secondsInMonth
+    
+    while timestamp >= seconds + (secondsInMonth = (months().(`month` * 2 + 1) + (`month` === 1 && isLeapYear(year))) * 86400)
+        seconds += secondsInMonth
+        `month` += 1
+    end while
+
+    return `month`
+end func
+
+return main()
+
+

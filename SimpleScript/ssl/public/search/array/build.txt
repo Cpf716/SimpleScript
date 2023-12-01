@@ -1,0 +1,49 @@
+//  Author: Corey Ferguson
+//  Date:   August 8, 2023
+//  File:   build.txt
+
+include("@/exception/expectExcept")
+include("@/exception/rangeExcept")
+
+func main
+    if nrows(argv) !== 4
+        expectExcept("3 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    array arr = ((argv row 1) slice 1, argv cell 1, 0)
+    
+    beg = ((argv row 2) slice 1, argv cell 2, 0)
+    
+    if subtypeOf beg !== "int"
+        typeExcept(subtypeOf beg, "int")
+    end if
+    
+    if beg < 0 || beg > count arr
+        rangeExcept("beg {}, count {}" format array(beg, count arr))
+    end if
+    
+    end = ((argv row 3) slice 1, argv cell 3, 0)
+    
+    if subtypeOf end !== "int"
+        typeExcept(subtypeOf end, "int")
+    end if
+    
+    if end < beg || end > count arr
+        rangeExcept("beg {}, end {}, count {}" format array(beg, end, count arr))
+    end if
+
+    len = floor((end - beg) / 2)
+    
+    echo "{}\n" format arr.(beg + len)
+    
+    if len !== 0
+        build(arr, beg, beg + len)
+    end if
+    
+    if beg + len !== end - 1
+        build(arr, beg + len + 1, end)
+    end if
+end func
+
+return main()
+

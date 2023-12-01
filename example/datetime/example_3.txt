@@ -1,0 +1,20 @@
+//  Author: Corey Ferguson
+//  Date:   August 28, 2023
+//  File:   example_3.txt
+//
+//  Description:   print the time and detailed time zone
+//
+
+include ((dir = "@/datetime/") + "parseTime")
+include (dir + "time/time")
+include (dir + "timezone2")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    echo "{}\n" format (array(time(parseTime(local())), timezone2()) join " ")
+end func
+
+main()

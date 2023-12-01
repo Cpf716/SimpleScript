@@ -1,0 +1,72 @@
+//  Author: Corey Ferguson
+//  Date:   August 24, 2023
+//  File:   isDaylightSavings.txt
+//
+
+include((dir = "@/datetime/") + "date/parseDate")
+include((dir += "date/") + "day")
+include(dir + "month")
+include(dir + "weekday")
+include(dir + "year")
+
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    timestamp = (argv row 1) slice 1
+    
+    if subtypeOf timestamp !== "int"
+        typeExcept(subtypeOf timestamp, "int")
+    end if
+    
+    `month` = month(timestamp)
+    `day` = day(timestamp)
+    
+    consume `day`
+    
+    if `month` === 1
+        //  February
+    
+        secondSunday = 1
+        
+        timestamp = parseDate("{}-02-01" format year(timestamp))
+        `weekday` = weekday(timestamp)
+        
+        n = 0
+        while 1
+            n += !`weekday`
+            
+            if n === 2
+                break
+            end if
+            
+            `weekday` = (`weekday` + 1) % 7
+            secondSunday += 1
+        end while
+        
+        return `day` >= secondSunday
+    end if
+    
+    if `month` === 10
+        //  November
+        
+        firstSunday = 1
+        
+        timestamp = parseDate("{}-11-01" format year(timestamp))
+        `weekday` = weekday(timestamp)
+        
+        while `weekday`
+            `weekday` = (`weekday` + 1) % 7
+            firstSunday += 1
+        end while
+        
+        return `day` < firstSunday
+    end if
+    
+    //  February - November
+    return (`month` > 1 && `month` < 10)
+end func
+
+return main()

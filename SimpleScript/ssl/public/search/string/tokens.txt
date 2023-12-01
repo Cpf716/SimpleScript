@@ -1,0 +1,43 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   tokens.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    text = (argv row 1) slice 1
+
+    if typeOf text !== "string"
+        typeExcept(typeOf text, "string")
+    end if
+
+    if text === null
+        throw "null"
+    end if
+
+    array arr = null, n = -1
+
+    for ei = 0, ei < count text, ei += 1
+        while ei < count text && isSpace text.ei
+            ei += 1
+        end while
+        
+        si = ei
+        while ei < count text && !isSpace text.ei
+            ei += 1
+        end while
+        
+        if si != ei
+            arr.(n += 1) = (text substr si, ei)
+        end if
+    end for
+
+    return arr
+end func
+
+return main()

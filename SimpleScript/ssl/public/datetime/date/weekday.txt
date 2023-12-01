@@ -1,0 +1,76 @@
+//  Author: Corey Ferguson
+//  Date:   August 24, 2023
+//  File:   weekday.txt
+//
+
+include((dir = "@/datetime/") + "data/months")
+include(dir + "date/isLeapYear")
+include("@/number/digits")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("Expected 1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    timestamp = (argv row 1) slice 1
+
+    if subtypeOf timestamp !== "int"
+        typeExcept(subtypeOf timestamp, "int")
+    end if
+
+    if timestamp < 0
+        rangeExcept(string(timestamp))
+    end if
+
+    seconds = 0, secondsInYear = 0, year = 1970
+    while timestamp >= seconds + (secondsInYear = (365 + isLeapYear(year)) * 86400)
+        seconds += secondsInYear
+        year += 1
+    end while
+
+    timestamp -= seconds
+
+    seconds = 0, secondsInMonth = 0, month = 0
+    
+    consume secondsInMonth
+    
+    while timestamp >= seconds + (secondsInMonth = (months().(month * 2 + 1) + (month === 1 && isLeapYear(year))) * 86400)
+        seconds += secondsInMonth
+        month += 1
+    end while
+
+    timestamp -= seconds
+
+    day = 0
+    while timestamp >= (day + 1) * 86400
+        day += 1
+    end while
+    
+    day += 1
+
+    timestamp -= 86400 * day
+
+    longYear = digits(year)
+
+    shortYear = 0
+    for i = 0, i < 2, i += 1
+        shortYear += longYear.(i + 2) * 10 pow (2 - i - 1)
+    end for
+
+    yearCode = (shortYear + floor(shortYear / 4)) % 7
+    monthCode = array(0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5).month
+    century = year - year % 100
+    centuryCodes = array(1700, 4, 1800, 2, 1900, 0, 2000, 6, 2100, 4, 2200, 2, 2300, 0)
+
+    i = 0
+    while i < count centuryCodes / 2 && centuryCodes.(i * 2) !== century
+        i += 1
+    end while
+
+    centuryCode = centuryCodes.(i * 2 + 1)
+    leapYearCode = isLeapYear(year)
+    
+    return (yearCode + monthCode + centuryCode + day - leapYearCode) % 7
+end func
+
+return main()

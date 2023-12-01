@@ -1,0 +1,33 @@
+//  Author: Corey Ferguson
+//  Date:   August 24, 2023
+//  File:   timezone1.txt
+//
+
+include((dir = "@/datetime/") + "data/timezones")
+include(dir + "date/isDaylightSavings")
+include(dir + "parseTime")
+include(dir + "transform/addHours")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    beg = gmt(), end = local()
+    
+    now = parseTime(end)
+
+    timezoneOffset = now - parseTime(beg)
+    timezoneOffset = addHours(timezoneOffset, -1 * isDaylightSavings(now))
+    timezoneOffset = (timezoneOffset - timezoneOffset % 60) / 60
+
+    i = 0
+    while i < count timezones() / 2 && timezones().(i * 2 + 1) !== timezoneOffset
+        i += 1
+    end while
+    
+    return timezones().(i * 2)
+end func
+
+return main()
+

@@ -1,0 +1,6 @@
+//  Author: Corey Ferguson
+//  Date:   November 20, 2023
+//  File:   main.txt
+//
+
+echo ""

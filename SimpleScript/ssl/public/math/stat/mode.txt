@@ -1,0 +1,33 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   mode.txt
+//
+
+include("@/sort/sort")
+
+func main
+    if (count argv - 1) / first argv !== 2
+        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    array arr = (argv row 1) slice 1
+
+    arr = sort(arr)
+
+    i = 0, n = 1
+    for j = 0, j < count arr - 1, j += 1
+        k = j + 1
+        while k < count arr && arr.j === arr.k
+            k += 1
+        end while
+        
+        if k - j > n
+            i = j
+            n = k - j
+        end if
+    end for
+
+    return arr.i
+end func
+
+return main()

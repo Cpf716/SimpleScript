@@ -1,0 +1,18 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   rangeExcept.txt
+//
+
+include("@/exception/expectExcept")
+
+if nrows(argv) !== 2
+    expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+end if
+
+message = (argv row 1) slice 1
+
+if typeOf message !== "string"
+    typeExcept(typeOf message, "string")
+end if
+
+throw "Out of range: {}" format message

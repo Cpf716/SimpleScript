@@ -1,0 +1,36 @@
+//  Author: Corey Ferguson
+//  Date:   August 23, 2023
+//  File:   parseWeekday.txt
+//
+
+include("@/datetime/data/weekdays")
+include((dir = "@/search/string/") + "startsWith")
+include(dir + "tokens")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    dateStr = (argv row 1) slice 1
+    
+    if typeOf dateStr !== "string"
+        typeExcept(typeOf dateStr, "string")
+    end if
+    
+    if dateStr === null
+        return
+    end if
+
+    array arr = tokens(dateStr)
+    
+    if count arr !== 5
+        return
+    end if
+    
+    weekday = weekdays() indexOf (weekdays() find val, startsWith(val, first arr))
+
+    return weekday === -1 ? undefined, weekday
+end func
+
+return main()

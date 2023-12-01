@@ -1,0 +1,30 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   factorial.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    a = (argv row 1) slice 1
+
+    if subtypeOf a !== "int"
+        typeExcept(subtypeOf a, "int")
+    end if
+
+    func `factorial` : a, b
+        if b === 1
+            return a
+        end if
+        
+        `factorial`(a * b, b - 1)
+    end func
+
+    return `factorial`(a, a - 1)
+end func
+
+return main()

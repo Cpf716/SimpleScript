@@ -1,0 +1,38 @@
+//  Author: Corey Ferguson
+//  Date:   September 2, 2023
+//  File:   preparedStatements.txt
+
+func main
+    con = -1
+
+    try
+        con = connect("tcp://localhost:3306", "root", "root")
+    catch err
+        echo "SQL: {}\n" format err
+        
+        return
+    end try
+
+    try
+        array res = prepareQuery(con, "select * from music_library.artists") ?? 1
+        
+        for i = 0, i < (count res - 1) / first res, i += 1
+            for j = 0, j < first res, j += 1
+                echo "{}\t" format (res cell i, j)
+            end for
+            
+            echo "\n"
+        end for
+    catch err
+        echo "SQL: {}\n" format err
+    end try
+
+    try
+        close(con)
+    catch err
+        echo "SQL: {}\n" format err
+    end try
+end func
+
+main()
+

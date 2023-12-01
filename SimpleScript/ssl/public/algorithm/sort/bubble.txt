@@ -1,0 +1,29 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   bubble.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if (count argv - 1) / first argv !== 2
+        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    array arr = (argv row 1) slice 1
+
+    for i = 0, i < count arr, i += 1
+        for j = 0, j < count arr - 1, j += 1
+            if arr.j > arr.(j + 1)
+                tmp = arr.j
+                
+                arr.j = arr.(j + 1)
+                arr.(j + 1) = tmp
+            end if
+        end for
+    end for
+
+    return arr
+end func
+
+return main()

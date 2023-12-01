@@ -1,0 +1,29 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   months.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    arr."January" = 31
+    arr."February" = 28
+    arr."March" = 31
+    arr."April" = 30
+    arr."May" = 31
+    arr."June" = 30
+    arr."July" = 31
+    arr."August" = 31
+    arr."September" = 30
+    arr."October" = 31
+    arr."November" = 30
+    arr."December" = 31
+
+    return arr
+end func
+
+return main()

@@ -1,0 +1,21 @@
+//  Author: Corey Ferguson
+//  Date:   August 29, 2023
+//  File:   example_4.txt
+//
+//  Description:   print the time and timezone offset string
+//
+
+include ((dir = "@/datetime/") + "parseTime")
+include (dir + "time/time")
+include (dir + "timezoneOffset")
+include (dir + "timezoneOffsetString")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    echo "{} (GMT{})\n" format array(time(parseTime(local())), timezoneOffsetString(timezoneOffset()))
+end func
+
+main()

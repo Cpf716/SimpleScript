@@ -1,0 +1,32 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   receiver.txt
+//
+
+include("@/datetime/parseTime")
+
+func main
+    sfd = client("127.0.0.1", 8080)
+
+    res = recv(sfd)
+
+    num = parseTime(gmt())
+
+    path = "/tmp/{}.csv" format num
+
+    write(path, res)
+
+    arr = read(path, "csv")
+    
+    remove(path)
+
+    for i = 0, i < (count arr - 1) / first arr, i += 1
+        for j = 1, j <= (arr cell i, 0), j += 1
+            echo "{}\t" format (arr cell i, j)
+        end for
+        
+        echo "\n"
+    end for
+end func
+
+main()

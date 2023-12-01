@@ -1,0 +1,33 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   selection.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if (count argv - 1) / first argv !== 2
+        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    array arr = (argv row 1) slice 1
+
+    for i = 0, i < count arr - 1, i += 1
+        idx = i
+        
+        for j = idx + 1, j < count arr, j += 1
+            if arr.j < arr.idx
+                idx = j
+            end if
+        end for
+        
+        tmp = arr.i
+        
+        arr.i = arr.idx
+        arr.idx = tmp
+    end for
+
+    return arr
+end func
+
+return main()

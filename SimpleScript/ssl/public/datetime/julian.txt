@@ -1,0 +1,54 @@
+//  Author: Corey Ferguson
+//  Date:   September 25, 2023
+//  File:   julian.txt
+//
+
+include((dir = "@/datetime/") + "data/months")
+include(dir + "date/isLeapYear")
+include("@/number/digits")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    timestamp = (argv row 1) slice 1
+
+    if subtypeOf timestamp !== "int"
+        typeExcept(subtypeOf timestamp, "int")
+    end if
+
+    if timestamp < 0
+        rangeExcept(string(timestamp))
+    end if
+
+    seconds = 0, secondsInYear = 0, year = 1970
+    while timestamp >= seconds + (secondsInYear = (365 + isLeapYear(year)) * 86400)
+        seconds += secondsInYear
+        year += 1
+    end while
+
+    timestamp -= seconds
+    
+    days = 0
+    while timestamp >= (days + 1) * 86400
+        days += 1
+    end while
+    
+    days += 1
+    
+    timestamp = 0
+    
+    fourYear = digits(year)
+    twoYear = (fourYear slice 2, 2)
+    
+    for i = 0, i < 2, i += 1
+        timestamp += twoYear.i * 10 pow (4 - i)
+    end for
+    
+    timestamp += days
+    
+    return timestamp
+end func
+
+return main()

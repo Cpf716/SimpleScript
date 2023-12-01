@@ -1,0 +1,49 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   swapRows.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if (count argv - 1) / first argv !== 4
+        expectExcept("3 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    arr = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf arr !== "array"
+        typeExcept(typeOf arr, "array")
+    end if
+
+    a = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if subtypeOf a !== "int"
+        typeExcept(subtypeOf a, "int")
+    end if
+
+    if a < 0 || a >= (count arr - 1) / first arr
+        rangeExcept("idx {}, nrows {}" format array(a, (count arr - 1) / first arr))
+    end if
+
+    b = ((argv row 3) slice 1, argv cell 3, 0)
+
+    if subtypeOf b !== "int"
+        typeExcept(subtypeOf b, "int")
+    end if
+
+    if b < 0 || b >= (count arr - 1) / first arr
+        rangeExcept("idx {}, nrows {}" format array(b, (count arr - 1) / first arr))
+    end if
+
+    for i = 0, i < first arr, i += 1
+        tmp = arr.(a * first arr + i + 1)
+        
+        arr.(a * first arr + i + 1) = arr.(b * first arr + i + 1)
+        arr.(a * first arr + i + 1) = tmp
+    end for
+
+    return arr
+end func
+
+return main()

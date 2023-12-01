@@ -1,0 +1,46 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   uuid.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    array src = 0
+
+    for i = 1, i < 10, i += 1
+        src.i = i
+    end for
+
+    for i = 0, i < 7, i += 1
+        src += toChar (i + 97)
+    end for
+
+    array dst = null
+
+    for i = 0, i < 8, i += 1
+        dst.i = src.(rand() % 16)
+    end for
+
+    dst += "-"
+
+    for i = 0, i < 3, i += 1
+        for j = 0, j < 4, j += 1
+            dst += src.(rand() % 16)
+        end for
+        
+        dst += "-"
+    end for
+
+    for i = 0, i < 12, i += 1
+        dst += src.(rand() % 16)
+    end for
+
+    return dst join ""
+end func
+
+return main()

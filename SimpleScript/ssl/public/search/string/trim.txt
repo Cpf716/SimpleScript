@@ -1,0 +1,36 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   trim.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept(nrows(argv) - 1)
+    end if
+
+    text = (argv row 1) slice 1
+
+    if typeOf text !== "string"
+        typeExcept(typeOf text, "string")
+    end if
+
+    if text === null
+        throw "null"
+    end if
+
+    ei = count text
+    while ei > 0 && isSpace text.(ei - 1)
+        ei -= 1
+    end while
+
+    si = 0
+    while si < ei && isSpace text.si
+        si += 1
+    end while
+
+    return text substr si, ei
+end func
+
+return main()

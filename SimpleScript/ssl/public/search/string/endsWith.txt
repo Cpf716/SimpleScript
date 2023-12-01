@@ -1,0 +1,41 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   endsWith.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 3
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    text = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf text !== "string"
+        typeExcept(typeOf text, "string")
+    end if
+
+    pattern = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if typeOf pattern !== "string"
+        typeExcept(typeOf pattern, "string")
+    end if
+
+    if pattern === null
+        throw "null"
+    end if
+
+    if count text < count pattern
+        return 0
+    end if
+
+    si = count text - count pattern, i = 0
+    while i < count pattern && text.(si + i) === pattern.i
+        i += 1
+    end while
+
+    return i === count pattern
+end func
+
+return main()

@@ -1,0 +1,38 @@
+//  Author: Corey Ferguson
+//  Date:   September 2, 2023
+//  File:   example_2.txt
+
+include("@/datetime/date/parseDate")
+include("@/datetime/isoString")
+include("@/datetime/time/parseTime")
+
+func main
+    con = -1
+
+    try
+        con = connect("tcp://localhost:3306", "root", "root")
+    catch err
+        echo "SQL: {}" format err
+        
+        return
+    end try
+
+    try
+        res = query(con, "select current_timestamp")
+        res = split((res cell 1, 0), " ")
+        
+        timestamp = parseDate(first res) + parseTime(last res)
+        
+        echo "{}\n" format isoString(timestamp)
+    catch err
+        echo "SQL: {}" format err
+    end try
+
+    try
+        close(con)
+    catch err
+        echo "SQL: {}" format err
+    end try
+end func
+
+main()

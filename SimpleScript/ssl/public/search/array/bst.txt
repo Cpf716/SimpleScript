@@ -1,0 +1,60 @@
+//  Author: Corey Ferguson
+//  Date:   August 8, 2023
+//  File:   bst.txt
+
+include("@/exception/expectExcept")
+include("@/exception/rangeExcept")
+
+func main
+    if nrows(argv) !== 5
+        expectExcept("4 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    array arr = ((argv row 1) slice 1, argv cell 1, 0)
+
+    beg = ((argv row 2) slice 1, argv cell 2, 0)
+    
+    if subtypeOf beg !== "int"
+        typeExcept(subtypeOf beg, "int")
+    end if
+    
+    if beg < 0 || beg > count arr
+        rangeExcept("beg {}, count {}" format array(beg, count arr))
+    end if
+    
+    end = ((argv row 3) slice 1, argv cell 3, 0)
+    
+    if subtypeOf end !== "int"
+        typeExcept(subtypeOf end, "int")
+    end if
+    
+    if end < beg || end > count arr
+        rangeExcept("beg {}, end {}, count {}" format array(beg, end, count arr))
+    end if
+
+    val = ((argv row 4) slice 1, argv cell 4, 0)
+    
+    assert typeOf val !== "array"
+
+    func `bst` : arr, beg, end, val
+        if beg === end
+            return -1
+        end if
+        
+        len = floor((end - beg) / 2)
+        
+        if arr.(beg + len) === val
+            return beg + len
+        end if
+        
+        if arr.(beg + len) > val
+            return `bst`(arr, beg, beg + len, val)
+        end if
+        
+        `bst`(arr, beg + len + 1, end, val)
+    end func
+    
+    return `bst`(arr, beg, end, val)
+end func
+
+return main()

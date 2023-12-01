@@ -1,0 +1,64 @@
+//  Author: Corey Ferguson
+//  Date:   October 9, 2023
+//  File:   calendar.txt
+//
+
+include((dir = "@/datetime/date/") + "month")
+include(dir + "parseDate")
+include(dir + "weekday")
+include(dir + "year")
+include("@/datetime/data/weekdays")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    timestamp = (argv row 1) slice 1
+    
+    if subtypeOf timestamp !== "int"
+        typeExcept(subtypeOf timestamp, "int")
+    end if
+    
+    if timestamp < 0
+        rangeExcept(string(timestamp))
+    end if
+
+    `month` = month(timestamp), `year` = year(timestamp)
+
+    echo (keys months()).`month` + " " + `year` + "\n"
+
+    `weekday` = weekday(parseDate(array(`year`, padStart(string(`month` + 1), 2, "0"), "01") join "-"))
+    
+    for i = 0, i < 7, i += 1
+        echo "{}\t" format (weekdays().i substr 0, 3)
+    end for
+
+    echo "\n"
+
+    i = 0
+    for , i < `weekday`, i += 1
+        echo "x\t"
+    end for
+    
+    upperLimit = (values months()).`month` + (`month` === 1 && isLeapYear(`year`))
+
+    for j = 1, j <= upperLimit, (i += 1, j += 1)
+        echo "{}\t" format j
+
+        if i % 7 === 6
+            echo "\n"
+        end if
+    end for
+
+    
+    if i % 7
+        for , i % 7, i += 1
+            echo "x\t"
+        end for
+    
+        echo "\n"
+    end if
+end func
+
+main()

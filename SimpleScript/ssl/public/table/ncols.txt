@@ -1,0 +1,20 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   ncols.txt
+//
+
+func main
+    if (count argv - 1) / first argv !== 2
+        throw "Expected 1 argument(s), got {}" format (nrows(argv) - 1)
+    end if
+
+    arr = (argv row 1) slice 1
+
+    if subtypeOf arr !== "table"
+        throw "Cannot convert from {} to table" format subtypeOf arr
+    end if
+
+    return first arr
+end func
+
+return main()

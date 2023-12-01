@@ -1,0 +1,92 @@
+//  Author: Corey Ferguson
+//  Date:   August 23, 2023
+//  File:   parseDate.txt
+//
+
+include((dir = "@/datetime/") + "data/months")
+include(dir + "date/isLeapYear")
+include((dir = "@/search/string/") + "startsWith")
+include(dir + "tokens")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    dateStr = (argv row 1) slice 1
+    
+    if typeOf dateStr !== "string"
+        typeExcept(typeOf dateStr, "string")
+    end if
+    
+    if dateStr === null
+        throw "null"
+    end if
+    
+    array arr = tokens(dateStr)
+    
+    if count arr !== 5
+        return
+    end if
+    
+    arr splice 0
+    
+    date = arr tospliced 2
+    
+    for i = count date - 1, i > 0, i -= 1
+        tmp = date.i
+        
+        date.i = date.(i - 1)
+        date.(i - 1) = tmp
+    end for
+    
+    for i = 0, i < count first date, i += 1
+        if !isDigit (first date).i
+            return
+        end if
+    end for
+    
+    date.0 = parse first date
+    
+    if first date < 1970
+        return
+    end if
+
+    date.1 = (keys months() indexOf (keys months() find val, startsWith(val, date.1)))
+    
+    if date.1 === -1
+        return
+    end if
+    
+    for i = 0, i < count last date, i += 1
+        if !isDigit (last date).i
+            return
+        end if
+    end for
+
+    date.(count date - 1) = parse last date
+    
+    if last date < 1 || last date > (values months()).(date.1) + (date.1 === 1 && isLeapYear(first date))
+        return
+    end if
+    
+    seconds = 0
+
+    for i = 1970, i < first date, i += 1
+        seconds += (365 + isLeapYear(i)) * 86400
+    end for
+
+    for i = 0, i < date.1, i += 1
+        seconds += months().(i * 2 + 1) * 86400
+    end for
+
+    if date.1 > 1 && isLeapYear(first date)
+        seconds += 86400
+    end if
+    
+    seconds += (last date - 1) * 86400
+
+    return seconds
+end func
+
+return main()

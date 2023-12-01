@@ -1,0 +1,41 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   gcd.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 3
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    a = ((argv row 1) slice 1, argv cell 0, 0)
+
+    if subtypeOf a !== "int"
+        typeExcept(subtypeOf a, "int")
+    end if
+
+    b = ((argv row 2) slice 1, argv cell 1, 0)
+
+    if subtypeOf b !== "int"
+        typeExcept(subtypeOf b, "int")
+    end if
+
+    if a < b
+        tmp = a
+        a = b
+        b = tmp
+    end if
+
+    r = 0
+    do while r !== 0
+        r = a % b
+        a = b
+        b = r
+    end while
+
+    return a
+end func
+
+return main()

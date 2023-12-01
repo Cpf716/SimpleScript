@@ -1,0 +1,29 @@
+//  Author: Corey Ferguson
+//  Date:   September 21, 2023
+//  File:   sender.txt
+//
+
+func main
+    askBeforeExit = true
+
+    sfd = client("127.0.0.1", 8080)
+
+    echo "Connected...\n"
+
+    listen(sfd, 8082)
+
+    while 1
+        req = null
+        while !(req = input())
+            continue
+        end while
+
+        if send(sfd, req) <= 0
+            break
+        end if
+    end while
+
+    echo "Disconnected.\n"
+end func
+
+main()

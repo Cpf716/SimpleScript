@@ -1,0 +1,30 @@
+//  Author: Corey Ferguson
+//  Date:   November 30, 2023
+//  File:   transformUpper.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    str = (argv row 1) slice 1
+    
+    if typeOf str !== "string"
+        typeExcept(typeOf str, "string")
+    end if
+    
+    arr = toArray str
+    
+    for i = 0, i < count arr, i += 1
+        arr.i = toUpper(arr.i)
+    end for
+    
+    return arr join ""
+end func
+
+return main()
+
+

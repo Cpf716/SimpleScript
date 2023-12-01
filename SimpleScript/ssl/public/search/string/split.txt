@@ -1,0 +1,55 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   split.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 3
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    text = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf text !== "string"
+        typeExcept(typeOf text, "string")
+    end if
+
+    if text === null
+        throw "null"
+    end if
+
+    pattern = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if typeOf pattern !== "string"
+        typeExcept(typeOf pattern, "string")
+    end if
+
+    if pattern === null
+        throw "null"
+    end if
+
+    array arr = null, n = -1
+
+    si = 0, ei = 0
+    while ei <= count text - count pattern
+        i = 0
+        while i < count pattern && text.(ei + i) === pattern.i
+            i += 1
+        end while
+        
+        if i === count pattern
+            arr.(n += 1) = (text substr si, ei)
+            si = (ei += i)
+        else
+            ei += 1
+        end if
+    end while
+
+    arr.(n += 1) = text substr si
+
+    return arr
+end func
+
+return main()

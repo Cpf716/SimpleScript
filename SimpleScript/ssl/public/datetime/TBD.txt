@@ -1,0 +1,144 @@
+//  Author: Corey Ferguson
+//  Date:   November 20, 2023
+//  File:   TBD.txt
+//
+
+include("@/datetime/data/months")
+include("@/datetime/date/isLeapYear")
+include("@/string")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    timestamp = (argv row 1) slice 1
+
+    if subtypeOf timestamp !== "int"
+        typeExcept(subtypeOf timestamp, "int")
+    end if
+
+    if timestamp < 0
+        rangeExcept(string(timestamp))
+    end if
+    
+    //  years
+
+    seconds = 0, secondsInYear = 0, year = 1970
+    while timestamp >= seconds + (secondsInYear = (365 + isLeapYear(year)) * 86400)
+        seconds += secondsInYear
+        year += 1
+    end while
+
+    timestamp -= seconds
+    
+    array str = ""
+    
+    year -= 1970
+    
+    if year
+        str += string(year) + " year" + (year === 1 ? "", "s")
+    end if
+    
+    //  months
+
+    seconds = 0, secondsInMonth = 0, `months` = 0
+    while timestamp >= seconds + (secondsInMonth = (months().(`months` * 2 + 1) + (`months` === 1 && isLeapYear(year))) * 86400)
+        seconds += secondsInMonth
+        `months` += 1
+    end while
+
+    timestamp -= seconds
+    
+    if `months`
+        if str
+            str += ", "
+        end if
+    
+        str += string(`months`) + " month" + (`months` === 1 ? "", "s")
+    end if
+    
+    //  weeks
+    
+    weeks = 0
+    while timestamp >= (weeks + 1) * 604800
+        weeks += 1
+    end while
+    
+    timestamp -= 604800 * weeks
+    
+    if weeks
+        if str
+            str += ", "
+        end if
+        
+        str += string(weeks) + " week" + (weeks === 1 ? "", "s")
+    end if
+    
+    //  days
+
+    days = 0
+    while timestamp >= (days + 1) * 86400
+        days += 1
+    end while
+
+    timestamp -= 86400 * days
+    
+    if days
+        if str
+            str += ", "
+        end if
+        
+        str += string(days) + " day" + (days === 1 ? "", "s")
+    end if
+
+    days += 1
+    
+    //  hours
+
+    hours = 0
+    while timestamp >= (hours + 1) * 3600
+        hours += 1
+    end while
+
+    timestamp -= hours * 3600
+    
+    if hours
+        if str
+            str += ", "
+        end if
+        
+        str += string(hours) + " hour" + (hours === 1 ? "", "s")
+    end if
+    
+    //  minutes
+
+    minutes = 0
+    while timestamp >= (minutes + 1) * 60
+        minutes += 1
+    end while
+
+    timestamp -= minutes * 60
+    
+    if minutes
+        if str
+            str += ", "
+        end if
+        
+        str += string(minutes) + " minute" + (minutes === 1 ? "", "s")
+    end if
+
+    seconds = timestamp
+    
+    if seconds
+        if str
+            str += ", "
+        end if
+        
+        str += string(seconds) + " second" + (seconds === 1 ? "", "s")
+    end if
+    
+    return str join ""
+end func
+
+return main()

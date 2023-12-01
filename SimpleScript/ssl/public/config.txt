@@ -1,0 +1,4 @@
+//  Author: Corey Ferguson
+//  Date:   September 28, 2023
+//  File:   config.txt
+//

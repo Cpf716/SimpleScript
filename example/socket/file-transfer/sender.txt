@@ -1,0 +1,34 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   sender.txt
+//
+
+func main
+    askBeforeExit = true
+
+    sfd = server(8080, 1024)
+
+    array conv = null
+    
+    req = read("/Library/Application Support/SimpleScript/data/unit_3_test_data.csv")
+    
+    while 1
+        while !(conv = accept(sfd))
+            continue
+        end while
+        
+        echo "Connected...\n"
+        
+        for cfd in conv
+            res = send(cfd, req)
+        
+            echo "Send {}\n" format (res <= 0 ? "failure", "success")
+            
+            close(cfd)
+        end for
+        
+        echo "Disconnected.\n"
+    end while
+end func
+
+main()

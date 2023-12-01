@@ -1,0 +1,28 @@
+//  Author: Corey Ferguson
+//  Date:   August 6, 2023
+//  File:   prefix.txt
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    arr."tera" = 10 pow 12      //  trillion
+    arr."giga" = 10 pow 9       //  billion
+    arr."mega" = 10 pow 6       //  million
+    arr."kilo" = 10 pow 3       //  thousand
+    arr."hecto" = 10 pow 2      //  hundred
+    arr."deca" = 10 pow 1       //  ten
+    arr."deci" = 10 pow -1      //  tenth
+    arr."centi" = 10 pow -2     //  hundredth
+    arr."milli" = 10 pow -3     //  thousandth
+    arr."micro" = 10 pow -6     //  millionth
+    arr."nano" = 10 pow -9      //  billionth
+    arr."pico" = 10 pow -12     //  trillionth
+    
+    return arr
+end func
+
+return main()

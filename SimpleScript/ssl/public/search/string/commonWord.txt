@@ -1,0 +1,45 @@
+//  Author: Corey Ferguson
+//  Date:   October 11, 2023
+//  File:   commonWord.txt
+//
+
+include("@/search/string/words")
+//  include("@/sort/table/sortRows")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    filename = (argv row 1) slice 1
+    
+    if typeOf filename !== "string"
+        typeExcept(typeOf filename, "string")
+    end if
+
+    arr = words(filename)
+
+    /*
+    arr insert 0, 2
+
+    arr = sortRows(arr, 1)
+
+    return array(arr.(count arr - 2), arr.(count arr - 1))
+
+    //  163,728 operations
+    */
+
+    i = 1
+    for j = 2, j < floor(count arr / 2), j += 1
+        if arr.i < arr.(j * 2 + 1)
+            i = j * 2 + 1
+        end if
+    end for
+
+    return array(arr.(i - 1), arr.i)
+
+    //  11,952 operations
+    //  92.7% more efficient
+end func
+
+return main()

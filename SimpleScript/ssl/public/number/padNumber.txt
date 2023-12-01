@@ -1,0 +1,47 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   padNumber.txt
+//
+
+include("@/number/digits")
+
+func main
+    if nrows(argv) !== 2 && nrows(argv) !== 3
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    num = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf num !== "number"
+        typeExcept(typeOf num, "number")
+    end if
+
+    padStr = ","
+
+    if nrows(argv) === 3
+        padStr = ((argv row 2) slice 1, argv cell 2, 0)
+        
+        if subtypeOf padStr !== "char"
+            typeExcept(subtypeOf padStr, "char")
+        end if
+    end if
+
+    array arr = digits(num)
+
+    for (i = 0, n = ceil(count arr / 3) - 1), i < n, i += 1
+        arr += padStr
+        
+        j = count arr - (i + 1) * 3 - i - 1
+        
+        for k = count arr - 1, k > j, k -= 1
+            tmp = arr.k
+            
+            arr.k = arr.(k - 1)
+            arr.(k - 1) = tmp
+        end for
+    end for
+
+    return arr join ""
+end func
+
+return main()

@@ -1,0 +1,28 @@
+//  Author: Corey Ferguson
+//  Date:   October 15, 2023
+//  File:   addMonths.txt
+//
+
+func main
+    if nrows(argv) !== 3
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    timestamp = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if subtypeOf timestamp !== "int"
+        typeExcept(subtypeOf timestamp, "int")
+    end if
+
+    months = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if subtypeOf months !== "int"
+        typeExcept(subtypeOf months, "int")
+    end if
+
+    timestamp += months * 2592000
+
+    return timestamp
+end func
+
+return main()

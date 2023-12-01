@@ -1,0 +1,76 @@
+//  Author: Corey Ferguson
+//  Date:   November 16, 2023
+//  File:   app.txt
+//
+
+include("@/datetime/parseTime")
+
+func int
+    while 1
+        num = input()
+        
+        if subtypeOf num === "int"
+            return num
+        end if
+    end while
+end func
+
+func main
+    while 1
+        sfd = client("127.0.0.1", 8080)
+
+        echo "1\t-\tArtists\n"
+        echo "2\t-\tAlbums\n"
+        echo "3\t-\tSongs\n"
+        echo "4\t-\tJoin\n"
+        echo ">\t"
+
+        num = -1
+
+        while 1
+            num = int()
+            
+            if num >= 1 && num < 5
+                break
+            end if
+        end while
+        
+        echo "\n"
+
+        mes = "/api/" + array("artists", "albums", "songs", "join").(num - 1)
+
+        send(sfd, mes)
+
+        array res = recv(sfd)
+
+        if !res
+            close(sfd)
+            echo "Disconnected.\n"
+            continue
+        end if
+
+        num = parseTime(gmt())
+        
+        path = "/tmp/{}.csv" format num
+
+        write(path, res)
+
+        res = read(path, "csv")
+
+        for i = 0, i < (count res - 1) / first res, i += 1
+            for j = 1, j <= (res cell i, 0), j += 1
+                echo "{}\t" format (res cell i, j)
+            end for
+            
+            echo "\n"
+        end for
+        
+        echo "\n"
+        
+        remove(path)
+        
+        close(sfd)
+    end while
+end func
+
+main()

@@ -1,0 +1,16 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   weekdays.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    return array("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+end func
+
+return main()

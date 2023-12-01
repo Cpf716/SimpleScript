@@ -1,0 +1,24 @@
+//  Author: Corey Ferguson
+//  Date:   August 31, 2023
+//  File:   example_6.txt
+//
+//  Description:   convert timezone offset string to timezone offset
+//
+
+include("@/datetime/time/parseTime")
+include("@/datetime/timezoneOffset")
+include("@/datetime/timezoneOffsetString")
+
+func main
+    if nrows(argv) !== 1
+        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    `timezoneOffsetString` = timezoneOffsetString(timezoneOffset())
+
+    `timezoneOffset` = (`timezoneOffsetString`.0 === "+" ? 1, -1) * parseTime(`timezoneOffsetString` substr 1)
+
+    echo "{}\n" format `timezoneOffset`
+end func
+
+main()

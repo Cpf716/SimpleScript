@@ -1,0 +1,44 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   words.txt
+//
+
+include("@/search/string/tokens")
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    filename = (argv row 1) slice 1
+
+    if typeOf filename !== "string"
+        typeExcept(typeOf filename, "string")
+    end if
+
+    if filename === null
+        throw "null"
+    end if
+
+    array arr1 = read(filename)
+
+    arr1 = tokens(arr1)
+
+    if !count arr1
+        return
+    end if
+
+    arr2.(arr1.0) = 1
+
+    for i = 1, i < count arr1, i += 1
+        if arr2.(arr1.i) === undefined
+            arr2.(arr1.i) = 1
+        else
+            arr2.(arr1.i) += 1
+        end if
+    end for
+
+    return arr2
+end func
+
+return main()

@@ -1,0 +1,50 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   swapCols.txt
+//
+
+include("@/exception/expectExcept")
+include("@/exception/rangeExcept")
+
+func main
+    if (count argv - 1) / first argv !== 4
+        expectExcept("3 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    arr = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf arr !== "array"
+        typeExcept(typeOf arr, "array")
+    end if
+
+    a = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if subtypeOf a !== "int"
+        typeExcept(subtypeOf a, "int")
+    end if
+
+    if a < 0 || a >= first arr
+        rangeExcept("idx {}, ncols {}" format array(a, first arr))
+    end if
+
+    b = ((argv row 3) slice 1, argv cell 3, 0)
+
+    if subtypeOf b !== "int"
+        typeExcept(subtypeOf b, "int")
+    end if
+
+    if b < 0 || b >= first arr
+        rangeExcept("idx {}, ncols {}" format array(b, first arr))
+    end if
+
+    for i = 0, i < (count arr - 1) / first arr, i += 1
+        tmp = arr.(i * first arr + a + 1)
+        
+        arr.(i * first arr + a + 1) = arr.(i * first arr + b + 1)
+        arr.(i * first arr + b + 1) = tmp
+    end for
+
+    return arr
+end func
+
+return main()

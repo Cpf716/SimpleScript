@@ -1,0 +1,52 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   padStart.txt
+//
+
+include("@/exception/expectExcept")
+include("@/exception/rangeExcept")
+include("@/string")
+
+func main
+    if nrows(argv) !== 4
+        throw expectExcept("3 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    text = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf text !== "string"
+        typeExcept(typeOf text, "string")
+    end if
+
+    if text === null
+        throw "null"
+    end if
+
+    tgtLen = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if subtypeOf tgtLen !== "int"
+        typeExcept(subtypeOf tgtLen, "int")
+    end if
+
+    if tgtLen < 0
+        rangeExcept(string(tgtLen))
+    end if
+
+    padStr = ((argv row 3) slice 1, argv cell 3, 0)
+
+    if typeOf padStr !== "string"
+        typeExcept(typeOf padStr, "string")
+    end if
+
+    if padStr === null
+        throw "null"
+    end if
+
+    while count text < tgtLen
+        text = padStr + text
+    end while
+
+    return text
+end func
+
+return main()
