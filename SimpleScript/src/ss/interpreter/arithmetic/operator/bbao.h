@@ -9,7 +9,7 @@
 #define bbao_h
 
 #include "bao_t.h"
-#include "utility.h"
+#include "common.h"
 
 namespace ss {
     class bbao: public bao_t {

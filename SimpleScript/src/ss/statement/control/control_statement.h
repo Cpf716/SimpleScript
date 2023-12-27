@@ -14,6 +14,13 @@ namespace ss {
     struct control_statement: public statement_t {
         //  MEMBER FUNCTIONS
         
+        void exit() {
+            this->should_return = true;
+            
+            for (size_t i = 0; i < this->statementc; ++i)
+                this->statementv[i]->exit();
+        }
+        
         void set_parent(statement_t* parent) {
             this->parent = parent;
             
@@ -24,6 +31,8 @@ namespace ss {
         //  MEMBER FIELDS
         
         statement_t* parent = NULL;
+        
+        bool should_return;
         
         size_t statementc;
         statement_t** statementv = NULL;

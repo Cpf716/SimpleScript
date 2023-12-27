@@ -4,6 +4,8 @@
 
 #### echo : any
 
+### define : symbol, any
+
 #### consume : symbol
 
 #### sleep : int
@@ -36,7 +38,7 @@ end func
 
 try<br>
 &nbsp;&nbsp;&nbsp;&nbsp;throw ""<br>
-catch err<br>
+catch exc<br>
 end try
 
 ### Repetition

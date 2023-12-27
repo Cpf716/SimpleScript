@@ -12,7 +12,7 @@ func main
 
     echo "Matrix Multplication\n\n"
 
-    func printMat : c
+    func printMat(c)
         for i = 0, i < (count c - 1) / first c, i += 1
             echo "\t"
         
@@ -24,7 +24,7 @@ func main
         end for
     end func
 
-    func calc : a, b
+    func calc(a, b)
         c = multMat(a, b)
 
         printMat(c)

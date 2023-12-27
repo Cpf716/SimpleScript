@@ -16,7 +16,6 @@ namespace ss {
         
         string expression;
         
-        bool should_break;
         bool should_continue;
     public:
         //  CONSTRUCTORS
@@ -32,8 +31,6 @@ namespace ss {
         string evaluate(interpreter* ssu);
         
         string execute(interpreter* ssu);
-        
-        void exit();
         
         bool compare(const string value) const;
         

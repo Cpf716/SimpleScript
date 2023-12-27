@@ -14,9 +14,6 @@
 #include <sstream>
 
 namespace ss {
-    //  NON-MEMBER FIELDS
-
-    const bool ENABLE_LOGGING = false;
 
     //  NON-MEMBER FUNCTIONS
 

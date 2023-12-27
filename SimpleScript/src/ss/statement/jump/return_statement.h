@@ -24,33 +24,47 @@ namespace ss {
             expression = trim(result).empty() ? encode("undefined") : result;
         }
         
-        void close() { delete this; }
+        void close() {
+            delete this;
+        }
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const { return true; }
+        bool analyze(interpreter* ssu) const {
+            return true;
+        }
         
-        bool compare(const string value) const { return value == "return"; }
+        bool compare(const string value) const {
+            return value == "return";
+        }
         
         string evaluate(interpreter* ssu) {
             unsupported_error("evaluate()");
-            return EMPTY;
+            return empty();
         }
         
         string execute(interpreter* ssu) {
-            set_return(expression.empty() ? EMPTY : ssu->evaluate(expression));
-            return EMPTY;
+            set_return(expression.empty() ? empty() : ssu->evaluate(expression));
+            return empty();
         }
         
         void exit() { }
         
-        void set_break() { unsupported_error("set_break()"); }
+        void set_break() {
+            unsupported_error("set_break()");
+        }
         
-        void set_continue() { unsupported_error("set_continue()"); }
+        void set_continue() {
+            unsupported_error("set_continue()");
+        }
         
-        void set_parent(statement_t* parent) { this->parent = parent; }
+        void set_parent(statement_t* parent) {
+            this->parent = parent;
+        }
         
-        void set_return(const string result) { this->parent->set_return(result); }
+        void set_return(const string result) {
+            this->parent->set_return(result);
+        }
     };
 }
 

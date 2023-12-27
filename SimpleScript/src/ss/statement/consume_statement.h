@@ -20,38 +20,50 @@ namespace ss {
         
         consume_statement(const string symbol) {
             if (!is_symbol(symbol))
-                expect_error("symbol");
+                expect_error("symbol: " + symbol);
             
             this->symbol = symbol;
         }
         
-        void close() { delete this; }
+        void close() {
+            delete this;
+        }
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const { return false; }
+        bool analyze(interpreter* ssu) const {
+            return false;
+        }
         
-        bool compare(const string value) const { return false; }
+        bool compare(const string value) const {
+            return false;
+        }
         
         string evaluate(interpreter* ssu) {
             unsupported_error("evaluate()");
-            return EMPTY;
+            return empty();
         }
         
         string execute(interpreter* ssu) {
             ssu->consume(symbol);
-            return EMPTY;
+            return empty();
         }
         
         void exit() { }
         
-        void set_break() { unsupported_error("set_break()"); }
+        void set_break() {
+            unsupported_error("set_break()");
+        }
         
-        void set_continue() { unsupported_error("set_continue()"); }
+        void set_continue() {
+            unsupported_error("set_continue()");
+        }
         
         void set_parent(statement_t* parent) { }
         
-        void set_return(const string result) { unsupported_error("set_return()"); }
+        void set_return(const string result) {
+            unsupported_error("set_return()");
+        }
     };
 }
 

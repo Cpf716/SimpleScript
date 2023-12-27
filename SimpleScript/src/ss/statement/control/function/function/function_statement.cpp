@@ -16,19 +16,24 @@ namespace ss {
             
         if (!tokenc || !is_symbol(tokenv[0])) {
             delete[] tokenv;
-            expect_error("symbol");
+            expect_error("symbol: " + tokenv[0]);
         }
         
         if (tokenc == 1)
             expressionc = 0;
         else {
-            if (tokenv[1] != ":") {
+            if (tokenv[1] != "(") {
                 delete[] tokenv;
                 expect_error("';' after expression");
             }
             
+            if (tokenv[tokenc - 1] != ")") {
+                delete[] tokenv;
+                expect_error("')'");
+            }
+            
             size_t e = 2, s = e;   int p = 0;
-            for (; e < tokenc; ++e) {
+            for (; e < tokenc - 1; ++e) {
                 if (tokenv[e] == "(")
                     ++p;
                 else if (tokenv[e] == ")")
@@ -58,7 +63,7 @@ namespace ss {
             
             int previous = -1;
             
-            for (size_t i = 0; i < floor((tokenc - 2) / 2); ++i) {
+            for (int i = 0; i < floor((tokenc - 3) / 2); ++i) {
                 string _tokenv[tokenv[i * 2 + 2].length() + 1];
                 size_t _tokenc = tokens(_tokenv, tokenv[i * 2 + 2]);
                 
@@ -93,7 +98,7 @@ namespace ss {
                         throw error("Missing default argument on parameter '" + _tokenv[j] + "'");
                     }
                     
-                    previous = (int)i;
+                    previous = i;
                     
                     ++optionalc;
                 }
@@ -104,46 +109,50 @@ namespace ss {
                 }
             }
             
-            string _tokenv[tokenv[tokenc - 1].length() + 1];
-            size_t _tokenc = tokens(_tokenv, tokenv[tokenc - 1]);
+            if (tokenc >= 4) {
+                string _tokenv[tokenv[tokenc - 2].length() + 1];
+                size_t _tokenc = tokens(_tokenv, tokenv[tokenc - 2]);
+                
+                if (_tokenc == 1) {
+                    if (!is_symbol(tokenv[tokenc - 2])) {
+                        delete[] tokenv;
+                        expect_error("symbol in 'function' statement specificer");
+                    }
+                    
+                    if (previous != -1) {
+                        delete[] tokenv;
+                        throw error("Missing default argument on parameter '" + tokenv[tokenc - 2] + "'");
+                    }
+                } else {
+                    size_t i = 0;
+                    while (i < _tokenc && _tokenv[i] == "(")
+                        ++i;
+                    
+                    if (i < _tokenc && tolower(_tokenv[i]) == "const")
+                        ++i;
+                    
+                    if (i < _tokenc && tolower(_tokenv[i]) == "array")
+                        ++i;
+                    
+                    if (i == _tokenc || !is_symbol(_tokenv[i]) || _tokenv[i + 1] != "=") {
+                        delete[] tokenv;
+                        expect_error("symbol in 'function' statement specificer");
+                    }
+                    
+                    ++this->optionalc;
+                }
+                
+                this->expressionc = floor((tokenc - 3) / 2) + 1;
+            } else
+                this->expressionc = 0;
             
-            if (_tokenc == 1) {
-                if (!is_symbol(tokenv[tokenc - 1])) {
-                    delete[] tokenv;
-                    expect_error("symbol in 'function' statement specificer");
-                }
-                
-                if (previous != -1) {
-                    delete[] tokenv;
-                    throw error("Missing default argument on parameter '" + tokenv[tokenc - 1] + "'");
-                }
-            } else {
-                size_t i = 0;
-                while (i < _tokenc && _tokenv[i] == "(")
-                    ++i;
-                
-                if (i < _tokenc && tolower(_tokenv[i]) == "const")
-                    ++i;
-                
-                if (i < _tokenc && tolower(_tokenv[i]) == "array")
-                    ++i;
-                
-                if (i == _tokenc || !is_symbol(_tokenv[i]) || _tokenv[i + 1] != "=") {
-                    delete[] tokenv;
-                    expect_error("symbol in 'function' statement specificer");
-                }
-                
-                ++this->optionalc;
-            }
-            
-            this->expressionc = ceil((tokenc - 1) / 2);
             this->expressionv = new string[this->expressionc];
             
             for (size_t i = 0; i < this->expressionc; ++i)
                 this->expressionv[i] = tokenv[i * 2 + 2];
         }
         
-        rename(tokenv[0]);
+        this->rename(tokenv[0]);
         
         delete[] tokenv;
         
@@ -189,6 +198,7 @@ namespace ss {
         if (argc < this->expressionc - this->optionalc || argc > this->expressionc)
             expect_error(to_string(this->expressionc - this->optionalc) + " argument(s) but got " + to_string(argc));
         
+        this->result = encode("undefined");
         this->should_return = false;
         
         string buid = this->ssu->backup();
@@ -234,25 +244,20 @@ namespace ss {
         return result;
     }
 
-    bool function_statement::compare(const string value) const { return false; }
+    bool function_statement::compare(const string value) const {
+        return false;
+    }
 
     string function_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string function_statement::execute(interpreter* ssu) {
         this->ssu = ssu;
         this->ssu->set_function(this);
         
-        return EMPTY;
-    }
-
-    void function_statement::exit() {
-        this->should_return = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+        return empty();
     }
 
     void function_statement::set_break() {
@@ -272,16 +277,13 @@ namespace ss {
         if (this->ssu->is_defined(symbol))
             this->ssu->drop(symbol);
         
-        string valuev[value.length() + 1];
-        size_t valuec = parse(valuev, value);
-        
-        if (valuec == 1) {
+        if (ss::is_array(value))
+            this->ssu->set_array(symbol, value);
+        else {
             if (value.empty() || is_string(value))
                 this->ssu->set_string(symbol, value);
             else
                 this->ssu->set_number(symbol, stod(value));
-        } else
-            for (size_t j = 0; j < valuec; ++j)
-                this->ssu->set_array(symbol, j, valuev[j]);
+        }
     }
 }

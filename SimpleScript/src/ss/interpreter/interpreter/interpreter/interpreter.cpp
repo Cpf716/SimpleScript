@@ -13,19 +13,26 @@ namespace ss {
     interpreter::interpreter() {
         initialize();
         
+        set_number("askBeforeExit", 0);
+        
+        set_string("null", empty());
+        std::get<2>(* stringv[io_string("null")]) = pair<bool, bool>(true, false);
+        
+        set_number("timeout", 90);
+        set_string("timeoutMessage", empty());
+        
         for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); ++i)
             set_array("types", i, encode(types[i]));
         
-        std::get<1>(* arrayv[io_array("types")]).shrink_to_fit();
-        std::get<2>(* arrayv[io_array("types")]) = pair<bool, bool>(true, false);
+        int i = io_array("types");
         
-        set_string("null", "");
-        std::get<2>(* stringv[io_string("null")]) = pair<bool, bool>(true, false);
+        std::get<1>(* arrayv[i]).shrink_to_fit();
+        std::get<2>(* arrayv[i]) = pair<bool, bool>(true, false);
         
         set_string("undefined", encode("undefined"));
         std::get<2>(* stringv[io_string("undefined")]) = pair<bool, bool>(true, false);
         
-        save();
+        buid = backup();
     }
 
     interpreter::~interpreter() {
@@ -170,6 +177,97 @@ namespace ss {
         return _uuid;
     }
 
+    void interpreter::backup(const string buid) {
+        size_t i = 0;
+        while (i < backupc && bu_numberv[i] != buid)
+            ++i;
+        
+        if (i != backupc)
+            defined_error(buid);
+        
+        //  resize backups
+        if (is_pow(backupc, 2)) {
+            
+            //  resize numbers
+            string* _bu_numberv = new string[backupc * 2];
+            
+            for (size_t i = 0; i < backupc; ++i)
+                _bu_numberv[i] = bu_numberv[i];
+            
+            delete[] bu_numberv;
+            bu_numberv = _bu_numberv;
+            
+            //  resize functions
+            pair<size_t, function_t**>** _bu_functionv = new pair<size_t, function_t**>*[backupc * 2];
+            
+            for (size_t i = 0; i < backupc; ++i)
+                _bu_functionv[i] = bu_functionv[i];
+            
+            delete[] bu_functionv;
+            bu_functionv = _bu_functionv;
+            
+            //  resize arrays
+            //  array value is a pointer, as its internal pointer will be deallocated otherwise when control exits the array's declaring scope
+            pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>>**>** _bu_arrayv = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>>**>*[backupc * 2];
+            
+            for (size_t i = 0; i < backupc; ++i)
+                _bu_arrayv[i] = bu_arrayv[i];
+            
+            delete[] bu_arrayv;
+            bu_arrayv = _bu_arrayv;
+            
+            //  resize strings
+            pair<size_t, tuple<string, string, pair<bool, bool>>**>** _bu_stringv = new pair<size_t, tuple<string, string, pair<bool, bool>>**>*[backupc * 2];
+            
+            for (size_t i = 0; i < backupc;  ++i)
+                _bu_stringv[i] = bu_stringv[i];
+            
+            delete[] bu_stringv;
+            bu_stringv = _bu_stringv;
+        }
+        
+        //  backup arrays
+        tuple<string, ss::array<string>*, pair<bool, bool>>** _arrayv = new tuple<string, ss::array<string>*, pair<bool, bool>>*[pow2(arrayc)];
+        
+        for (size_t i = 0; i < arrayc; ++i) {
+            string first = std::get<0>(* arrayv[i]);
+            ss::array<string>* second = new ss::array<string>(std::get<1>(* arrayv[i]));
+            pair<bool, bool> third = std::get<2>(* arrayv[i]);
+            
+            _arrayv[i] = new tuple<string, ss::array<string>*, pair<bool, bool>>(first, second, third);
+        }
+        
+        bu_arrayv[backupc] = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>>**>(arrayc, _arrayv);
+        
+        //  backup functions
+        function_t** _functionv = new function_t*[pow2(functionc)];
+        
+        for (size_t i = 0; i < functionc; ++i)
+            _functionv[i] = functionv[i];
+        
+        bu_functionv[backupc] = new pair<size_t, function_t**>(functionc, _functionv);
+        
+        arithmetic::backup(buid);
+        
+        //  backup numbers
+        bu_numberv[backupc] = buid;
+        
+        //  backup strings
+        tuple<string, string, pair<bool, bool>>** _stringv = new tuple<string, string, pair<bool, bool>>*[pow2(stringc)];
+        
+        for (size_t i = 0; i < stringc; ++i) {
+            string first = std::get<0>(* stringv[i]);
+            string second = std::get<1>(* stringv[i]);
+            pair<bool, bool> third = std::get<2>(* stringv[i]);
+            
+            _stringv[i] = new tuple<string, string, pair<bool, bool>>(first, second, third);
+        }
+        
+        bu_stringv[backupc] = new pair<size_t, tuple<string, string, pair<bool, bool>>**>(stringc, _stringv);
+        
+        ++backupc;
+    }
+
     void interpreter::drop(const string symbol) {
         int i = io_function(symbol);
         
@@ -181,7 +279,6 @@ namespace ss {
                 
                 if (i == -1) {
                     arithmetic::drop(symbol);
-                    
                     return;
                 }
                 
@@ -343,14 +440,14 @@ namespace ss {
                                 } else if (p == 1 && data[k] == uov[unary_count]->opcode())
                                     ++argc;
                                 else {
-                                    size_t j = 0;
-                                    while (j < data[k].length() && (data[k][j] == ' ' || data[k][j] == '('))
+                                    size_t l = 0;
+                                    while (l < data[k].length() && (data[k][l] == ' ' || data[k][l] == '('))
+                                        ++l;
+                                    
+                                    while (l < data[k].length() && (data[k][l] == ' ' || data[k][l] == ')'))
                                         ++j;
                                     
-                                    while (j < data[k].length() && (data[k][j] == ' ' || data[k][j] == ')'))
-                                        ++j;
-                                    
-                                    if (j == data[k].length())
+                                    if (l == data[k].length())
                                         operands.pop();
                                     else
                                         flag = true;
@@ -365,12 +462,12 @@ namespace ss {
                             
                             string argv[argc];
                             
-                            for (size_t k = 0; k < argc; ++k) {
+                            for (k = 0; k < argc; ++k) {
                                 argv[k] = operands.pop();
                                 argv[k] = evaluate(argv[k]);
                             }
                             
-                            stack_trace.push(j);
+                            stack_trace.push(functionv[j]->name());
                             
                             //  call function and push its result
                             operands.push(functionv[j]->call(argc, argv));
@@ -688,7 +785,7 @@ namespace ss {
                                     rhs = decode(rhs);
                                     
                                     if (rhs.empty())
-                                        undefined_error(encode((EMPTY)));
+                                        undefined_error(encode((empty())));
                                     
                                     rhs = encode(rhs);
                                     
@@ -813,7 +910,7 @@ namespace ss {
                                             null_error();
                                         
                                         if (rhs.length() == 2)
-                                            undefined_error(encode(EMPTY));
+                                            undefined_error(encode(empty()));
                                         
                                         size_t m = 0;
                                         while (m < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[m * 2] != rhs)
@@ -1399,7 +1496,7 @@ namespace ss {
                                 rhs = decode(rhs);
                                 
                                 if (rhs.empty())
-                                    undefined_error(encode(EMPTY));
+                                    undefined_error(encode(empty()));
                                 
                                 rhs = encode(rhs);
                                 
@@ -1422,7 +1519,7 @@ namespace ss {
                                 }
                                 
                                 if (!std::get<1>(* arrayv[k]).size())
-                                    std::get<1>(* arrayv[k]).push(EMPTY);
+                                    std::get<1>(* arrayv[k]).push(empty());
                                     
                                 rhs = stringify(valuec, valuev);
                                 
@@ -1539,7 +1636,7 @@ namespace ss {
                                 if (rhs.empty()) {
                                     delete[] valuev;
                                     
-                                    undefined_error(encode(EMPTY));
+                                    undefined_error(encode(empty()));
                                 }
                                 
                                 rhs = encode(rhs);
@@ -2854,7 +2951,7 @@ namespace ss {
                                 
                                 if (rhs.empty()) {
                                     delete[] v;
-                                    undefined_error(encode(EMPTY));
+                                    undefined_error(encode(empty()));
                                 }
                                 
                                 rhs = encode(rhs);
@@ -2974,7 +3071,7 @@ namespace ss {
                                     
                                     if (rhs.length() == 2) {
                                         delete[] v;
-                                        undefined_error(encode(EMPTY));
+                                        undefined_error(encode(empty()));
                                     }
                                     
                                     size_t m = 0;
@@ -3127,7 +3224,7 @@ namespace ss {
                                         rhs = decode(rhs);
                                         
                                         if (rhs.empty())
-                                            undefined_error(encode(EMPTY));
+                                            undefined_error(encode(empty()));
                                         
                                         rhs = encode(rhs);
                                         
@@ -3172,7 +3269,7 @@ namespace ss {
 
                                             //  empty
                                             if (rhs.length() == 2)
-                                                undefined_error(encode(EMPTY));
+                                                undefined_error(encode(empty()));
 
                                             string key = rhs;
                                             
@@ -3350,7 +3447,7 @@ namespace ss {
                                     
                                     //  empty string
                                     if (rhs.empty())
-                                        undefined_error(encode(EMPTY));
+                                        undefined_error(encode(empty()));
                                     
                                     rhs = encode(rhs);
                                     
@@ -3425,7 +3522,7 @@ namespace ss {
                                         
                                         //  empty string
                                         if (rhs.length() == 2)
-                                            undefined_error(encode(EMPTY));
+                                            undefined_error(encode(empty()));
                                         
                                         string key = rhs;
                                         
@@ -3506,7 +3603,7 @@ namespace ss {
                                     delete[] v;
                                     
                                     if (rhs.empty())
-                                        set_array(lhs, 0, EMPTY);
+                                        set_array(lhs, 0, empty());
                                     
                                     else if (is_string(rhs)) {
                                         rhs = decode(rhs);
@@ -3638,6 +3735,7 @@ namespace ss {
                                                             }
                                                         } else {
                                                             set_array(lhs, 0, std::get<1>(* arrayv[k])[0]);
+                                                            
                                                             k = io_array(rhs);
                                                             
                                                             for (size_t l = 1; l < std::get<1>(* arrayv[k]).size(); ++l)
@@ -3661,8 +3759,7 @@ namespace ss {
                                                         rhs = rtrim(d);
                                                     }
                                                 } else {
-                                                    for (size_t k = 0; k < p; ++k)
-                                                        set_array(lhs, k, v[k]);
+                                                    set_array(lhs, stringify(p, v));
                                                     
                                                     delete[] v;
                                                 
@@ -3837,7 +3934,7 @@ namespace ss {
         }
         
         if (!operands.size())
-            return EMPTY;
+            return empty();
         
         while (operands.size() > 1) {
             if (operands.top().empty() ||
@@ -3900,15 +3997,18 @@ namespace ss {
         return result;
     }
 
-    ss::array<string> interpreter::get_array(const string symbol) {
+    string interpreter::get_array(const string symbol, const size_t index) {
         int i = io_array(symbol);
         
         if (i == -1)
             undefined_error(symbol);
         
+        if (index >= std::get<1>(* arrayv[i]).size())
+            range_error(to_string(index));
+        
         std::get<2>(* arrayv[i]).second = true;
         
-        return std::get<1>(* arrayv[i]);
+        return std::get<1>(* arrayv[i])[index];
     }
 
     string interpreter::get_string(const string symbol) {
@@ -3972,7 +4072,7 @@ namespace ss {
                         
                         std::get<2>(* stringv[i]).second = true;
                         
-                        return to_string(std::get<1>(* stringv[i]).length() - 2);
+                        return to_string(decode(std::get<1>(* stringv[i])).length());
                     }
                     
                     std::get<2>(* arrayv[i]).second = true;
@@ -4416,7 +4516,7 @@ namespace ss {
                     stringstream ss;
                     size_t j;
                     for (j = 0; j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) - 1; ++j)
-                        ss << std::get<1>(* arrayv[i])[j * 2] << ',';
+                        ss << std::get<1>(* arrayv[i])[j * 2] << pattern();
                     
                     ss << std::get<1>(* arrayv[i])[j * 2];
                     
@@ -4431,7 +4531,7 @@ namespace ss {
             stringstream ss;
             size_t i;
             for (i = 0; i < (size_t)floor(n / 2) - 1; ++i)
-                ss << v[i * 2] << ',';
+                ss << v[i * 2] << pattern();
             
             ss << v[i * 2];
             
@@ -4507,6 +4607,9 @@ namespace ss {
             }
             
             rhs = decode(rhs);
+            
+            if (!is_number(rhs))
+                return string("nan");
             
             try {
                 return rtrim(stod(rhs));
@@ -4665,7 +4768,7 @@ namespace ss {
                             str[0] = rhs[i];
                             str[1] = '\0';
                             
-                            ss << encode(string(str)) << ",";
+                            ss << encode(string(str)) << pattern();
                         }
                         
                         char str[2];
@@ -4705,12 +4808,12 @@ namespace ss {
                                 str[0] = rhs[j];
                                 str[1] = '\0';
                                 
-                                ss << encode(string(str)) << ',';
+                                ss << encode(string(str)) << pattern();
                             }
                             
                             char str[2];
                             str[0] = rhs[rhs.length() - 1];
-                            str[1] = '\0';
+                            str[1] = '\0'; 
                             
                             ss << encode(string(str));
                         }
@@ -4983,7 +5086,7 @@ namespace ss {
                     stringstream ss;
                     size_t j;
                     for (j = 0; j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) - 1; ++j)
-                        ss << std::get<1>(* arrayv[i])[j * 2 + 1] << ',';
+                        ss << std::get<1>(* arrayv[i])[j * 2 + 1] << pattern();
                     
                     ss << std::get<1>(* arrayv[i])[j * 2 + 1];
                     
@@ -4998,7 +5101,7 @@ namespace ss {
             stringstream ss;
             size_t i;
             for (i = 0; i < (size_t)floor(n / 2) - 1; ++i)
-                ss << v[i * 2 + 1] << ',';
+                ss << v[i * 2 + 1] << pattern();
             
             ss << v[i * 2 + 1];
             
@@ -5603,7 +5706,7 @@ namespace ss {
                     if ((std::get<1>(* arrayv[i]).size() - 1) / c != 1) {
                         size_t k;
                         for (k = 1; k < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[k * c + j + 1] << ',';
+                            ss << std::get<1>(* arrayv[i])[k * c + j + 1] << pattern();
                         ss << std::get<1>(* arrayv[i])[k * c + j + 1];
                     }
                     
@@ -5631,7 +5734,7 @@ namespace ss {
                         
                         size_t k;
                         for (k = 0; k < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[k * c + idx + 1] << ',';
+                            ss << std::get<1>(* arrayv[i])[k * c + idx + 1] << pattern();
                         ss << std::get<1>(* arrayv[i])[k * c + idx + 1];
                         
                         return ss.str();
@@ -5658,7 +5761,7 @@ namespace ss {
                     if ((std::get<1>(* arrayv[i]).size() - 1) / c != 1) {
                         size_t l;
                         for (l = 1; l < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++l)
-                            ss << std::get<1>(* arrayv[i])[l * c + k + 1] << ',';
+                            ss << std::get<1>(* arrayv[i])[l * c + k + 1] << pattern();
                         ss << std::get<1>(* arrayv[i])[l * c + k + 1];
                     }
                     
@@ -5679,7 +5782,7 @@ namespace ss {
                 
                 size_t j;
                 for (j = 0; j < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[j * c + idx + 1] << ',';
+                    ss << std::get<1>(* arrayv[i])[j * c + idx + 1] << pattern();
                 ss << std::get<1>(* arrayv[i])[j * c + idx + 1];
                 
                 return ss.str();
@@ -5719,7 +5822,7 @@ namespace ss {
                 if ((n - 1) / c != 1) {
                     size_t j;
                     for (j = 1; j < (n - 1) / c - 1; ++j)
-                        ss << v[j * c + i + 1] << ',';
+                        ss << v[j * c + i + 1] << pattern();
                     ss << v[j * c + i + 1];
                 }
                 
@@ -5751,7 +5854,7 @@ namespace ss {
                     
                     size_t j;
                     for (j = 0; j < (n - 1) / c - 1; ++j)
-                        ss << v[j * c + (size_t)idx + 1] << ',';
+                        ss << v[j * c + (size_t)idx + 1] << pattern();
                     ss << v[j * c + (size_t)idx + 1];
                     
                     return ss.str();
@@ -5781,7 +5884,7 @@ namespace ss {
                 if ((n - 1) / c != 1) {
                     size_t k;
                     for (k = 1; k < (n - 1) / c - 1; ++k)
-                        ss << v[k * c + j + 1] << ',';
+                        ss << v[k * c + j + 1] << pattern();
                     ss << v[k * c + j + 1];
                 }
                 
@@ -5804,7 +5907,7 @@ namespace ss {
             
             size_t i;
             for (i = 0; i < (n - 1) / c - 1; ++i)
-                ss << v[i * c + (size_t)idx + 1] << ',';
+                ss << v[i * c + (size_t)idx + 1] << pattern();
             ss << v[i * c + (size_t)idx + 1];
             
             delete[] v;
@@ -6947,7 +7050,7 @@ namespace ss {
             type_error(2, 4);
             //  double => string
             
-            return EMPTY;
+            return empty();
         });
         
         uov[index_of_oi = uoc++] = new buo("indexof", [this](const string lhs, const string rhs) {
@@ -7750,7 +7853,7 @@ namespace ss {
                     if (c != 1) {
                         size_t k;
                         for (k = 1; k < c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[j * c + k + 1] << ',';
+                            ss << std::get<1>(* arrayv[i])[j * c + k + 1] << pattern();
                         ss << std::get<1>(* arrayv[i])[j * c + k + 1];
                     }
                     
@@ -7778,7 +7881,7 @@ namespace ss {
                         
                         size_t k;
                         for (k = 0; k < c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[idx * c + k + 1] << ',';
+                            ss << std::get<1>(* arrayv[i])[idx * c + k + 1] << pattern();
                         ss << std::get<1>(* arrayv[i])[idx * c + k + 1];
                         
                         return ss.str();
@@ -7805,7 +7908,7 @@ namespace ss {
                     if (c != 1) {
                         size_t l;
                         for (l = 1; l < c - 1; ++l)
-                            ss << std::get<1>(* arrayv[i])[k * c + l + 1] << ',';
+                            ss << std::get<1>(* arrayv[i])[k * c + l + 1] << pattern();
                         ss << std::get<1>(* arrayv[i])[k * c + l + 1];
                     }
                     
@@ -7826,7 +7929,7 @@ namespace ss {
                 
                 size_t j;
                 for (j = 0; j < c - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[idx * c + j + 1] << ',';
+                    ss << std::get<1>(* arrayv[i])[idx * c + j + 1] << pattern();
                 ss << std::get<1>(* arrayv[i])[idx * c + j + 1];
                 
                 return ss.str();
@@ -7866,7 +7969,7 @@ namespace ss {
                 if (c != 1) {
                     size_t j;
                     for (j = 1; j < c - 1; ++j)
-                        ss << v[i * c + j + 1] << ',';
+                        ss << v[i * c + j + 1] << pattern();
                     ss << v[i * c + j + 1];
                 }
                 
@@ -7898,7 +8001,7 @@ namespace ss {
                     
                     size_t j;
                     for (j = 0; j < c - 1; ++j)
-                        ss << v[(size_t)idx * c + j + 1] << ',';
+                        ss << v[(size_t)idx * c + j + 1] << pattern();
                     ss << v[(size_t)idx * c + j + 1];
                     
                     return ss.str();
@@ -7928,7 +8031,7 @@ namespace ss {
                 if (c != 1) {
                     size_t k;
                     for (k = 1; k < c - 1; ++k)
-                        ss << v[j * c + k + 1] << ',';
+                        ss << v[j * c + k + 1] << pattern();
                     ss << v[j * c + k + 1];
                 }
                 
@@ -7951,7 +8054,7 @@ namespace ss {
             
             size_t i;
             for (i = 0; i < c - 1; ++i)
-                ss << v[(size_t)idx * c + i + 1] << ',';
+                ss << v[(size_t)idx * c + i + 1] << pattern();
             ss << v[(size_t)idx * c + i + 1];
             
             delete[] v;
@@ -8077,7 +8180,7 @@ namespace ss {
                     valuev = tmp;
                 }
                 
-                valuev[valuec++] = EMPTY;
+                valuev[valuec++] = empty();
             }
             
             string result = stringify(valuec, valuev);
@@ -8106,7 +8209,6 @@ namespace ss {
         
         uov[tospliced_oi = uoc++] = new tuo("tospliced", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("tospliced");
-            
             return nullptr;
         });
         
@@ -8114,34 +8216,30 @@ namespace ss {
             if (lhs.empty())
                 null_error();
             
-            string* v = new string[lhs.length() + 1];
-            size_t n = parse(v, lhs);
-            
-            delete[] v;
-            
-            if (n == 1) {
+            string valuev[lhs.length() + 1];
+            size_t valuec = parse(valuev, lhs);
+                        
+            if (valuec == 1) {
                 if (is_string(lhs)) {
                     if (rhs.empty())
                         null_error();
                     
                     lhs = decode(lhs);
                     
-                    v = new string[rhs.length() + 1];
-                    n = parse(v, rhs);
-                    delete[] v;
-                    
-                    if (n != 1)
+                    if (ss::is_array(rhs))
                         type_error(0, 4);
                         //  array => string
                     
                     if (is_string(rhs))
                         rhs = decode(rhs);
+                    
                     else if (is_symbol(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(0, 4);
                             //  array => string
                         
                         int i = io_string(rhs);
+                        
                         if (i == -1)
                             rhs = rtrim(get_number(rhs));
                         else {
@@ -8157,33 +8255,24 @@ namespace ss {
                     } else
                         rhs = rtrim(stod(rhs));
                     
-                    rhs = lhs + rhs;
-                    
-                    return encode(rhs);
+                    return encode(lhs + rhs);
                 }
                 
                 if (is_symbol(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
+                        
                         if (i == -1) {
-                            double d = get_number(lhs);
+                            double num = get_number(lhs);
                             
-                            if (rhs.empty())
+                            if (rhs.empty() || is_string(rhs))
                                 type_error(4, 2);
                                 //  string => double
                             
-                            v = new string[rhs.length() + 1];
-                            n = parse(v, rhs);
-                            delete[] v;
-                            
-                            if (n != 1)
+                            if (ss::is_array(rhs))
                                 type_error(0, 2);
                                 //  array => double
-                            
-                            if (is_string(rhs))
-                                type_error(4, 2);
-                                //  string => double
                             
                             if (is_symbol(rhs)) {
                                 if (io_array(rhs) != -1)
@@ -8194,11 +8283,11 @@ namespace ss {
                                     type_error(4, 2);
                                     //  string => double
                                 
-                                d += get_number(rhs);
+                                num += get_number(rhs);
                             } else
-                                d += stod(rhs);
+                                num += stod(rhs);
                             
-                            return rtrim(d);
+                            return rtrim(num);
                         }
                         
                         lhs = std::get<1>(* stringv[i]);
@@ -8208,19 +8297,19 @@ namespace ss {
                         
                         lhs = decode(lhs);
                         
-                        v = new string[rhs.length() + 1];
-                        n = parse(v, rhs);
-                        delete[] v;
-                        
-                        if (n != 1)
+                        if (ss::is_array(rhs))
                             type_error(0, 4);
                             //  array => string
+                        
+                        if (rhs.empty())
+                            null_error();
                         
                         if (is_string(rhs))
                             rhs = decode(rhs);
                         
                         else if (is_symbol(rhs)) {
                             int j = io_string(rhs);
+                            
                             if (j == -1)
                                 rhs = rtrim(get_number(rhs));
                             else {
@@ -8242,52 +8331,45 @@ namespace ss {
                     }
                     
                     if (!rhs.empty()) {
-                        v = new string[rhs.length() + 1];
-                        n = parse(v, rhs);
-                        delete[] v;
-                        
-                        if (n == 1) {
-                            if (is_string(rhs)) {
-                                rhs = decode(rhs);
-                                rhs = encode(rhs);
+                        if (!ss::is_array(rhs)) {
+                            if (is_string(rhs))
+                                rhs = encode(decode(rhs));
                                 
-                            } else if (is_symbol(rhs)) {
+                            else if (is_symbol(rhs)) {
                                 int j = io_array(rhs);
+                                
                                 if (j == -1) {
                                     j = io_string(rhs);
+                                    
                                     if (j == -1)
                                         rhs = rtrim(get_number(rhs));
                                     else {
                                         std::get<2>(* stringv[j]).second = true;
+                                        
                                         rhs = std::get<1>(* stringv[j]);
                                     }
                                 } else {
                                     std::get<2>(* arrayv[j]).second = true;
+                                    
                                     rhs = stringify(std::get<1>(* arrayv[j]));
                                 }
                             } else
                                 rhs = rtrim(stod(rhs));
                         }
-                        
-                        //  array
                     }
                     
                     std::get<2>(* arrayv[i]).second = true;
                     
-                    return stringify(std::get<1>(* arrayv[i])) + ',' + rhs;
+                    return stringify(std::get<1>(* arrayv[i])) + pattern() + rhs;
                 }
                 
-                double d = stod(lhs);
+                double num = stod(lhs);
                 
-                v = new string[rhs.length() + 1];
-                n = parse(v, rhs);
-                delete[] v;
-                
-                if (n != 1)
+                if (ss::is_array(rhs))
                     type_error(0, 2);
                     //  array => double
                 
-                if (is_string(rhs))
+                if (rhs.empty() || is_string(rhs))
                     type_error(4, 2);
                     //  string => double
                 
@@ -8300,36 +8382,34 @@ namespace ss {
                         type_error(4, 2);
                         //  string => double
                     
-                    d += get_number(rhs);
+                    num += get_number(rhs);
                 } else
-                    d += stod(rhs);
+                    num += stod(rhs);
                 
-                return rtrim(d);
+                return rtrim(num);
             }
             
-            lhs.push_back(',');
-            
             if (!rhs.empty()) {
-                string w[rhs.length() + 1];
-                size_t p = parse(w, rhs);
-                
-                if (p == 1) {
-                    if (is_string(rhs)) {
-                        rhs = decode(rhs);
-                        rhs = encode(rhs);
+                if (!ss::is_array(rhs)) {
+                    if (is_string(rhs))
+                        rhs = encode(decode(rhs));
                         
-                    } else if (is_symbol(rhs)) {
+                    else if (is_symbol(rhs)) {
                         int i = io_array(rhs);
+                        
                         if (i == -1) {
                             i = io_string(rhs);
+                            
                             if (i == -1)
                                 rhs = rtrim(get_number(rhs));
                             else {
                                 rhs = std::get<1>(* stringv[i]);
+                                
                                 std::get<2>(* stringv[i]).second = true;
                             }
                         } else {
                             rhs = stringify(std::get<1>(* arrayv[i]));
+                            
                             std::get<2>(* arrayv[i]).second = true;
                         }
                     } else
@@ -8337,7 +8417,7 @@ namespace ss {
                 }
             }
             
-            return lhs + rhs;
+            return lhs + pattern() + rhs;
         });
         //  22
         
@@ -8347,13 +8427,10 @@ namespace ss {
                 
             if (lhs.empty()) {
                 if (rhs.empty())
-                    return rhs;
+                    return empty();
                 
-                if (is_string(rhs)) {
-                    rhs = decode(rhs);
-                    
-                    return encode(rhs);
-                }
+                if (is_string(rhs))
+                    return encode(decode(rhs));
                 
                 if (is_symbol(rhs)) {
                     int i = io_array(rhs);
@@ -8382,16 +8459,13 @@ namespace ss {
                 
                 if (lhs == types[5]) {
                     if (rhs.empty())
-                        return EMPTY;
+                        return empty();
                     
                     if (ss::is_array(rhs))
                         return rhs;
                     
-                    if (is_string(rhs)) {
-                        rhs = decode(rhs);
-                        
-                        return encode(rhs);
-                    }
+                    if (is_string(rhs))
+                        return encode(decode(rhs));
                     
                     if (is_symbol(rhs)) {
                         int i = io_array(rhs);
@@ -8421,18 +8495,16 @@ namespace ss {
                     i = io_string(lhs);
                     
                     if (i == -1) {
-                        double d = get_number(lhs);
+                        double num = get_number(lhs);
                         
-                        if (d)  return rtrim(d);
+                        if (num)
+                            return rtrim(num);
                         
                         if (rhs.empty())
-                            return rhs;
+                            return empty();
                         
-                        if (is_string(rhs)) {
-                            rhs = decode(rhs);
-                            
-                            return encode(rhs);
-                        }
+                        if (is_string(rhs))
+                            return encode(decode(rhs));
                         
                         if (is_symbol(rhs)) {
                             int i = io_array(rhs);
@@ -8462,13 +8534,10 @@ namespace ss {
                     
                     if (lhs.empty()) {
                         if (rhs.empty())
-                            return rhs;
+                            return empty();
                         
-                        if (is_string(rhs)) {
-                            rhs = decode(rhs);
-                            
-                            return encode(rhs);
-                        }
+                        if (is_string(rhs))
+                            return encode(decode(rhs));
                         
                         if (is_symbol(rhs)) {
                             int i = io_array(rhs);
@@ -8498,22 +8567,20 @@ namespace ss {
                 std::get<2>(* arrayv[i]).second = true;
                 
                 if (std::get<1>(* arrayv[i]).size() == 1) {
-                    if (std::get<1>(* arrayv[i])[0].empty()
-                        || (is_string(std::get<1>(* arrayv[i])[0]) && decode(std::get<1>(* arrayv[i])[0]) == types[5])
-                        || (!is_string(std::get<1>(* arrayv[i])[0]) && !stod(std::get<1>(* arrayv[i])[0]))) {
+                    if (std::get<1>(* arrayv[i])[0].empty() || (is_string(std::get<1>(* arrayv[i])[0]) &&
+                        decode(std::get<1>(* arrayv[i])[0]) == types[5]) || (!is_string(std::get<1>(* arrayv[i])[0]) &&
+                         !stod(std::get<1>(* arrayv[i])[0]))) {
                         if (rhs.empty())
                             return rhs;
                         
-                        if (is_string(rhs)) {
-                            rhs = decode(rhs);
-                            
-                            return encode(rhs);
-                        }
+                        if (is_string(rhs))
+                            return encode(decode(rhs));
                         
                         if (is_symbol(rhs)) {
                             i = io_array(rhs);
                             if (i == -1) {
                                 i = io_string(rhs);
+                                
                                 if (i == -1)
                                     return rtrim(get_number(rhs));
                                 
@@ -8536,18 +8603,16 @@ namespace ss {
                 return stringify(std::get<1>(* arrayv[i]));
             }
             
-            double d = stod(lhs);
+            double num = stod(lhs);
             
-            if (d)  return rtrim(d);
+            if (num)
+                return rtrim(num);
             
             if (rhs.empty())
-                return rhs;
+                return empty();
             
-            if (is_string(rhs)) {
-                rhs = decode(rhs);
-                
-                return encode(rhs);
-            }
+            if (is_string(rhs))
+                return encode(decode(rhs));
             
             if (is_symbol(rhs)) {
                 int i = io_array(rhs);
@@ -12259,7 +12324,7 @@ namespace ss {
                 if (num < 1)
                     range_error(rtrim(num));
                 
-                return string((size_t)num - 1, ',');
+                return string((size_t)num - 1, pattern()[0]);
             }
             
             for (size_t i = 0; i < argc; ++i)
@@ -12269,7 +12334,7 @@ namespace ss {
             return stringify(argc, argv);
         }));
         
-        set_function(new ss::function("accept", [this](const size_t argc, string* argv) {
+        set_function(new ss::function("poll", [this](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + to_string(argc));
             
@@ -12290,13 +12355,13 @@ namespace ss {
             if (num < 0)
                 range_error(rtrim(num));
             
-            vector<int> val = api::socket_accept((int)num);
+            vector<int> val = api::socket_poll((int)num);
             
             ostringstream ss;
             
             if (val.size()) {
                 for (size_t i = 0; i < val.size() - 1; ++i)
-                    ss << val[i] << ",";
+                    ss << val[i] << pattern();
                 
                 ss << val[val.size() - 1];
             }
@@ -12403,7 +12468,7 @@ namespace ss {
                 res = api::mysql_connect(argv[0], argv[1], argv[2]);
                 
             } catch (sql::SQLException& e) {
-                throw e;
+                throw exception(e.what());
             }
             
             return to_string(res);
@@ -12427,7 +12492,7 @@ namespace ss {
             argv[0] = decode(argv[0]);
             
             if (argv[0].empty())
-                undefined_error("");
+                undefined_error(empty());
             
             ifstream file;
             
@@ -12445,14 +12510,9 @@ namespace ss {
                 expect_error("0 argument(s), got " + to_string(argc));
             
             string str;
+            getline(cin, str);
             
-            while (1) {
-                getline(cin, str);
-                
-                if (!trim(str).empty())
-                    break;
-            }
-            
+            str = trim(str);
             
             return raw(str);
         }));
@@ -12508,8 +12568,7 @@ namespace ss {
             return encode("undefined");
         }));
         
-        //  replace string empty with NULL
-        set_function(new ss::function("prepareQuery", [this](size_t argc, string* argv) {
+        set_function(new ss::function("preparedQuery", [this](size_t argc, string* argv) {
             if (argc <= 1)
                 expect_error("2 argument(s), got " + to_string(argc));
             
@@ -12564,7 +12623,7 @@ namespace ss {
             sql::ResultSet* res = NULL;
             
             try {
-                res = api::mysql_prepare_query((size_t)num, str, argc, argv);
+                res = api::mysql_prepared_query((size_t)num, str, argc, argv);
                 
             } catch (sql::SQLException& e) {
                 throw exception(e.what());
@@ -12595,7 +12654,7 @@ namespace ss {
             return stringify(arr);
         }));
         
-        set_function(new ss::function("prepareUpdate", [this](size_t argc, string* argv) {
+        set_function(new ss::function("preparedUpdate", [this](size_t argc, string* argv) {
             if (argc <= 1)
                 expect_error("2 argument(s), got " + to_string(argc));
             
@@ -12650,7 +12709,7 @@ namespace ss {
             int res;
             
             try {
-                res = api::mysql_prepare_update((size_t)num, str, argc, argv);
+                res = api::mysql_prepared_update((size_t)num, str, argc, argv);
                 
             } catch (sql::SQLException& e) {
                 throw exception(e.what());
@@ -12759,45 +12818,33 @@ namespace ss {
             argv[0] = decode(argv[0]);
             
             if (argc > 1) {
+                if (ss::is_array(argv[1]))
+                    type_error(0, 4);
+                    //  array => string
+                
+                if (argv[1].empty())
+                    null_error();
+                
+                if (!is_string(argv[1]))
+                    type_error(2, 4);
+                    //  double => string
+                
                 argv[1] = decode(argv[1]);
                 
-                if (argv[1] == "csv") {
-                    string data[1024];
-                    
-                    int n = read_csv(data, argv[0]);
-                    
-                    if (n == -1)
-                        return encode(types[5]);
-                        //  undefined
-                    
-                    string val = stringify(n, data);
-                    
-                    return val;
-                }
+                string data[1024];
                 
-                if (argv[1] == "tsv") {
-                    string data[1024];
-                    
-                    int n = read_tsv(data, argv[0]);
-                    
-                    if (n == -1)
-                        return encode(types[5]);
-                        //  undefined
-                    
-                    string val = stringify(n, data);
-                    
-                    return val;
-                }
-                    
-                if (argv[1] == "txt")
-                    return encode(read_txt(argv[0]));
+                int n = ::ss::read(data, argv[0], argv[1]);
                 
-                undefined_error(encode(argv[1]));
+                if (n == -1)
+                    return encode(types[5]);
+                    //  undefined
+                
+                string val = stringify(n, data);
+                
+                return val;
             }
             
-            //  txt
-            
-            return encode(read_txt(argv[0]));
+            return encode(::ss::read(argv[0]));
         }));
         
         set_function(new ss::function("recv", [this](const size_t argc, string* argv) {
@@ -12951,6 +12998,44 @@ namespace ss {
             return encode(to_string(res));
         }));
         
+        set_function(new ss::function("start", [this](const size_t argc, string* argv) {
+            if (argc != 0)
+                expect_error("0 argument(s), got " + to_string(argc));
+            
+            size_t num = stopwatchc++;
+            
+            stopwatchv.push_back(pair<size_t, time_point<steady_clock>>(num, steady_clock::now()));
+            
+            return to_string(num);
+        }));
+        
+        set_function(new ss::function("stop", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(2, 3);
+                //  double => int
+            
+            if (num < 0)
+                range_error(rtrim(num));
+            
+            size_t i = 0;
+            while (i < stopwatchv.size() && stopwatchv[i].first != num)
+                ++i;
+            
+            if (i == stopwatchv.size())
+                return to_string(-1);
+            
+            num = duration<double>(steady_clock::now() - stopwatchv[i].second).count();
+            
+            stopwatchv.erase(stopwatchv.begin() + i);
+            
+            return rtrim(num);
+        }));
+        
         set_function(new ss::function("update", [this](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + to_string(argc));
@@ -13015,7 +13100,7 @@ namespace ss {
             argv[0] = decode(argv[0]);
             
             if (argv[0].empty())
-                undefined_error("");
+                undefined_error(empty());
             
             string valuev[argv[1].length() + 1];
             size_t valuec = parse(valuev, argv[1]);
@@ -13026,7 +13111,7 @@ namespace ss {
                 
                 argv[1] = decode(argv[1]);
                 
-                write_txt(argv[0], argv[1]);
+                ::ss::write(argv[0], argv[1]);
             } else {
                 if (argc == 2 || argc > 3)
                     expect_error("3 argument(s), got " + to_string(argc));
@@ -13044,21 +13129,11 @@ namespace ss {
                 
                 argv[2] = decode(argv[2]);
                 
-                if (argv[2] == "csv")
-                    write_csv(argv[0], valuec, valuev);
-                else if (argv[2] == "tsv")
-                    write_tsv(argv[0], valuec, valuev);
-                else
-                    undefined_error(argv[2]);
+                ::ss::write(argv[0], valuec, valuev, argv[2]);
             }
             
             return encode(types[5]);
         }));
-        
-        /*
-        for (size_t i = 0; i < functionc; ++i)
-            cout << functionv[i]->name() << endl;
-         // */
     }
 
     int interpreter::io_function(const string symbol) const {
@@ -13924,8 +13999,7 @@ namespace ss {
         string padding = "  ";
         
         while (!stack_trace.empty()) {
-            logger_write(padding + functionv[stack_trace.pop()]->name() + "()\n");
-            
+            logger_write(padding + stack_trace.pop() + "()\n");
             padding += "  ";
         }
         
@@ -13933,17 +14007,12 @@ namespace ss {
     }
 
     void interpreter::reload() {
-        if (buid.empty())
-            expect_error("save");
-            
         restore(buid, false);
         
-        save();
+        buid = backup();
     }
 
-    void interpreter::restore(const string uuid, bool verbose) { restore(uuid, verbose, 0, nullptr); }
-
-    void interpreter::restore(const string uuid, const bool verbose, size_t symbolc, string* symbolv) {
+    void interpreter::restore(const string uuid, bool verbose, size_t symbolc, string* symbolv) {
         //  find backup
         size_t i = 0;
         while (i < backupc && bu_numberv[i] != uuid)
@@ -14142,16 +14211,14 @@ namespace ss {
         --backupc;
     }
 
-    void interpreter::save() { buid = backup(); }
-
     void interpreter::set_array(const string symbol, const size_t index, const string value) {
         if (!is_symbol(symbol))
-            expect_error("symbol");
+            expect_error("symbol: " + symbol);
         
         if (!value.empty() && !is_string(value) && !is_number(value))
             throw error("Unexpected token: " + value);
         
-        size_t i = io_array(symbol);
+        int i = io_array(symbol);
         
         if (i == -1) {
             if (is_defined(symbol))
@@ -14164,7 +14231,6 @@ namespace ss {
                     _arrayv[j] = arrayv[j];
                 
                 delete[] arrayv;
-                
                 arrayv = _arrayv;
             }
             
@@ -14173,7 +14239,6 @@ namespace ss {
             size_t j = arrayc++;
             while (j > 0 && std::get<0>(* arrayv[j]) < std::get<0>(* arrayv[j - 1])) {
                 swap(arrayv[j], arrayv[j - 1]);
-                
                 --j;
             }
             
@@ -14204,6 +14269,98 @@ namespace ss {
         }
     }
 
+    void interpreter::set_array(const string symbol, const string value, bool global) {
+        if (!is_symbol(symbol))
+            expect_error("symbol: " + symbol);
+        
+        string valuev[value.length() + 1];
+        size_t valuec = parse(valuev, value);
+        
+        for (size_t i = 0; i < valuec; ++i) {
+            if (valuev[i].empty())
+                continue;
+            
+            if (is_number(valuev[i]))
+                valuev[i] = rtrim(stod(valuev[i]));
+            
+            else if (is_string(valuev[i]))
+                valuev[i] = encode(decode(valuev[i]));
+            else
+                throw error("Unexpected token: " + value);
+        }
+        
+        std::function<void(void)> _set_array = [&]() {
+            int i = io_array(symbol);
+            
+            if (i == -1) {
+                if (is_defined(symbol))
+                    defined_error(symbol);
+                
+                if (is_pow(arrayc, 2)) {
+                    tuple<string, ss::array<string>, pair<bool, bool>>** _arrayv = new tuple<string, ss::array<string>, pair<bool, bool>>*[arrayc * 2];
+                    
+                    for (size_t j = 0; j < arrayc; ++j)
+                        _arrayv[j] = arrayv[j];
+                    
+                    delete[] arrayv;
+                    arrayv = _arrayv;
+                }
+                
+                arrayv[arrayc] = new tuple<string, ss::array<string>, pair<bool, bool>>(symbol, ss::array<string>(), pair<bool, bool>(false, false));
+                
+                size_t j = arrayc++;
+                while (j > 0 && std::get<0>(* arrayv[j]) < std::get<0>(* arrayv[j - 1])) {
+                    swap(arrayv[j], arrayv[j - 1]);
+                    --j;
+                }
+                
+                std::get<1>(* arrayv[j]).resize(valuec);
+                
+                for (size_t k = 0; k < valuec; ++k)
+                    std::get<1>(* arrayv[j])[k] = valuev[k];
+                
+                insert(symbol);
+                
+                if (array_bst != NULL)
+                    array_bst->close();
+                
+                string symbolv[arrayc];
+                
+                for (j = 0; j < arrayc; ++j)
+                    symbolv[j] = std::get<0>(* arrayv[j]);
+                
+                array_bst = build(symbolv, 0, (int)arrayc);
+            } else {
+                if (std::get<2>(* arrayv[i]).first)
+                    write_error(symbol);
+                
+                std::get<1>(* arrayv[i]).resize(valuec);
+                
+                for (size_t j = 0; j < valuec; ++j)
+                    std::get<1>(* arrayv[i])[j] = valuev[j];
+            }
+        };
+        
+        if (global) {
+            string buid = backup();
+            
+            for (size_t i = 0; i < backupc; ++i) {
+                string _buid = bu_numberv[0];
+                
+                restore(_buid, false);
+                
+                _set_array();
+                
+                std::get<2>(* arrayv[io_array(symbol)]) = pair<bool, bool>(true, false);
+                
+                backup(_buid);
+            }
+            
+            restore(buid);
+        } else
+            _set_array();
+    }
+
     void interpreter::set_function(function_t* new_function) {
         if (is_defined(new_function->name()))
             defined_error(new_function->name());
@@ -14227,7 +14384,6 @@ namespace ss {
         
         while (i > 0 && functionv[i]->name() < functionv[i - 1]->name()) {
             swap(functionv[i], functionv[i - 1]);
-            
             --i;
         }
         
@@ -14242,56 +14398,96 @@ namespace ss {
         function_bst = build(symbolv, 0, (int)functionc);
     }
 
-    void interpreter::set_string(const string symbol, const string value) {
+    void interpreter::set_number(const string symbol, const double value, bool global) {
+        if (global) {
+            string buid = backup();
+            
+            for (size_t i = 0; i < backupc; ++i) {
+                string _buid = bu_numberv[0];
+                
+                restore(_buid, false);
+                
+                arithmetic::set_number(symbol, value);
+                arithmetic::disable_write(symbol);
+                
+                backup(_buid);
+            }
+            
+            restore(buid);
+        } else
+            arithmetic::set_number(symbol, value);
+    }
+
+    void interpreter::set_string(const string symbol, const string value, bool global) {
         if (!is_symbol(symbol))
-            expect_error("symbol");
+            expect_error("symbol: " + symbol);
         
         if (!value.empty() && !is_string(value))
-            undefined_error(value);
+            throw error("Unexpected token: " + value);
         
-        int i = io_string(symbol);
-        
-        if (i == -1) {
-            if (is_defined(symbol))
-                defined_error(symbol);
+        std::function<void(void)> _set_string = [&]() {
+            int i = io_string(symbol);
             
-            if (is_pow(stringc, 2)) {
-                tuple<string, string, pair<bool, bool>>** tmp = new tuple<string, string, pair<bool, bool>>*[stringc * 2];
+            if (i == -1) {
+                if (is_defined(symbol))
+                    defined_error(symbol);
+                
+                if (is_pow(stringc, 2)) {
+                    tuple<string, string, pair<bool, bool>>** tmp = new tuple<string, string, pair<bool, bool>>*[stringc * 2];
+                    
+                    for (size_t j = 0; j < stringc; ++j)
+                        tmp[j] = stringv[j];
+                    
+                    delete[] stringv;
+                    
+                    stringv = tmp;
+                }
+                
+                stringv[stringc] = new tuple<string, string, pair<bool, bool>>(symbol, value, pair<bool, bool>(false, false));
+                
+                size_t j = stringc++;
+                while (j > 0 && std::get<0>(* stringv[j]) < std::get<0>(* stringv[j - 1])) {
+                    swap(stringv[j], stringv[j - 1]);
+                    --j;
+                }
+                
+                insert(symbol);
+                
+                if (string_bst != NULL)
+                    string_bst->close();
+                 
+                string symbolv[stringc];
                 
                 for (size_t j = 0; j < stringc; ++j)
-                    tmp[j] = stringv[j];
+                    symbolv[j] = std::get<0>(* stringv[j]);
                 
-                delete[] stringv;
+                string_bst = build(symbolv, 0, (int)stringc);
+            } else {
+                if (std::get<2>(* stringv[i]).first)
+                    write_error(symbol);
                 
-                stringv = tmp;
+                std::get<1>(* stringv[i]) = value;
+            }
+        };
+        
+        if (global) {
+            string buid = backup();
+            
+            for (size_t i = 0; i < backupc; ++i) {
+                string _buid = bu_numberv[0];
+                
+                restore(_buid, false);
+                
+                _set_string();
+                
+                std::get<2>(* stringv[io_string(symbol)]) = pair<bool, bool>(true, false);
+                
+                backup(_buid);
             }
             
-            stringv[stringc] = new tuple<string, string, pair<bool, bool>>(symbol, value, pair<bool, bool>(false, false));
-            
-            size_t j = stringc++;
-            while (j > 0 && std::get<0>(* stringv[j]) < std::get<0>(* stringv[j - 1])) {
-                swap(stringv[j], stringv[j - 1]);
-                
-                --j;
-            }
-            
-            insert(symbol);
-            
-            if (string_bst != NULL)
-                string_bst->close();
-             
-            string symbolv[stringc];
-            
-            for (size_t j = 0; j < stringc; ++j)
-                symbolv[j] = std::get<0>(* stringv[j]);
-            
-            string_bst = build(symbolv, 0, (int)stringc);
-        } else {
-            if (std::get<2>(* stringv[i]).first)
-                write_error(symbol);
-            
-            std::get<1>(* stringv[i]) = value;
-        }
+            restore(buid);
+        } else
+            _set_string();
     }
 
     int interpreter::split(string* dst, string src) const {
@@ -14310,7 +14506,7 @@ namespace ss {
 
     void interpreter::consume(const string symbol) {
         if (symbol.empty())
-            expect_error("symbol");
+            expect_error("symbol: " + symbol);
         
         int i = io_function(symbol);
         

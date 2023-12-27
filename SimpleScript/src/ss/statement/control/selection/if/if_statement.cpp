@@ -57,11 +57,13 @@ namespace ss {
         return false;
     }
 
-    bool if_statement::compare(const string value) const { return false; }
+    bool if_statement::compare(const string value) const {
+        return false;
+    }
 
     string if_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string if_statement::execute(interpreter* ssu) {
@@ -97,14 +99,7 @@ namespace ss {
             }
         }
         
-        return EMPTY;
-    }
-
-    void if_statement::exit() {
-        this->should_return = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+        return empty();
     }
 
     void if_statement::set_break() {

@@ -23,7 +23,7 @@ using namespace std::chrono;
 namespace ss {
     class interpreter: public logic {
         //  MEMBER FIELDS
-    
+            
         size_t aggregate_oi;        //  lambda
         size_t assignment_oi;       //
         size_t cell_oi;
@@ -56,37 +56,38 @@ namespace ss {
         size_t unary_count;
         
         bst<pair<string, int>>* array_bst = NULL;
-        bst<pair<string, int>>* function_bst = NULL;
-        bst<pair<string, int>>* string_bst = NULL;
-        
         size_t arrayc = 0;
         tuple<string, ss::array<string>, pair<bool, bool>>** arrayv = NULL;
-        
-        size_t functionc = 0;
-        function_t** functionv = NULL;
-        
-        size_t stringc = 0;
-        tuple<string, string, pair<bool, bool>>** stringv = NULL;
         
         size_t backupc = 0;
         pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>>**>** bu_arrayv = NULL;
         pair<size_t, function_t**>** bu_functionv = NULL;
         string* bu_numberv = NULL;
         pair<size_t, tuple<string, string, pair<bool, bool>>**>** bu_stringv = NULL;
+        string buid = empty();
         
-        buo*** buov = NULL;
         size_t buoc[7];
-        
-        operator_t** uov = NULL;
-        size_t uoc = 0;
-        
-        string buid = EMPTY;
+        buo*** buov = NULL;
         
         string current_expression;
         
-        ss::stack<size_t> stack_trace = ss::stack<size_t>();
+        bst<pair<string, int>>* function_bst = NULL;
+        size_t functionc = 0;
+        function_t** functionv = NULL;
+        
+        ss::stack<string> stack_trace = ss::stack<string>();
+        
+        bst<pair<string, int>>* string_bst = NULL;
+        size_t stringc = 0;
+        tuple<string, string, pair<bool, bool>>** stringv = NULL;
+        
+        size_t stopwatchc = 0;
+        vector<pair<size_t, time_point<steady_clock>>> stopwatchv;
         
         string types[8] { "array", "char", "double", "int", "string", "undefined", "dictionary", "table" };
+        
+        size_t uoc = 0;
+        operator_t** uov = NULL;
 
         //  MEMBER FUNCTIONS
         
@@ -125,15 +126,15 @@ namespace ss {
         
         string backup();
         
+        void backup(const string buid);
+        
         void consume(const string symbol);
         
         void drop(const string symbol);
         
         string evaluate(const string expression);
         
-        void exit();
-        
-        ss::array<string> get_array(const string symbol);
+        string get_array(const string symbol, const size_t index);
         
         string get_string(const string symbol);
         
@@ -143,15 +144,17 @@ namespace ss {
         
         void reload();
         
-        void restore(const string uuid, bool verbose = true);
-        
-        void restore(const string uuid, const bool verbose, const size_t symbolc, string* symbolv);
+        void restore(const string uuid, bool verbose = true, size_t symbolc = 0, string* symbolv = nullptr);
         
         void set_array(const string symbol, const size_t index, const string value);
         
+        void set_array(const string symbol, const string value, bool global = false);
+        
         void set_function(function_t* new_function);
         
-        void set_string(const string symbol, const string value);
+        void set_number(const string symbol, const double value, bool global = false);
+        
+        void set_string(const string symbol, const string value, bool global = false);
     };
 }
 

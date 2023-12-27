@@ -39,7 +39,7 @@ namespace ss {
         
         string evaluate(interpreter* ssu) {
             unsupported_error("evaluate()");
-            return EMPTY;
+            return empty();
         }
         
         string execute(interpreter* ssu) {
@@ -50,18 +50,24 @@ namespace ss {
             
             cout << (result.empty() ? "null" : decode(result));
             
-            return EMPTY;
+            return empty();
         }
         
         void exit() { }
         
-        void set_break() { unsupported_error("set_break()"); }
+        void set_break() {
+            unsupported_error("set_break()");
+        }
         
-        void set_continue() { unsupported_error("set_continue()"); }
+        void set_continue() {
+            unsupported_error("set_continue()");
+        }
         
         void set_parent(statement_t* parent) { }
         
-        void set_return(const string result) { unsupported_error("set_return()"); }
+        void set_return(const string result) {
+            unsupported_error("set_return()");
+        }
     };
 }
 

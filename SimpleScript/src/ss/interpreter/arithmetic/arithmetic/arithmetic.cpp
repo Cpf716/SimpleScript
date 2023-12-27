@@ -51,8 +51,6 @@ namespace ss {
 
     arithmetic::arithmetic() {
         initialize();
-        
-        set_number("askBeforeExit", 0);
        
         set_number("E", exp(1));
         disable_write("E");
@@ -60,17 +58,26 @@ namespace ss {
         set_number("false", 0);
         disable_write("false");
         
-        set_number("true", 1);
-        disable_write("true");
-       
-        set_number("pi", 2 * acos(0.0));
-        disable_write("pi");
-       
         set_number("nan", NAN);
         disable_write("nan");
+        
+        set_number("pi", 2 * acos(0.0));
+        disable_write("pi");
+        
+        set_number("true", 1);
+        disable_write("true");
     }
 
     //  MEMBER FUNCTIONS
+
+    size_t arithmetic::add_listener(const string symbol, std::function<void(double)> callback) {
+        if (io_number(symbol) == -1)
+            undefined_error(symbol);
+        
+        listenerv.push_back(tuple<size_t, string, std::function<void(double)>>(listenerc, symbol, callback));
+        
+        return listenerc++;
+    }
 
     void arithmetic::analyze(const size_t n, string* data) const {
         size_t start = 0, end = n;
@@ -308,6 +315,65 @@ namespace ss {
         backupc++;
         
         return _uuid;
+    }
+
+    void arithmetic::backup(const string buid) {
+        size_t i = 0;
+        while (i < backupc && std::get<0>(* bu_symbolv[i]) != buid)
+            ++i;
+        
+        if (i != backupc)
+            defined_error(buid);
+        
+        //  resize backups
+        if (is_pow(backupc, 2)) {
+            //  resize numbers
+            pair<size_t, tuple<string, double, pair<bool, bool>>**>** _bu_numberv = NULL;
+            
+            _bu_numberv = new pair<size_t, tuple<string, double, pair<bool, bool>>**>*[backupc * 2];
+            
+            for (size_t i = 0; i < backupc; ++i)
+                _bu_numberv[i] = bu_numberv[i];
+            
+            delete[] bu_numberv;
+            bu_numberv = _bu_numberv;
+            
+            //  resize symbols
+            tuple<string, size_t, string*>** _bu_symbolv = NULL;
+            
+            _bu_symbolv = new tuple<string, size_t, string*>*[backupc * 2];
+            
+            for (size_t i = 0; i < backupc; ++i)
+                _bu_symbolv[i] = bu_symbolv[i];
+            
+            delete[] bu_symbolv;
+            bu_symbolv = _bu_symbolv;
+        }
+        
+        //  backup numbers
+        tuple<string, double, pair<bool, bool>>** _numberv = NULL;
+        
+        _numberv = new tuple<string, double, pair<bool, bool>>*[pow2(numberc)];
+        
+        for (size_t i = 0; i < numberc; ++i) {
+            string first = std::get<0>(* numberv[i]);
+            double second = std::get<1>(* numberv[i]);
+            pair<bool, bool> third = std::get<2>(* numberv[i]);
+            
+            _numberv[i] = new tuple<string, double, pair<bool, bool>>(first, second, third);
+        }
+
+        bu_numberv[backupc] = new pair<size_t, tuple<string, double, pair<bool, bool>>**>(numberc, _numberv);
+        
+        //  backup symbols
+        string* _symbolv = new string[pow2(symbolc)];
+        
+        for (size_t i = 0; i < symbolc; ++i)
+            _symbolv[i] = symbolv[i];
+        
+        bu_symbolv[backupc] = new tuple<string, size_t, string*>(buid, symbolc, _symbolv);
+        
+        backupc++;
     }
 
     void arithmetic::disable_write(const string symbol) {
@@ -561,7 +627,7 @@ namespace ss {
 
     void arithmetic::insert(const string symbol) {
         if (symbol.empty())
-            expect_error("symbol");
+            expect_error("symbol: " + symbol);
         
         int i = this->io_symbol(symbol);
         
@@ -696,9 +762,18 @@ namespace ss {
         return n;
     }
 
-    void arithmetic::restore(const string uuid, bool verbose) { restore(uuid, verbose, 0, nullptr); }
+    void arithmetic::remove_listener(const size_t listener) {
+        size_t i = 0;
+        while (i < listenerv.size() &&  std::get<0>(listenerv[i]) != listener)
+            ++i;
+        
+        if (i == -1)
+            undefined_error(to_string(listener));
+        
+        listenerv.erase(listenerv.begin() + i);
+    }
 
-    void arithmetic::restore(const string uuid, const bool verbose, size_t symbolc, string* symbolv) {
+    void arithmetic::restore(const string uuid, bool verbose, size_t symbolc, string* symbolv) {
         //  find backup
         size_t i = 0;
         while (i < backupc && std::get<0>(* bu_symbolv[i]) != uuid)
@@ -799,7 +874,7 @@ namespace ss {
     //  precondition:   key is non-empty & double is not nan
     void arithmetic::set_number(const string symbol, const double value) {
         if (!is_symbol(symbol))
-            expect_error("symbol");
+            expect_error("symbol: " + symbol);
         
         int i = io_number(symbol);
         
@@ -808,7 +883,7 @@ namespace ss {
                 defined_error(symbol);
             
             if (is_pow(numberc, 2)) {
-                tuple<string, double, pair<bool, bool>>** tmp = new tuple<string, double, pair<bool, bool>>* [numberc * 2];
+                tuple<string, double, pair<bool, bool>>** tmp = new tuple<string, double, pair<bool, bool>>*[numberc * 2];
                 
                 for (size_t j = 0; j < numberc; ++j)
                     tmp[j] = numberv[j];
@@ -842,6 +917,10 @@ namespace ss {
                 write_error(symbol);
             
             std::get<1>(* numberv[i]) = value;
+            
+            for (size_t j = 0; j < listenerv.size(); ++j)
+                if (std::get<1>(listenerv[j]) == symbol)
+                    std::get<2>(listenerv[j])(value);
         }
     }
 
@@ -1085,7 +1164,7 @@ namespace ss {
 
     void arithmetic::consume(const string symbol) {
         if (symbol.empty())
-            expect_error("symbol");
+            expect_error("symbol: " + symbol);
         
         int i = io_number(symbol);
         
@@ -1107,11 +1186,7 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    int balance(const string str) {
-        return balance(str, 0, str.length());
-    }
-
-    int balance(const string str, const size_t start) {
+    int balance(const string str, size_t start) {
         return balance(str, start, str.length());
     }
 
@@ -1120,9 +1195,11 @@ namespace ss {
         for (size_t i = start; i < end; ++i) {
             if (str[i] == '(')
                 ++p;
+            
             else if (str[i] == ')') {
                 if (!p)
                     return -1;
+                
                 --p;
             }
         }

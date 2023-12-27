@@ -19,9 +19,7 @@ namespace ss {
         
         size_t optionalc = 0;
         
-        string result = EMPTY;
-        
-        bool should_return;
+        string result;
         
         interpreter* ssu = NULL;
         
@@ -46,9 +44,7 @@ namespace ss {
         string evaluate(interpreter* ssu);
         
         string execute(interpreter* ssu);
-        
-        void exit();
-        
+                
         void set_break();
         
         void set_continue();

@@ -6,8 +6,12 @@
 include("@/number/digits")
 
 func main
-    if nrows(argv) !== 2 && nrows(argv) !== 3
+    if nrows(argv) < 2
         expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    if nrows(argv) >= 3
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
     end if
 
     num = ((argv row 1) slice 1, argv cell 1, 0)

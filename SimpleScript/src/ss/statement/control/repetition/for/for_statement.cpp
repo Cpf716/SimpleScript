@@ -59,7 +59,7 @@ namespace ss {
         } else {
             for (size_t i = 0, n = (size_t)floor(tokenc / 2) + 1; i < n; ++i) {
                 if (tokenv[i * 2] == ",") {
-                    tokenv[tokenc] = EMPTY;
+                    tokenv[tokenc] = empty();
                     
                     for (size_t j = tokenc; j > i * 2; --j)
                         swap(tokenv[j], tokenv[j - 1]);
@@ -69,7 +69,7 @@ namespace ss {
             }
             
             if (tokenv[tokenc - 1] == ",")
-                tokenv[tokenc++] = EMPTY;
+                tokenv[tokenc++] = empty();
             
             if (tokenc < 5)
                 expect_error("',' in 'for' statement specifier");
@@ -128,15 +128,17 @@ namespace ss {
         return false;
     }
 
-    bool for_statement::compare(const string value) const { return false; }
+    bool for_statement::compare(const string value) const {
+        return false;
+    }
 
     string for_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string for_statement::execute(interpreter* ssu) {
-        this->should_break = false;
+        this->should_return = false;
         
         string buid = ssu->backup();
         size_t valuec = 0;
@@ -204,11 +206,11 @@ namespace ss {
             for (size_t j = 0; j < this->statementc; ++j) {
                 this->statementv[j]->execute(ssu);
                 
-                if (this->should_break || this->should_continue)
+                if (this->should_return || this->should_continue)
                     break;
             }
             
-            if (this->should_break) {
+            if (this->should_return) {
                 if (this->expressionc == 2)
                     ssu->restore(_buid, true, 1, this->expressionv);
                 else
@@ -236,22 +238,19 @@ namespace ss {
             valuev = NULL;
         }
         
-        return EMPTY;
+        return empty();
     }
 
-    void for_statement::exit() {
-        this->should_break = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+    void for_statement::set_break() {
+        this->should_return = true;
     }
 
-    void for_statement::set_break() { this->should_break = true; }
-
-    void for_statement::set_continue() { this->should_continue = true; }
+    void for_statement::set_continue() {
+        this->should_continue = true;
+    }
 
     void for_statement::set_return(const string result) {
-        this->should_break = true;
+        this->should_return = true;
         this->parent->set_return(result);
     }
 }

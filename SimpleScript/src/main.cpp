@@ -11,15 +11,41 @@ using namespace ss;
 
 //  NON-MEMBER FIELDS
 
+size_t listenerc = 0;
+
+bool ready = false;
+
 interpreter ssu;
+
 file* target;
 
 //  NON-MEMBER FUNCTIONS
 
 void sched_exit() {
-    this_thread::sleep_for(minutes(15));
+    size_t lis = listenerc++;
     
-    target->exit();
+    double num = ssu.get_number("timeout");
+    
+    if (num - (int)num)
+        type_error("double", "int");
+    
+    if (num < 0)
+        ss::range_error(rtrim(num));
+    
+    if (!num)
+        return;
+    
+    this_thread::sleep_for(seconds((int)num));
+    
+    if (lis == listenerc - 1) {
+        target->exit();
+        
+        while (!ready);
+        
+        string timmes = ssu.get_string("timeoutMessage");
+        
+        cout << flush << decode(timmes) << endl;
+    }
 }
 
 void signal_handler(int signum) {
@@ -50,7 +76,7 @@ int main(int argc, char* argv[]) {
     
     logger_write("Building...\n");
     
-    string filename = argc == 1 ? BASE_DIR + "main.txt" : argv[1];
+    string filename = argc == 1 ? base_dir() + "main.txt" : decode(raw(argv[1]));
     
     time_point<steady_clock> beg;
     
@@ -58,7 +84,7 @@ int main(int argc, char* argv[]) {
     
     //  initialize filepath tree
     //  this prevents recursive file inclusion
-    node<string>* root = new node<string>(EMPTY, NULL);
+    node<string>* root = new node<string>(empty(), NULL);
     
     target = new file(filename, root, &ssu);
      
@@ -79,18 +105,20 @@ int main(int argc, char* argv[]) {
     
     if (argc >= 3) {
         for (size_t i = 2; i < argc - 1; i += 1)
-            ss << (is_number(argv[i]) ? rtrim(stod(argv[i])) : encode(argv[i])) << ",";
+            ss << raw(argv[i]) << ",";
         
-        ss << (is_number(argv[argc - 1]) ? rtrim(stod(argv[argc - 1])) : encode(argv[argc - 1]));
+        ss << raw(argv[argc - 1]);
     }
     
     ss << ")";
     
     beg = steady_clock::now();
     
-    thread t1(sched_exit);
+    thread(sched_exit).detach();
     
-    t1.detach();
+    ssu.add_listener("timeout", [&](const double num) {
+        thread(sched_exit).detach();
+    });
     
     try {
         statement(ss.str()).execute(&ssu);
@@ -102,6 +130,8 @@ int main(int argc, char* argv[]) {
         
         throw e;
     }
+    
+    ready = true;
     
     end = steady_clock::now();
     

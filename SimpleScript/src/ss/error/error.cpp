@@ -22,23 +22,39 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    void defined_error(const std::string symbol) { throw error(symbol + " is defined"); }
+    void defined_error(const std::string symbol) {
+        throw error(symbol + " is defined");
+    }
 
-    void expect_error(const std::string subject) { throw error("Expected " + subject); }
+    void expect_error(const std::string subject) {
+        throw error("Expected " + subject);
+    }
 
-    void null_error() { throw error("null"); }
+    void null_error() {
+        throw error("null");
+    }
 
-    void operation_error() { throw error("invalid operation"); }
+    void operation_error() {
+        throw error("invalid operation");
+    }
 
-    void range_error(const std::string message) { throw error("Out of range: " + message); }
+    void range_error(const std::string message) {
+        throw error("Out of range: " + message);
+    }
 
-    void type_error(const std::string lhs, const std::string rhs) { throw error("Cannot convert from " + lhs + " to " + rhs); }
+    void type_error(const std::string lhs, const std::string rhs) {
+        throw error("Cannot convert from " + lhs + " to " + rhs);
+    }
 
-    void write_error(const std::string symbol) { throw error(symbol + " is read-only"); }
+    void write_error(const std::string symbol) {
+        throw error(symbol + " is read-only");
+    }
 
-    void undefined_error(const std::string symbol) { throw error(symbol + " is undefined"); }
+    void undefined_error(const std::string symbol) {
+        throw error(symbol + " is undefined");
+    }
 
-    void unknown_error() { throw error("An unknown error occurred"); }
-
-    void unsupported_error(const std::string subject) { throw error(subject + " is unsupported"); }
+    void unsupported_error(const std::string subject) {
+        throw error(subject + " is unsupported");
+    }
 }

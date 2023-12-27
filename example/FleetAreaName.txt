@@ -5,12 +5,16 @@
 
 include("@/search/string/padStart")
 
+define PATTERN ","
+
+//  FUNCTIONS
+
 func main
     echo "Path:\t"
 
     path = input()
 
-    arr = read(path, "csv")
+    arr = read(path, PATTERN)
 
     assert arr
 
@@ -26,18 +30,18 @@ func main
 
     array sql = "start transaction;"
 
-    a = (arr row 0) indexOf "fleetAreaName"
-    b = (arr row 0) indexOf "storeNumber"
+    fan = (arr row 0) indexOf "fleetAreaName"
+    sn = (arr row 0) indexOf "storeNumber"
 
     for i = 1, i < (count arr - 1) / first arr, i += 1
         stmt = "UPDATE store_org.stores SET fleetAreaName = '{}' WHERE storeNumber = '{}';"
         
-        arr = array((arr cell i, a), (arr cell i, b))
+        arr = array((arr cell i, fan), (arr cell i, sn))
         
-        fleetAreaName = first arr
+        `fleetAreaName` = first arr
         storeNumber = padStart(string(last arr), 4, "0")
         
-        sql += stmt format array(fleetAreaName, storeNumber)
+        sql += stmt format array(`fleetAreaName`, storeNumber)
     end for
 
     sql += "end transaction;"

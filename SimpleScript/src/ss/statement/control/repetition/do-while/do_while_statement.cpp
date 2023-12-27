@@ -55,15 +55,17 @@ namespace ss {
         return false;
     }
 
-    bool do_while_statement::compare(const string value) const { return false; }
+    bool do_while_statement::compare(const string value) const {
+        return false;
+    }
 
     string do_while_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string do_while_statement::execute(interpreter* ssu) {
-        this->should_break = false;
+        this->should_return = false;
         
         while (1) {
             string buid = ssu->backup();
@@ -73,11 +75,11 @@ namespace ss {
             for (size_t i = 0; i < this->statementc; ++i) {
                 this->statementv[i]->execute(ssu);
                 
-                if (this->should_break || this->should_continue)
+                if (this->should_return || this->should_continue)
                     break;
             }
             
-            if (this->should_break || !ss::evaluate(ssu->evaluate(this->expression))) {
+            if (this->should_return || !ss::evaluate(ssu->evaluate(this->expression))) {
                 ssu->restore(buid);
                 break;
             }
@@ -85,22 +87,19 @@ namespace ss {
             ssu->restore(buid);
         }
         
-        return EMPTY;
+        return empty();
     }
 
-    void do_while_statement::exit() {
-        this->should_break = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+    void do_while_statement::set_break() {
+        this->should_return = true;
     }
 
-    void do_while_statement::set_break() { this->should_break = true; }
-
-    void do_while_statement::set_continue() { this->should_continue = true; }
+    void do_while_statement::set_continue() {
+        this->should_continue = true;
+    }
 
     void do_while_statement::set_return(const string result) {
-        this->should_break = true;
+        this->should_return = true;
         this->parent->set_return(result);
     }
 }

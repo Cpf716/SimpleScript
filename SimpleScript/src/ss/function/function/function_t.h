@@ -8,8 +8,8 @@
 #ifndef function_t_h
 #define function_t_h
 
+#include "common.h"
 #include <iostream>
-#include "utility.h"
 
 using namespace std;
 
@@ -36,7 +36,7 @@ namespace ss {
         
         void rename(const string new_name) {
             if (!is_symbol(new_name))
-                expect_error("symbol");
+                expect_error("symbol: " + new_name);
             
             this->_name = new_name;
         }

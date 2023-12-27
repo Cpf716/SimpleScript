@@ -1,6 +1,6 @@
 //  Author: Corey Ferguson
-//  Date:   November 20, 2023
-//  File:   TBD.txt
+//  Date:   December 15, 2023
+//  File:   components.txt
 //
 
 include("@/datetime/data/months")
@@ -8,8 +8,12 @@ include("@/datetime/date/isLeapYear")
 include("@/string")
 
 func main
-    if nrows(argv) !== 2
+    if nrows(argv) < 2
         expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    if nrows(argv) >= 4
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
     end if
 
     timestamp = (argv row 1) slice 1
@@ -22,6 +26,18 @@ func main
         rangeExcept(string(timestamp))
     end if
     
+    flag = 1
+    
+    if nrows(argv) === 3
+        `flag` = (argv row 2) slice 1
+
+        if subtypeOf `flag` !== "int"
+            typeExcept(subtypeOf `flag`, "int")
+        end if
+        
+        flag = `flag`
+    end if
+    
     //  years
 
     seconds = 0, secondsInYear = 0, year = 1970
@@ -32,12 +48,12 @@ func main
 
     timestamp -= seconds
     
-    array str = ""
+    str."year" = 0
     
     year -= 1970
     
     if year
-        str += string(year) + " year" + (year === 1 ? "", "s")
+        str."year" = year
     end if
     
     //  months
@@ -51,28 +67,22 @@ func main
     timestamp -= seconds
     
     if `months`
-        if str
-            str += ", "
-        end if
-    
-        str += string(`months`) + " month" + (`months` === 1 ? "", "s")
+        str."month" = `months`
     end if
     
     //  weeks
     
-    weeks = 0
-    while timestamp >= (weeks + 1) * 604800
-        weeks += 1
-    end while
-    
-    timestamp -= 604800 * weeks
-    
-    if weeks
-        if str
-            str += ", "
-        end if
+    if flag
+        weeks = 0
+        while timestamp >= (weeks + 1) * 604800
+            weeks += 1
+        end while
         
-        str += string(weeks) + " week" + (weeks === 1 ? "", "s")
+        timestamp -= 604800 * weeks
+        
+        if weeks
+            str."week" = weeks
+        end if
     end if
     
     //  days
@@ -85,11 +95,7 @@ func main
     timestamp -= 86400 * days
     
     if days
-        if str
-            str += ", "
-        end if
-        
-        str += string(days) + " day" + (days === 1 ? "", "s")
+        str."day" = days
     end if
 
     days += 1
@@ -104,11 +110,7 @@ func main
     timestamp -= hours * 3600
     
     if hours
-        if str
-            str += ", "
-        end if
-        
-        str += string(hours) + " hour" + (hours === 1 ? "", "s")
+        str."hour" = hours
     end if
     
     //  minutes
@@ -121,24 +123,17 @@ func main
     timestamp -= minutes * 60
     
     if minutes
-        if str
-            str += ", "
-        end if
-        
-        str += string(minutes) + " minute" + (minutes === 1 ? "", "s")
+        str."minute" = minutes
     end if
 
     seconds = timestamp
     
     if seconds
-        if str
-            str += ", "
-        end if
-        
-        str += string(seconds) + " second" + (seconds === 1 ? "", "s")
+        str."second" = seconds
     end if
     
-    return str join ""
+    return str
 end func
 
 return main()
+

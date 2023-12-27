@@ -54,7 +54,7 @@ namespace ss {
 
     string file_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string file_statement::execute(interpreter* ssu) {

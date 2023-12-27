@@ -1,0 +1,78 @@
+//  Author: Corey Ferguson
+//  Date:   December 19, 2023
+//  File:   parseBody.txt
+//
+
+include("@/search/string/trim")
+include("@/table/parse", parseTable)
+
+if typeOf PATTERN === "undefined"
+    define PATTERN ","
+end if
+
+func main
+    if nrows(argv) !== 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    req = (argv row 1) slice 1
+    
+    if typeOf req !== "string"
+        typeExcept(typeOf req, "string")
+    end if
+
+    array body = split(req, "?")
+    
+    body insert 0, array(2, "url")
+    
+    `max` = 1
+    
+    if count body > 3
+        if count body !== 4
+            return 1
+        end if
+    
+        array params = split(last body, "&")
+        
+        body splice (count body - 1)
+        
+        for param in params
+            array key = split(param, "=")
+            array val = ""
+            
+            if count key !== 2
+                return 1
+            end if
+            
+            if (key.0 = trim(first key)) === "url"
+                return 1
+            end if
+                
+            if count last key
+                val = parseTable(last key, PATTERN) slice 2
+            end if
+            
+            if count val > `max`
+                `max` = count val
+            end if
+            
+            key = ((toArray key) insert 0, count val + 1) splice count key
+            body += key + val
+        end for
+        
+        //  normalize
+        for i = 0, i <= count params, i += 1
+            j = body.(i * (`max` + 2))
+            
+            for k = 0, k <= `max` - j, k += 1
+                body insert i * (`max` + 2) + j + k + 1, null
+            end for
+        end for
+    end if
+    
+    body insert 0, `max` + 2
+    
+    return body
+end func
+
+return main()

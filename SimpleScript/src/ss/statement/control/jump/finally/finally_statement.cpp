@@ -48,11 +48,13 @@ namespace ss {
         return false;
     }
 
-    bool finally_statement::compare(const string value) const { return value == "finally"; }
+    bool finally_statement::compare(const string value) const {
+        return value == "finally";
+    }
 
     string finally_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string finally_statement::execute(interpreter* ssu) {
@@ -69,14 +71,7 @@ namespace ss {
         
         ssu->restore(buid);
         
-        return EMPTY;
-    }
-
-    void finally_statement::exit() {
-        this->should_return = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+        return empty();
     }
 
     void finally_statement::set_break() {

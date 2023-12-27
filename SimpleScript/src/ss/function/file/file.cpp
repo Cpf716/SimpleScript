@@ -28,7 +28,7 @@ namespace ss {
             string tokenv[line.length() + 1];
             size_t tokenc = tokenize(tokenv, line, "//");
             
-            tokenc = merge(tokenc, tokenv, "");
+            tokenc = merge(tokenc, tokenv, empty());
             
             if (tokenc == 0)
                 continue;
@@ -60,15 +60,14 @@ namespace ss {
             string* tokenv = new string[pow2(src[i].length() + 1)];
             size_t tokenc = tokenize(tokenv, src[i], "/*");
             
-            tokenc = merge(tokenc, tokenv, "/*");
+            tokenc = merge(tokenc, tokenv, empty());
             
             size_t j = 0;
             while (j < tokenc) {
                 string _tokenv[tokenv[j].length() + 1];
                 size_t _tokenc = tokenize(_tokenv, tokenv[j], "*/");
                 
-                _tokenc = merge(_tokenc, _tokenv, "*/");
-                
+                _tokenc = merge(_tokenc, _tokenv, empty());
                 tokenv[j] = trim(_tokenv[0]);
                 
                 for (size_t k = 1; k < _tokenc; ++k) {
@@ -153,8 +152,10 @@ namespace ss {
                 while (j < n && src[j] != "*/")
                     ++j;
                 
-                if (j == n)
+                if (j == n) {
+                    logger_write("Missing terminating '*/' character\n");
                     --j;
+                }
                 
                 for (size_t k = i; k <= j; ++k) {
                     for (size_t l = i; l < n - 1; ++l)
@@ -365,7 +366,7 @@ namespace ss {
                 }
                 
                 if (tokenv[0].length() > 1 && tokenv[0][0] == '@' && tokenv[0][1] == '/')
-                    tokenv[0] = BASE_DIR + tokenv[0].substr(2) + ".txt";
+                    tokenv[0] = base_dir() + tokenv[0].substr(2) + ".txt";
                 
                 string _buid = ssu->backup();
                 
@@ -868,6 +869,9 @@ namespace ss {
                 } else if (src[i] == "continue") {
                     delete[] tokenv;
                     dst[s] = new continue_statement();
+                } else if (tokenv[0] == "define") {
+                    delete[] tokenv;
+                    dst[s] = new define_statement(ltrim(src[i].substr(6)));
                 } else if (tokenv[0] == "echo") {
                     delete[] tokenv;
                     dst[s] = new echo_statement(ltrim(src[i].substr(4)));
@@ -907,9 +911,7 @@ namespace ss {
         
         ss::array<string> arr = this->marshall(argc, argv);
         
-        for (size_t  i = 0; i < arr.size(); ++i)
-            this->ssu->set_array("argv", i, arr[i]);
-        
+        this->ssu->set_array("argv", stringify(arr));
         this->ssu->evaluate("shrink argv");
         this->ssu->consume("argv");
         
@@ -948,7 +950,7 @@ namespace ss {
             size_t k = stoi(data[i * (j + 1)]);
             
             for (size_t l = 0; l < j - k; ++l)
-                data.insert(i * (j + 1) + k + l + 1, EMPTY);
+                data.insert(i * (j + 1) + k + l + 1, empty());
         }
         
         data.insert(0, to_string(j + 1));
@@ -956,8 +958,14 @@ namespace ss {
         data.insert(2, encode(this->filename));
         
         for (size_t k = 1; k < j; ++k)
-            data.insert(k + 2, EMPTY);
+            data.insert(k + 2, empty());
         
         return data;
+    }
+
+    //  NON-MEMBER FUNCTIONS
+
+    string base_dir() {
+        return "/Library/Application Support/SimpleScript/ssl/";
     }
 }

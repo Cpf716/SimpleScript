@@ -3,26 +3,30 @@
 //  File:   receiver.txt
 //
 
-include("@/datetime/parseTime")
+include("@/table/parse", parseTable)
+
+//  FUNCTIONS
 
 func main
-    sfd = client("127.0.0.1", 8080)
+    echo "Searching...\n"
 
-    res = recv(sfd)
-
-    num = parseTime(gmt())
-
-    path = "/tmp/{}.csv" format num
-
-    write(path, res)
-
-    arr = read(path, "csv")
+    sfd = -1
+    for i = 0, i < 30 && (sfd = client("127.0.0.1", 8080)) === -1, i += 1
+        sleep 1000
+    end for
     
-    remove(path)
+    if sfd === -1
+        echo "Connection to the server timed out.\n"
+        return
+    end if
 
-    for i = 0, i < (count arr - 1) / first arr, i += 1
-        for j = 1, j <= (arr cell i, 0), j += 1
-            echo "{}\t" format (arr cell i, j)
+    array req = recv(sfd)
+    
+    req = parseTable(req)
+
+    for i = 0, i < (count req - 1) / first req, i += 1
+        for j = 1, j <= (req cell i, 0), j += 1
+            echo "{}\t" format (req cell i, j)
         end for
         
         echo "\n"

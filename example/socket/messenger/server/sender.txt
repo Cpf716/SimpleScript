@@ -4,24 +4,34 @@
 //
 
 func main
-    askBeforeExit = true
-
     sfd = server(8080, 1)
-
-    echo "Server listening on port 8080...\n"
 
     array conv = null
 
     while 1
-        while !(conv = accept(sfd))
-            continue
-        end while
+        askBeforeExit = false
+        
+        echo "Searching...\n"
+    
+        i = 0
+        for , i < 30 && !(conv = poll(sfd)), i += 1
+            sleep 1000
+        end for
+        
+        if i === 30
+            echo "Connection to the server timed out.\n"
+            return
+        end if
         
         echo "Connected...\n"
         
+        askBeforeExit = true
+    
         listen(first conv, 8081)
         
         while 1
+            echo "> "
+        
             req = null
             while !(req = input())
                 continue

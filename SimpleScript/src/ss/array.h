@@ -23,18 +23,23 @@ namespace ss {
         array(const ss::array<T>& data) {
             this->_capacity = data.capacity();
             this->_data = new T[capacity()];
-            
-            for (std::size_t i = 0; i < data.size(); ++i)
-                this->_data[i] = data._data[i];
-            
             this->_size = data.size();
+            
+            for (std::size_t i = 0; i < size(); ++i)
+                this->_data[i] = data._data[i];
         }
         
-        array() { _data = new T[this->_capacity = 1]; }
+        array() {
+            _data = new T[this->_capacity = 1];
+        }
         
-        array(const std::size_t capacity) { this->_data = new T[this->_capacity = capacity]; }
+        array(const std::size_t capacity) {
+            this->_data = new T[this->_capacity = capacity];
+        }
         
-        ~array() { delete[] this->_data; }
+        ~array() {
+            delete[] this->_data;
+        }
         
         //  OPERATORS
         
@@ -47,7 +52,9 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        std::size_t capacity() const { return this->_capacity; };
+        std::size_t capacity() const {
+            return this->_capacity;
+        };
         
         void clear() {
             delete[] this->_data;

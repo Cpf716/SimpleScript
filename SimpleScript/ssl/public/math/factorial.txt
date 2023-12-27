@@ -16,7 +16,7 @@ func main
         typeExcept(subtypeOf a, "int")
     end if
 
-    func `factorial` : a, b
+    func `factorial`(a, b)
         if b === 1
             return a
         end if

@@ -17,7 +17,6 @@ namespace ss {
         size_t expressionc;
         string* expressionv = NULL;
         
-        bool should_break;
         bool should_continue;
         
         string* valuev = NULL;
@@ -37,8 +36,6 @@ namespace ss {
         string evaluate(interpreter* ssu);
         
         string execute(interpreter* ssu);
-        
-        void exit();
         
         void set_break();
         

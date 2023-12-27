@@ -12,7 +12,7 @@ namespace ss {
 
     catch_statement::catch_statement(const string symbol, const size_t statementc, statement_t** statementv) {
         if (!is_symbol(symbol))
-            expect_error("symbol");
+            expect_error("symbol: " + symbol);
         
         this->symbol = symbol;
         
@@ -50,9 +50,13 @@ namespace ss {
         return false;
     }
 
-    bool catch_statement::compare(const string value) const { return value == "catch"; }
+    bool catch_statement::compare(const string value) const {
+        return value == "catch";
+    }
 
-    string catch_statement::evaluate(interpreter* ssu) { return encode(symbol); }
+    string catch_statement::evaluate(interpreter* ssu) {
+        return encode(symbol);
+    }
 
     string catch_statement::execute(interpreter* ssu) {
         this->should_return = false;
@@ -64,14 +68,7 @@ namespace ss {
                 break;
         }
         
-        return EMPTY;
-    }
-
-    void catch_statement::exit() {
-        this->should_return = true;
-        
-        for (size_t i = 0; i < statementc; ++i)
-            statementv[i]->exit();
+        return empty();
     }
 
     void catch_statement::set_break() {

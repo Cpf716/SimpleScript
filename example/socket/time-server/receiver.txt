@@ -7,19 +7,37 @@ include("@/datetime/parseTime")
 include("@/datetime/isoString")
 
 func main
+    timeoutMessage = "Disconnected."
+
     while 1
-        sfd = client("127.0.0.1", 8080)
-
+        askBeforeExit = false
+        timeout = 0
+    
+        echo "Searching...\n"
+    
+        sfd = -1
+        for i = 0, i < 30 && (sfd = client("127.0.0.1", 8080)) === -1, i += 1
+            sleep 1000
+        end for
+        
+        if sfd === -1
+            echo "Connection to the server timed out.\n"
+            return
+        end if
+        
         echo "Connected...\n"
-
-        res = null
+        
+        //  askBeforeExit = true
+        timeout = 90
+        
+        req = null
 
         while 1
-            if !(res = recv(sfd))
+            if !(req = recv(sfd))
                 break
             end if
             
-            array arr = split(res, "\n")
+            array arr = split(req, "\n")
             
             for str in arr
                 echo "{}\n" format isoString(parseTime(str))

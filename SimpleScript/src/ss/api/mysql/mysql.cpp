@@ -115,7 +115,7 @@ namespace ss {
             return true;
         }
 
-        sql::ResultSet* mysql_prepare_query(const size_t con, const string sql, const size_t argc, string* argv) {
+        sql::ResultSet* mysql_prepared_query(const size_t con, const string sql, const size_t argc, string* argv) {
             if (conbst == NULL)
                 return NULL;
             
@@ -131,14 +131,10 @@ namespace ss {
                 prep_stmt = conv[i].second->prepareStatement(sql);
                 
                 for (int j = 0; j < argc; ++j) {
-                    try {
-                        double num = stod(argv[j]);
-                        
-                        prep_stmt->setDouble(j + 1, num);
-                        
-                    } catch (invalid_argument& e) {
+                    if (is_number(argv[j]))
+                        prep_stmt->setDouble(j + 1, stod(argv[j]));
+                    else
                         prep_stmt->setString(j + 1, argv[j]);
-                    }
                 }
                 
                 res = prep_stmt->executeQuery();
@@ -152,7 +148,7 @@ namespace ss {
             return res;
         }
 
-        int mysql_prepare_update(const size_t con, const string sql, const size_t argc, string* argv) {
+        int mysql_prepared_update(const size_t con, const string sql, const size_t argc, string* argv) {
             if (conbst == NULL)
                 return -1;
             
@@ -169,14 +165,10 @@ namespace ss {
                 prep_stmt = conv[i].second->prepareStatement(sql);
                 
                 for (int j = 0; j < argc; ++j) {
-                    try {
-                        double num = stod(argv[j]);
-                        
-                        prep_stmt->setDouble(j + 1, num);
-                        
-                    } catch (invalid_argument& e) {
+                    if (is_number(argv[j]))
+                        prep_stmt->setDouble(j + 1, stod(argv[j]));
+                    else
                         prep_stmt->setString(j + 1, argv[j]);
-                    }
                 }
                 
                 res = prep_stmt->executeUpdate();

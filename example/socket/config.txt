@@ -1,0 +1,8 @@
+//  Author: Corey Ferguson
+//  Date:   December 26, 2023
+//  File:   config.txt
+//
+
+//  sudo ln -s /Users/<user>/SimpleScript/example /Library/Application\ Support/SimpleScript
+
+define PATTERN ","

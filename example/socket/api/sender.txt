@@ -3,56 +3,76 @@
 //  File:   apiServer.txt
 //
 
-include("@/datetime/parseTime")
+include("/Library/Application Support/SimpleScript/example/socket/config.txt")
+include("@/search/array/getParam")
+include("@/search/string/parseBody")
+include("@/search/string/startsWith")
+include("@/string")
+include("@/table/encode")
+include("@/table/stringify")
 
-func `query` : sql
-    con = -1
+config()
 
+//  FUNCTIONS
+
+func `close`(con)
+    try
+        close(con)
+    catch exc
+        echo "SQL: {}\n" format exc
+    end try
+end func
+
+func `connect`
     try
         con = connect("tcp://localhost:3306", "root", "root")
         
         setSchema(con, "music_library")
-    catch err
-        echo "SQL: {}\n" format err
-
-        return
+        
+        return con
+    catch exc
+        echo "SQL: {}\n" format exc
+        
+        return exc
     end try
-    
-    echo "{}\n" format sql
-    
-    array res = null
+end func
 
-    try
-        res = query(con, sql)
-    catch err
-        echo "SQL: {}\n" format err
-    end try
+func `query`(sql)
+    con = `connect`()
     
-    try
-        close(con)
-    catch err
-        echo "SQL: {}\n" format err
-    end try
-    
-    res = inverse res
+    array `res` = null
 
-    res insert 1, (array(first res) fill (count res - 1) / first res)
-    
-    num = parseTime(gmt())
-    
-    path = "/tmp/{}.csv" format num
+    if typeOf con === "string"
+        `res` = array(2, "sqlException", con)
+    else
+        echo "{}\n" format sql
 
-    write(path, inverse res, "csv")
+        try
+            `res` = query(con, sql)
+        catch exc
+            echo "SQL: {}\n" format exc
+
+            `res` = array("sqlException", exc)
+        end try
+        
+        `close`(con)
+    end if
     
-    res = read(path)
+    `res` = encode(`res`)
+    
+    path = "/tmp/{}" format parseTime(gmt())
+
+    write(path, `res`, PATTERN)
+    
+    `res` = read(path)
     
     remove(path)
     
-    return res
+    return `res`
 end func
 
 func main
-    askBeforeExit = true
+    timeout = 0
 
     sfd = server(8080, 1024)
 
@@ -60,31 +80,274 @@ func main
 
     while 1
         array conv = null
-        while !(conv = accept(sfd))
+        
+        consume conv
+        
+        if !(conv = poll(sfd))
             continue
-        end while
+        end if
         
         echo "Connected...\n"
         
         cfd = first conv
         
-        req = recv(cfd)
+        array req = recv(cfd)
         
-        if req === "/api/artists"
-            send(cfd, `query`("select * from artists"))
-            
-        else if req === "/api/albums"
-            send(cfd, `query`("select * from albums"))
-            
-        else if req === "/api/songs"
-            send(cfd, `query`("select * from songs"))
-            
-        else if req === "/api/join"
-            send(cfd, `query`("select artist_name, album_year, album_name, song_title from songs join albums on songs.album_id = albums.album_id join artists on albums.artist_id = artists.artist_id"))
-            
+        sw = start()
+        
+        req = parseBody(req)
+        res = "error,404 Not Found"
+        
+        if count req === 1
+            res = "error,parseBody"
         else
-            send(cfd, undefined)
+            url = getParam(req, "url")
+            
+            if startsWith(url, "/api/")
+                url = url substr 5
+        
+                if url === "addAlbum"
+                    artistId = getParam(req, "artistId")
+                    albumYear = getParam(req, "albumYear")
+                    albumName = getParam(req, "albumName")
+                    
+                    con = `connect`()
+
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "insert into albums(artist_id, album_year, album_name) values(?, ?, ?)"
+                        
+                        echo sql + "\n"
+                    
+                        try
+                            res = string(preparedUpdate(con, sql, artistId, albumYear, albumName))
+                        catch exc
+                            echo "SQL: {}\n" format exc
+                            
+                            res = stringify(array(2, "sqlException", exc))
+                        end try
+                        
+                        `close`(con)
+                    end if
+
+                else if url === "addArtist"
+                    artistName = getParam(req, "artistName")
+                    
+                    con = `connect`()
+                    
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "insert into artists(artist_name) values(?)"
+                        
+                        echo sql + "\n"
+                    
+                        try
+                            res = string(preparedUpdate(con, sql, artistName))
+                        catch exc
+                            echo "SQL: {}\n" format exc
+            
+                            res = stringify(array(2, "sqlException", exc))
+                        end try
+                        
+                        `close`(con)
+                    end if
+                    
+                else if url === "addSong"
+                    albumId = getParam(req, "albumId")
+                    songTitle = getParam(req, "songTitle")
+                    
+                    con = `connect`()
+                    
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "insert into songs(artist_id, album_id, song_title) values((select artist_id from albums where album_id = ?), ?, ?)"
+                        
+                        echo sql + "\n"
+                    
+                        try
+                            res = string(preparedUpdate(con, sql, albumId, albumId, songTitle))
+                        catch exc
+                            echo "SQL: {}\n" format exc
+            
+                            res = stringify(array(2, "sqlException", exc))
+                        end try
+                        
+                        `close`(con)
+                    end if
+                    
+                else if url === "findAlbum"
+                    target = getParam(req, "target")
+                    
+                    con = `connect`()
+                    
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "select artists.artist_id, artists.artist_name, albums.album_id, albums.album_year, albums.album_name from albums join artists on albums.artist_id = artists.artist_id where artists.artist_id = ? or artists.artist_name like ? or albums.album_id = ? or albums.album_year = ? or albums.album_name like ?"
+                    
+                        echo sql + "\n"
+                        
+                        array `res` = null
+                    
+                        try
+                            `res` = preparedQuery(con, sql, target, "%" + target + "%", target, target, "%" + target + "%")
+                        catch exc
+                            echo "SQL: {}\n" format exc
+                            
+                            `res` = array("sqlException", exc)
+                        end try
+                        
+                        res = stringify(`res`)
+                        
+                        remove(tmp)
+                        
+                        `close`(con)
+                    end if
+                    
+                else if url === "findArtist"
+                    target = getParam(req, "target")
+                    
+                    con = `connect`()
+                    
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "select artist_id, artist_name from artists where artists.artist_id = ? or artists.artist_name like ?"
+                    
+                        echo sql + "\n"
+                        
+                        array `res` = null
+                    
+                        try
+                            `res` = preparedQuery(con, sql, target, "%" + target + "%")
+                        catch exc
+                            echo "SQL: {}\n" format exc
+                            
+                            `res` = array("sqlException", exc)
+                        end try
+                        
+                        res = stringify(`res`)
+                        
+                        `close`(con)
+                    end if
+                    
+                else if url === "findSong"
+                    target = getParam(req, "target")
+                    
+                    con = `connect`()
+                    
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "select artists.artist_id, artists.artist_name, albums.album_id, albums.album_year, albums.album_name, songs.song_id, songs.song_title from songs join albums on songs.album_id = albums.album_id join artists on albums.artist_id = artists.artist_id where artists.artist_id = ? or artists.artist_name like ? or albums.album_id = ? or albums.album_year = ? or albums.album_name like ? or songs.song_id = ? or songs.song_title like ?"
+                    
+                        echo sql + "\n"
+                        
+                        array `res` = null
+                    
+                        try
+                            `res` = preparedQuery(con, sql, target, "%" + target + "%", target, target, "%" + target + "%", target, "%" + target + "%")
+                        catch exc
+                            echo "SQL: {}\n" format exc
+                            
+                            `res` = array("sqlException", exc)
+                        end try
+                        
+                        res = stringify(`res`)
+                        
+                        `close`(con)
+                    end if
+                    
+                else if url === "getAlbums"
+                    res = `query`("select * from albums")
+                    
+                else if url === "getArtists"
+                    res = `query`("select * from artists")
+                    
+                else if url === "getLibrary"
+                    res = `query`("select artist_name, album_year, album_name, song_title from songs join albums on songs.album_id = albums.album_id join artists on albums.artist_id = artists.artist_id")
+                    
+                else if url === "getSongs"
+                    res = `query`("select * from songs")
+                    
+                else if url === "removeAlbum"
+                    albumId = getParam(req, "albumId")
+                    
+                    con = `connect`()
+
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "delete from albums where album_id = ?"
+                        
+                        echo sql + "\n"
+                    
+                        try
+                            res = string(preparedUpdate(con, sql, albumId))
+                        catch exc
+                            echo "SQL: {}\n" format exc
+                            
+                            res = stringify(array(2, "sqlException", exc))
+                        end try
+                        
+                       `close`(con)
+                    end if
+                    
+                else if url === "removeArtist"
+                    artistId = getParam(req, "artistId")
+                    
+                    con = `connect`()
+                    
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "delete from artists where artist_id = ?"
+                        
+                        echo sql + "\n"
+                    
+                        try
+                            res = string(preparedUpdate(con, sql, artistId))
+                        catch exc
+                            echo "SQL: {}\n" format exc
+                            
+                            res = stringify(array(2, "sqlException", exc))
+                        end try
+                        
+                        `close`(con)
+                    end if
+                    
+                else if url === "removeSong"
+                    songId = getParam(req, "songId")
+                    
+                    con = `connect`()
+
+                    if typeOf con === "string"
+                        res = stringify(array(2, "sqlException", con))
+                    else
+                        sql = "delete from songs where song_id = ?"
+                    
+                        echo sql + "\n"
+                    
+                        try
+                            res = string(preparedUpdate(con, sql, songId))
+                        catch exc
+                            echo "SQL: {}\n" format exc
+                            
+                            res = stringify(array(2, "sqlException", exc))
+                        end try
+                        
+                        `close`(con)
+                    end if
+                end if
+            end if
         end if
+        
+        send(cfd, res)
+        
+        echo "(Done in {}s)\n" format stop(sw)
         
         close(cfd)
         

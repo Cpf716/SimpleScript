@@ -48,11 +48,13 @@ namespace ss {
         return false;
     }
 
-    bool else_statement::compare(const string value) const { return value == "else"; }
+    bool else_statement::compare(const string value) const {
+        return value == "else";
+    }
 
     string else_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string else_statement::execute(interpreter* ssu) {
@@ -65,14 +67,7 @@ namespace ss {
                 break;
         }
         
-        return EMPTY;
-    }
-
-    void else_statement::exit() {
-        this->should_return = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+        return empty();
     }
 
     void else_statement::set_break() {

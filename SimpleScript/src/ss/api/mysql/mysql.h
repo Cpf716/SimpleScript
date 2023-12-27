@@ -9,7 +9,7 @@
 #define mysql_h
 
 #include "bst.h"
-
+#include "common.h"
 #include <cppconn/driver.h>
 #include <cppconn/exception.h>
 #include <cppconn/prepared_statement.h>
@@ -29,9 +29,9 @@ namespace ss {
 
         bool mysql_set_schema(const size_t con, const std::string sch);
 
-        sql::ResultSet* mysql_prepare_query(const size_t con, const string sql, const size_t argc, string* argv);
+        sql::ResultSet* mysql_prepared_query(const size_t con, const string sql, const size_t argc, string* argv);
 
-        int mysql_prepare_update(const size_t con, const string sql, const size_t argc, string* argv);
+        int mysql_prepared_update(const size_t con, const string sql, const size_t argc, string* argv);
 
         int mysql_update(const size_t con, const string sql);
 

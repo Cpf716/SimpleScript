@@ -4,15 +4,27 @@
 //
 
 func main
-    askBeforeExit = true
+    echo "Searching...\n"
 
-    sfd = client("127.0.0.1", 8080)
-
+    sfd = -1
+    for i = 0, i < 30 && (sfd = client("127.0.0.1", 8080)) === -1, i += 1
+        sleep 1000
+    end for
+    
+    if sfd === -1
+        echo "Connection to the server timed out.\n"
+        return
+    end if
+    
     echo "Connected...\n"
-
+    
+    askBeforeExit = true
+    
     listen(sfd, 8082)
 
     while 1
+        echo "> "
+    
         req = null
         while !(req = input())
             continue

@@ -12,9 +12,6 @@
 
 namespace ss {
     class finally_statement: public control_statement {
-        //  MEMBER FIELDS
-        
-        bool should_return;
     public:
         //  CONSTRUCTORS
         
@@ -31,8 +28,6 @@ namespace ss {
         string evaluate(interpreter* ssu);
         
         string execute(interpreter* ssu);
-        
-        void exit();
         
         void set_break();
         

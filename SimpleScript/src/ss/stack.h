@@ -8,7 +8,7 @@
 #ifndef stack_h
 #define stack_h
 
-#include "utility.h"
+#include "common.h"
 
 using namespace std;
 
@@ -22,11 +22,15 @@ namespace ss {
     public:
         //  CONSTRUCTORS
         
-        ~stack() { delete[] this->data; }
+        ~stack() {
+            delete[] this->data;
+        }
         
         //  MEMBER FUNCTIONS
         
-        bool empty() const { return !this->size(); }
+        bool empty() const {
+            return !this->size();
+        }
         
         T pop() {
             T _top = this->top();
@@ -58,7 +62,9 @@ namespace ss {
             ++this->n;
         }
         
-        size_t size() const { return this->n; }
+        size_t size() const {
+            return this->n;
+        }
         
         void swap(stack& x) {
             T* _data = new T[pow2(this->size())];

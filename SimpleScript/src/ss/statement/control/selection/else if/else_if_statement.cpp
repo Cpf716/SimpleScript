@@ -53,9 +53,13 @@ namespace ss {
         return false;
     }
 
-    bool else_if_statement::compare(const string value) const { return value == "elseif"; }
+    bool else_if_statement::compare(const string value) const {
+        return value == "elseif";
+    }
 
-    string else_if_statement::evaluate(interpreter* ssu) { return ssu->evaluate(this->expression); }
+    string else_if_statement::evaluate(interpreter* ssu) {
+        return ssu->evaluate(this->expression);
+    }
 
     string else_if_statement::execute(interpreter* ssu) {
         this->should_return = false;
@@ -67,14 +71,7 @@ namespace ss {
                 break;
         }
             
-        return EMPTY;
-    }
-
-    void else_if_statement::exit() {
-        this->should_return = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+        return empty();
     }
 
     void else_if_statement::set_break() {

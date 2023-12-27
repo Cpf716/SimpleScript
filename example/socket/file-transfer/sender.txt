@@ -4,25 +4,27 @@
 //
 
 func main
-    askBeforeExit = true
+    timeout = 0
 
     sfd = server(8080, 1024)
+    
+    echo "Server listening on port 8080...\n"
 
     array conv = null
     
-    req = read("/Library/Application Support/SimpleScript/data/unit_3_test_data.csv")
+    file = read("/Library/Application Support/SimpleScript/example/data/unit_3_test_data.csv")
     
     while 1
-        while !(conv = accept(sfd))
+        while !(conv = poll(sfd))
             continue
         end while
         
         echo "Connected...\n"
         
         for cfd in conv
-            res = send(cfd, req)
+            res = send(cfd, file)
         
-            echo "Send {}\n" format (res <= 0 ? "failure", "success")
+            echo "Send {}!\n" format (res <= 0 ? "failure", "success")
             
             close(cfd)
         end for

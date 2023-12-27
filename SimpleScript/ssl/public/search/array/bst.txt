@@ -36,7 +36,7 @@ func main
     
     assert typeOf val !== "array"
 
-    func `bst` : arr, beg, end, val
+    func `bst`(arr, val, beg = 0, end = count arr)
         if beg === end
             return -1
         end if
@@ -54,7 +54,7 @@ func main
         `bst`(arr, beg + len + 1, end, val)
     end func
     
-    return `bst`(arr, beg, end, val)
+    return `bst`(arr, val)
 end func
 
 return main()

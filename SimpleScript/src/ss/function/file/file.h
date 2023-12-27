@@ -13,6 +13,7 @@
 #include "catch_statement.h"
 #include "consume_statement.h"
 #include "continue_statement.h"
+#include "define_statement.h"
 #include "do_while_statement.h"
 #include "echo_statement.h"
 #include "else_statement.h"
@@ -63,6 +64,10 @@ namespace ss {
         
         void exit();
     };
+
+    //  NON-MEMBER FIELDS
+
+    string base_dir();
 }
 
 #endif /* file_h */

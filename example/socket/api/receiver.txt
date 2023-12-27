@@ -1,31 +1,49 @@
 //  Author: Corey Ferguson
 //  Date:   November 16, 2023
-//  File:   app.txt
+//  File:   receiver.txt
 //
 
-include("@/datetime/parseTime")
+include("/Library/Application Support/SimpleScript/example/socket/config.txt")
+include("@/string")
+include("@/table/parse", parseTable)
 
-func int
-    while 1
-        num = input()
-        
-        if subtypeOf num === "int"
-            return num
-        end if
-    end while
-end func
+config()
+
+//  FUNCTIONS
 
 func main
-    while 1
-        sfd = client("127.0.0.1", 8080)
+    timeout = 0
+    
+    func int
+        while 1
+            `num` = input()
+            
+            if subtypeOf `num` === "int"
+                return `num`
+            end if
+        end while
+    end func
+    
+    echo "Searching...\n"
 
-        echo "1\t-\tArtists\n"
-        echo "2\t-\tAlbums\n"
-        echo "3\t-\tSongs\n"
-        echo "4\t-\tJoin\n"
+    while 1
+        sfd = -1
+        for i = 0, i < 30 && (sfd = client("127.0.0.1", 8080)) === -1, i += 1
+            sleep 1000
+        end for
+        
+        if sfd === -1
+            echo "Connection to the server timed out.\n"
+            return
+        end if
+        
+        echo "1\t-\tLibrary\n"
+        echo "2\t-\tArtists\n"
+        echo "3\t-\tAlbums\n"
+        echo "4\t-\tSongs\n"
         echo ">\t"
 
-        num = -1
+        num = 0
 
         while 1
             num = int()
@@ -36,26 +54,190 @@ func main
         end while
         
         echo "\n"
+        
+        req = null
+        
+        if num === 1
+            req = "getLibrary"
+        
+        else if num === 2
+            echo "1\t-\tGet Artists\n"
+            echo "2\t-\tFind Artist\n"
+            echo "3\t-\tAdd Artist\n"
+            echo "4\t-\tRemove Artist\n"
+            echo ">\t"
+            
+            while 1
+                num = int()
+            
+                if num >= 1 && num < 5
+                    break
+                end if
+            end while
+            
+            echo "\n"
+            
+            if num === 1
+                req = "getArtists"
+            
+            else if num === 2
+                echo "Target:\t"
+                
+                target = input()
+                
+                req = "findArtist?target={}" format target
+            else if num === 3
+                echo "Artist Name:\t"
+                
+                artistName = string(input())
+                
+                echo "\n"
+                
+                req = "addArtist?artistName={}" format artistName
+            else
+                echo "Artist Id:\t"
+                
+                artistId = 0
+                while (artistId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req = "removeArtist?artistId={}" format artistId
+            end if
+        else if num === 3
+            
+            echo "1\t-\tGet Albums\n"
+            echo "2\t-\tFind Album\n"
+            echo "3\t-\tAdd Album\n"
+            echo "4\t-\tRemove Album\n"
+            echo ">\t"
+            
+            while 1
+                num = int()
+            
+                if num >= 1 && num < 5
+                    break
+                end if
+            end while
+            
+            echo "\n"
+            
+            if num === 1
+                req = "getAlbums"
+                
+            else if num === 2
+                echo "Target:\t"
+                
+                target = input()
+                
+                req = "findAlbum?target={}" format target
+            else if num === 3
+                echo "Artist Id:\t"
+                
+                artistId = 0
+                while (artistId = int()) < 1
+                    continue
+                end while
+                
+                echo "Album Year:\t"
+                
+                albumYear = 0
+                while (albumYear = int()) < 1970
+                    continue
+                end while
+                
+                echo "Album Name:\t"
+                
+                albumName = string(input())
+                
+                echo "\n"
+                
+                req = "addAlbum?artistId={}&albumYear={}&albumName={}" format array(artistId, albumYear, albumName)
+            else
+                echo "Album Id:\t"
+                
+                albumId = 0
+                while (albumId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req = "removeAlbum?albumId={}" format albumId
+            end if
+        else
+            
+            echo "1\t-\tGet Songs\n"
+            echo "2\t-\tFind Song\n"
+            echo "3\t-\tAdd Song\n"
+            echo "4\t-\tRemove Song\n"
+            echo ">\t"
+            
+            while 1
+                num = int()
+            
+                if num >= 1 && num < 5
+                    break
+                end if
+            end while
+            
+            echo "\n"
+            
+            if num === 1
+                req = "getSongs"
+            else if num === 2
+                echo "Target:\t"
+                
+                target = input()
+                
+                req = "findSong?target={}" format target
+                
+            else if num === 3
+                echo "Album Id:\t"
+                
+                albumId = 0
+                while (albumId = int()) < 1
+                    continue
+                end while
+                
+                echo "Song Title:\t"
+                
+                songTitle = string(input())
+                
+                echo "\n"
+                
+                req = "addSong?albumId={}&songTitle={}" format array(albumId, songTitle)
+            else
+                echo "Song Id:\t"
+                
+                songId = 0
+                while (songId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req = "removeSong?songId={}" format songId
+            end if
+        end if
+        
+        sw = start()
 
-        mes = "/api/" + array("artists", "albums", "songs", "join").(num - 1)
-
-        send(sfd, mes)
+        send(sfd, "/api/" + req)
 
         array res = recv(sfd)
+        
+        dif = stop(sw)
 
         if !res
             close(sfd)
-            echo "Disconnected.\n"
+            echo "Disconnected.\n\n"
             continue
         end if
-
-        num = parseTime(gmt())
         
-        path = "/tmp/{}.csv" format num
-
-        write(path, res)
-
-        res = read(path, "csv")
+        res = parseTable(res, PATTERN)
 
         for i = 0, i < (count res - 1) / first res, i += 1
             for j = 1, j <= (res cell i, 0), j += 1
@@ -65,9 +247,8 @@ func main
             echo "\n"
         end for
         
+        echo "(Done in {}s)\n" format dif
         echo "\n"
-        
-        remove(path)
         
         close(sfd)
     end while

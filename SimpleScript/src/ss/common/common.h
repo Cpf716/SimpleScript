@@ -1,12 +1,12 @@
 //
-//  utility.h
+//  common.h
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 11/1/22.
 //
 
-#ifndef utility_h
-#define utility_h
+#ifndef common_h
+#define common_h
 
 #include "array.h"
 #include <cassert>
@@ -15,16 +15,13 @@
 #include <random>
 
 namespace ss {
-    //  NON-MEMBER FIELDS
 
-    //  read from config file
-    const static std::string BASE_DIR = "/Library/Application Support/SimpleScript/ssl/";
-
-    const static std::string EMPTY = "";
+    //  NON-MEMBER FUNCTIONS
 
     std::string decode(const std::string str);
 
-    //  encode comma-separated value
+    std::string empty();
+
     std::string encode(const std::string str);
 
     std::string filename(const std::string filepath);
@@ -53,20 +50,17 @@ namespace ss {
 
     std::size_t merge(std::size_t len, std::string* arr, const std::string pat);
 
-    //  parse comma-separated values
-    std::size_t parse(std::string* dst, const std::string src);
+    std::string pattern();
 
-    std::size_t parse(std::string* dst, const std::string src, const std::string pat);
+    std::size_t parse(std::string* dst, const std::string src, std::string pat = pattern());
 
     std::size_t pow2(const std::size_t num);
 
     std::string raw(const std::string val);
 
-    int read_csv(std::string* dst, const std::string src);
+    std::string read(const std::string filename);
 
-    int read_tsv(std::string* dst, const std::string src);
-
-    std::string read_txt(const std::string filename);
+    int read(std::string* dst, const std::string src, const std::string pat);
 
     std::string* resize(const std::size_t len, const std::size_t newlen, std::string* arr);
 
@@ -76,9 +70,7 @@ namespace ss {
 
     std::size_t split(std::string* dst, const std::string src, const std::string pat);
 
-    std::string stringify(ss::array<std::string> arr);
-
-    std::string stringify(ss::array<std::string> arr, std::size_t beg);
+    std::string stringify(ss::array<std::string> arr, std::size_t beg = 0);
 
     std::string stringify(ss::array<std::string> arr, std::size_t beg, std::size_t end);
 
@@ -96,11 +88,9 @@ namespace ss {
 
     std::string uuid();
 
-    void write_csv(const std::string filename, const std::size_t len, std::string* arr);
+    void write(const std::string filename, const std::string str);
 
-    void write_tsv(const std::string filename, const std::size_t len, std::string* arr);
-
-    void write_txt(const std::string filename, const std::string str);
+    void write(const std::string filename, const std::size_t len, std::string* arr, const std::string pat);
 }
 
 #endif /* commoon_h */

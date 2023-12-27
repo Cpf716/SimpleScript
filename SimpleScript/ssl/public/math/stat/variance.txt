@@ -18,7 +18,8 @@ func main
         arr.i = (arr.i - `mean`) pow 2
     end for
 
-    return sum(arr) / count arr
+    //  sample
+    return sum(arr) / (count arr - 1)
 end func
 
 return main()

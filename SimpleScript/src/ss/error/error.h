@@ -41,8 +41,6 @@ namespace ss {
 
     void undefined_error(const std::string symbol);
 
-    void unknown_error();
-
     void unsupported_error(const std::string subject);
 
     void write_error(const std::string symbol);

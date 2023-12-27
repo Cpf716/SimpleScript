@@ -4,17 +4,24 @@
 //
 
 func main
-    sfd = client("127.0.0.1", 8081)
+    echo "Searching...\n"
 
+    sfd = -1
+    while (sfd = client("127.0.0.1", 8081)) === -1
+        sleep 1000
+    end while
+    
     echo "Connected...\n"
+    
+    askBeforeExit = true
 
     while 1
-        req = null
-        if !(req = recv(sfd))
+        res = null
+        if !(res = recv(sfd))
             break
         end if
         
-        echo req
+        echo res
     end while
 
     echo "Disconnected.\n"

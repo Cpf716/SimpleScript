@@ -30,7 +30,7 @@ func main
     end while
 
     timezone = timezones().(i * 2)
-    timezone = (timezone === "Hawaii" ? "HST", (timezone === "Alaska" ? "AK", (timezone slice 0, 1)) + (`isDaylightSavings` ? "D", "S") + "T")
+    timezone = (timezone === "Alaska" ? "AK", (timezone slice 0, 1)) + (timezone !== "Hawaii" && `isDaylightSavings` ? "D", "S") + "T"
 
     return timezone
 end func

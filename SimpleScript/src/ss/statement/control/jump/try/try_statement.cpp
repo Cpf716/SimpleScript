@@ -61,7 +61,7 @@ namespace ss {
 
     string try_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string try_statement::execute(interpreter* ssu) {
@@ -107,14 +107,7 @@ namespace ss {
                 this->statementv[this->statementc - 1]->execute(ssu);
         }
         
-        return EMPTY;
-    }
-
-    void try_statement::exit() {
-        this->should_return = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+        return empty();
     }
 
     void try_statement::set_break() {

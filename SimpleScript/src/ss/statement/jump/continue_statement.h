@@ -20,33 +20,47 @@ namespace ss {
         
         continue_statement() { }
         
-        void close() { delete this; }
+        void close() {
+            delete this;
+        }
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const { return true; }
+        bool analyze(interpreter* ssu) const {
+            return true;
+        }
         
-        bool compare(const string value) const { return false; }
+        bool compare(const string value) const {
+            return false;
+        }
         
         string evaluate(interpreter* ssu) {
             unsupported_error("evaluate()");
-            return EMPTY;
+            return empty();
         }
         
         string execute(interpreter* ssu) {
             set_continue();
-            return EMPTY;
+            return empty();
         }
         
         void exit() { }
         
-        void set_break() { unsupported_error("set_break()"); }
+        void set_break() {
+            unsupported_error("set_break()");
+        }
         
-        void set_continue() { parent->set_continue(); }
+        void set_continue() {
+            parent->set_continue();
+        }
         
-        void set_parent(statement_t* parent) { this->parent = parent; }
+        void set_parent(statement_t* parent) {
+            this->parent = parent;
+        }
         
-        void set_return(const string result) { unsupported_error("set_return()"); }
+        void set_return(const string result) {
+            unsupported_error("set_return()");
+        }
     };
 }
 

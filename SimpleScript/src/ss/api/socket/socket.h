@@ -66,15 +66,15 @@ namespace ss {
 
         void handler_server_accept();
 
-        std::vector<int> socket_accept(const int fildes);
-
         int socket_client(const std::string src, const int port);
-
+    
         int socket_close();
 
         int socket_close(const int fildes);
 
         void socket_listen(const int fildes, const int port);
+    
+        std::vector<int> socket_poll(const int fildes);
 
         std::string socket_recv(const int fildes);
 

@@ -38,9 +38,13 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        T data() const { return this->_data; }
+        T data() const {
+            return this->_data;
+        }
         
-        node* parent() const { return this->_parent; }
+        node* parent() const {
+            return this->_parent;
+        }
     };
 }
 

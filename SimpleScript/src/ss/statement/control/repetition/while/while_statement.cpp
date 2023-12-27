@@ -57,11 +57,11 @@ namespace ss {
 
     string while_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
-        return EMPTY;
+        return empty();
     }
 
     string while_statement::execute(interpreter* ssu) {
-        this->should_break = false;
+        this->should_return = false;
         
         while (1) {
             string buid = ssu->backup();
@@ -76,34 +76,33 @@ namespace ss {
             for (size_t i = 0; i < this->statementc; ++i) {
                 this->statementv[i]->execute(ssu);
                 
-                if (this->should_break || this->should_continue)
+                if (this->should_return || this->should_continue)
                     break;
             }
             
             ssu->restore(buid);
             
-            if (this->should_break)
+            if (this->should_return)
                 break;
         }
         
-        return EMPTY;
+        return empty();
     }
 
-    void while_statement::exit() {
-        this->should_break = true;
-        
-        for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->exit();
+    bool while_statement::compare(const string value) const {
+        return false;
     }
 
-    bool while_statement::compare(const string value) const { return false; }
+    void while_statement::set_break() {
+        this->should_return = true;
+    }
 
-    void while_statement::set_break() { this->should_break = true; }
-
-    void while_statement::set_continue() { this->should_continue = true; }
+    void while_statement::set_continue() {
+        this->should_continue = true;
+    }
 
     void while_statement::set_return(const string result) {
-        this->should_break = true;
+        this->should_return = true;
         this->parent->set_return(result);
     }
 }

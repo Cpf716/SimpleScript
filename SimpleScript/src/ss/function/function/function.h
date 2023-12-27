@@ -23,12 +23,15 @@ namespace ss {
             this->_function = function;
         }
         
-        void close() { delete this; }
+        void close() {
+            delete this;
+        }
         
         //  MEMBER FUNCTIONS
         
         string call(const size_t argc, string* argv) {
-            //  consume();
+            //  this->consume();
+            
             return this->_function(argc, argv);
         }
     };

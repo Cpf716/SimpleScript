@@ -5,6 +5,7 @@
 ### Environment
 
 #### array(num: int): array | null
+#### array(argv: any...): array
 
 Precondition:   `num >= 1`<br>
 Postcondition:  returns an array of null values with count `num`
@@ -28,6 +29,16 @@ Postcondition:  returns the current local time string
 
 Precondition:   none<br>
 Postcondition:  returns a pseudorandom, unsigned integer
+
+#### start(): int
+
+Precondition:   none<br>
+Postcondition:  starts a new stopwatch and returns its descriptor
+
+#### stop(sw: int): double
+
+Precondition:   `sw >= 0`
+Postcondition:  returns the stopwatch time (seconds)
 
 <!-- -->
 
@@ -59,15 +70,11 @@ Postcondition:  writes `data` to file; returns `undefined`
 
 ### Sockets
 
-#### accept(fildes: int): array | null
-
-Precondition:   `fildes >= 0`<br>
-Postcondition:  returns an array of file descriptors identifying clients of the server `fildes`, otherwise returns `null` if the server has no clients or an error occurs
-
 #### client(src: string, port: int): int
+#### client(src: string, port: int, timeout: int): int
 
-Precondition:   `count src > 0 && port >= 0`<br>
-Postcondition:  returns a file descriptor identifying the server at `src` and `port`, otherwise throws socket_exception if an error occurs (blocking)
+Precondition:   `count src > 0 && port >= 0 && timeout >= 0`<br>
+Postcondition:  returns a file descriptor identifying the server at `src` and `port`, otherwise returns -1 if `timeout` expires or throws socket_exception if an error occurs (blocking)
 
 #### close(fildes: int): int
 
@@ -78,6 +85,11 @@ Postcondition:  returns 0 upon successful closure of the socket `fildes`, otherw
 
 Precondition:   `fildes >= 0 && port >= 0`<br>
 Postcondition:  listens to messages received by the socket `fildes` and forwards them to `port`; returns the file descriptor identifying the listener, otherwise throws socket_exception if an error occurs
+
+#### poll(fildes: int): array | null
+
+Precondition:   `fildes >= 0`<br>
+Postcondition:  returns an array of file descriptors identifying clients of the server `fildes`, otherwise returns `null` if the server has no clients or an error occurs
 
 #### recv(fildes: int): string
 
@@ -108,12 +120,12 @@ Postcondition:  returns the MySQL connection to `hostName` given `userName` and 
 Precondition:   `con >= 0`<br>
 Postcondition:  returns 0 upon successful closure of the MySQL connection, otherwise returns -1 or throws an exception if an error occurs
 
-#### prepareQuery(con: int, sql: string, args...): table
+#### preparedQuery(con: int, sql: string, args...): table
 
 Precondition:   `con >= 0 && count sql > 0`<br>
 Postcondition:  returns the result set of a prepared statement query, otherwise returns `undefined` if no such connection exists or throws an exception if an error occurs
 
-#### prepareUpdate(con: int, sql: string, args...): int
+#### preparedUpdate(con: int, sql: string, args...): int
 
 Precondition:   `con >= 0 && count sql > 0`<br>
 Postcondition:  returns the number of rows updated by a prepared statement update, otherwise returns -1 if no such connection exists or throws an exception if an error occurs

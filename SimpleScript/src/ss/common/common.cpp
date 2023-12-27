@@ -1,16 +1,22 @@
 //
-//  utility.cpp
+//  common.cpp
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 11/4/22.
 //
 
-#include "utility.h"
+#include "common.h"
 
 namespace ss {
     //  NON-MEMBER FIELDS
 
-    const std::string delimeters[] = { "!", "(", ")", ",", ".", ":", ";" };
+    const std::string delim[] = { "!", "(", ")", ",", ".", ":", ";" };
+
+    const std::pair<std::string, char> escape[] = {
+        std::pair<std::string, char>("\\n", '\n'),
+        std::pair<std::string, char>("\\r", '\r'),
+        std::pair<std::string, char>("\\t", '\t')
+    };
 
     //  NON-MEMBER FUNCTIONS
 
@@ -29,6 +35,7 @@ namespace ss {
         
         for (std::size_t j = l; j < n - 1; ++j)
             std::swap(dst[j], dst[j + 1]);
+        
         --n;
         
         int i = l, r = -1;
@@ -52,48 +59,24 @@ namespace ss {
             //  BEGIN
             
             for (int j = l; j < (int)n - 2; ++j) {
-                std::size_t k = 0;
-                while (k < 2 && dst[j + k] == ("\\t")[k])
-                    ++k;
-                
-                if (k == 2) {
-                    dst[j] = '\t';
+                std::size_t k;
+                for (k = 0; k < sizeof(escape) / sizeof(escape)[0]; ++k) {
+                    std::size_t m = 0;
+                    while (m < 2 && dst[j + m] == escape[k].first[m])
+                        ++k;
                     
-                    for (std::size_t m = j + 1; m < n - 1; ++m)
-                        std::swap(dst[m], dst[m + 1]);
-                    --n;
+                    if (m == 2) {
+                        dst[j] = escape[k].second;
+                        
+                        for (std::size_t p = j + 1; p < n - 1; ++p)
+                            std::swap(dst[p], dst[p + 1]);
+                        
+                        --n;
+                        
+                        break;
+                    }
                 }
             }
-            
-            for (int j = l; j < (int)n - 2; ++j) {
-                std::size_t k = 0;
-                while (k < 2 && dst[j + k] == ("\\n")[k])
-                    ++k;
-                
-                if (k == 2) {
-                    dst[j] = '\n';
-                    
-                    for (std::size_t m = j + 1; m < n - 1; ++m)
-                        std::swap(dst[m], dst[m + 1]);
-                    --n;
-                }
-            }
-            
-            //  /*
-            for (int j = l; j < (int)n - 2; ++j) {
-                std::size_t k = 0;
-                while (k < 2 && dst[j + k] == ("\\r")[k])
-                    ++k;
-                
-                if (k == 2) {
-                    dst[j] = '\r';
-                    
-                    for (std::size_t m = j + 1; m < n - 1; ++m)
-                        std::swap(dst[m], dst[m + 1]);
-                    --n;
-                }
-            }
-             // */
             
             //  END
             
@@ -107,6 +90,7 @@ namespace ss {
                     for (m = 0; m < (k - j) / 2; ++m) {
                         for (std::size_t p = j; p < n - 1; ++p)
                             std::swap(dst[p], dst[p + 1]);
+                        
                         --n;
                     }
                     
@@ -116,56 +100,31 @@ namespace ss {
         } else {
             for (std::size_t j = --r; j < n - 1; ++j)
                 std::swap(dst[j], dst[j + 1]);
+            
             --n;
             --r;
             
             //  BEGIN
             
             for (int j = l; j < r; ++j) {
-                std::size_t k = 0;
-                while (k < 2 && dst[j + k] == ("\\t")[k])
-                    ++k;
-                
-                if (k == 2) {
-                    dst[j] = '\t';
+                std::size_t k;
+                for (k = 0; k < sizeof(escape) / sizeof(escape)[0]; ++k) {
+                    std::size_t m = 0;
+                    while (m < 2 && dst[j + m] == escape[k].first[m])
+                        ++m;
                     
-                    for (std::size_t m = j + 1; m < n - 1; ++m)
-                        std::swap(dst[m], dst[m + 1]);
-                    --n;
+                    if (m == 2) {
+                        dst[j] = escape[k].second;
+                        
+                        for (std::size_t p = j + 1; p < n - 1; ++p)
+                            std::swap(dst[p], dst[p + 1]);
+                        
+                        --n;
+                        
+                        break;
+                    }
                 }
             }
-            
-            for (int j = l; j < r; ++j) {
-                int k = 0;
-                while (k < 2 && dst[j + k] == ("\\n")[k])
-                    ++k;
-                
-                if (k == 2) {
-                    dst[j] = '\n';
-                    
-                    for (std::size_t m = j + 1; m < n - 1; ++m)
-                        std::swap(dst[m], dst[m + 1]);
-                    --n;
-                    --r;
-                }
-            }
-            
-            //  /*
-            for (int j = l; j < r; ++j) {
-                int k = 0;
-                while (k < 2 && dst[j + k] == ("\\r")[k])
-                    ++k;
-                
-                if (k == 2) {
-                    dst[j] = '\r';
-                    
-                    for (std::size_t m = j + 1; m < n - 1; ++m)
-                        std::swap(dst[m], dst[m + 1]);
-                    --n;
-                    --r;
-                }
-            }
-             // */
             
             //  END
                         
@@ -179,6 +138,7 @@ namespace ss {
                     for (m = 0; m < (k - j) / 2; ++m) {
                         for (std::size_t p = j; p < n - 1; ++p)
                             std::swap(dst[p], dst[p + 1]);
+                        
                         --n;
                         --r;
                     }
@@ -199,6 +159,10 @@ namespace ss {
         }
         
         return std::string(dst);
+    }
+
+    std::string empty() {
+        return "";
     }
 
     std::string encode(const std::string str) {
@@ -393,33 +357,18 @@ namespace ss {
         if (str.empty())
             return false;
         
-        std::size_t e, s = 0;
-        while (s < str.length() && str[s] != '`')
-            ++s;
-                
-        if (s == str.length()) {
-            e = str.length();
-            s = 0;
-        } else {
-            if (s)
-                return false;
-            
-            e = ++s;
-            while (e < str.length() && str[e] != '`')
-                ++e;
-            
-            if (e != str.length() - 1)
-                return false;
-        }
-        
-        if (str[s] != '_' && !isalpha(str[s]))
-            return false;
-        
-        std::size_t i = s + 1;
-        while (i < e && (str[i] == '_' || isalnum(str[i])))
+        std::size_t i = 0;
+        while (i < floor(str.length() / 2) && str[i] == '`' && str[str.length() - i - 1] == '`')
             ++i;
         
-        return i == e;
+        if (str[i] != '_' && !isalpha(str[i]))
+            return false;
+        
+        std::size_t j = i + 1;
+        while (j < str.length() - i && (str[j] == '_' || isalnum(str[i])))
+            ++i;
+        
+        return j == str.length() - i;
     }
 
     bool is_table(ss::array<std::string> arr) {
@@ -521,9 +470,7 @@ namespace ss {
         return len;
     }
 
-    std::size_t parse(std::string* dst, const std::string src) { return parse(dst, src, ","); }
-
-    std::size_t parse(std::string* dst, const std::string src, const std::string pat) {
+    std::size_t parse(std::string* dst, const std::string src, std::string pat) {
         std::size_t n = split(dst, src, pat);
         
         n = merge(n, dst, pat);
@@ -532,6 +479,10 @@ namespace ss {
             dst[i] = trim(dst[i]);
      
         return n;
+    }
+
+    std::string pattern() {
+        return ",";
     }
 
     std::size_t pow2(const std::size_t num) {
@@ -548,11 +499,29 @@ namespace ss {
         if (is_number(val))
             return rtrim(stod(val));
         
-        return encode(val);
+        size_t n = val.length();
+        char str[n + 1];
+        
+        strcpy(str, val.c_str());
+        
+        //  remove escape character
+        size_t i;
+        for (i = 0; i < n - 1; ++i) {
+            if (val[i] != '\\' || val[i + 1] != ' ')
+                continue;
+            
+            for (size_t j = i; j < n; ++j)
+                std::swap(str[j], str[j + 1]);
+            
+            --n;
+        }
+        
+        return encode(std::string(str));
     }
 
-    int read_csv(std::string* dst, const std::string src) {
+    int read(std::string* dst, const std::string src, const std::string pat) {
         assert(!src.empty());
+        assert(!pat.empty());
         
         std::ifstream file;
         
@@ -576,7 +545,7 @@ namespace ss {
         std::size_t i = 0, m = 0;
         while (i < n) {
             std::string valuev[dst[i].length() + 1];
-            std::size_t valuec = parse(valuev, dst[i]);
+            std::size_t valuec = parse(valuev, dst[i], pat);
             
             if (valuec > m)
                 m = valuec;
@@ -608,7 +577,7 @@ namespace ss {
         for (std::size_t i = 0; i < p; ++i) {
             std::size_t j = stoi(dst[i * m]);
             for (std::size_t k = 0; k < m - j - 1; ++k) {
-                dst[n] = EMPTY;
+                dst[n] = empty();
                 
                 for (std::size_t l = n; l > i * m + j + k + 1; --l)
                     std::swap(dst[l], dst[l - 1]);
@@ -627,91 +596,17 @@ namespace ss {
         return n;
     }
 
-    int read_tsv(std::string* dst, const std::string src) {
-        assert(!src.empty());
-        
+    std::string read(const std::string filename) {
         std::ifstream file;
         
-        file.open(src);
+        file.open(filename);
         
         if (!file)
-            return -1;
-        
-        int n = 0;
-        
-        std::string line;
-        while (getline(file, line))
-            dst[n++] = line;
-        
-        n = (int)merge(n, dst, "\n");
-        
-        std::size_t p = n;
-
-        std::size_t i = 0, j = 0;
-        while (i < n) {
-            std::string valuev[dst[i].length() + 1];
-            std::size_t valuec = parse(valuev, dst[i], "\t");
-
-            if (valuec > j)
-                j = valuec;
-
-            dst[n] = std::to_string(valuec);
-
-            for (std::size_t k = n; k > i; --k)
-                std::swap(dst[k], dst[k - 1]);
-
-            ++n;
-            ++i;
-
-            dst[i] = raw(valuev[0]);
-
-            for (std::size_t k = 1; k < valuec; ++k) {
-                dst[n] = raw(valuev[k]);
-
-                for (std::size_t l = n; l > i + k; --l)
-                    std::swap(dst[l], dst[l - 1]);
-
-                ++n;
-            }
-
-            i += valuec;
-        }
-
-        ++j;
-
-        for (i = 0; i < p; ++i) {
-            std::size_t k = stoi(dst[i * j]);
-            for (std::size_t l = 0; l < j - k - 1; ++l) {
-                dst[n] = EMPTY;
-
-                for (std::size_t m = n; m > i * j + k + l + 1; --m)
-                    std::swap(dst[m], dst[m - 1]);
-
-                ++n;
-            }
-        }
-
-        dst[n] = std::to_string(j);
-
-        for (i = n; i > 0; --i)
-            std::swap(dst[i], dst[i - 1]);
-
-        ++n;
-        
-        return n;
-    }
-
-    std::string read_txt(const std::string filename) {
-        std::ifstream fil;
-        
-        fil.open(filename);
-        
-        if (!fil)
             return encode("undefined");
         
         std::ostringstream ss;
         
-        ss << fil.rdbuf();
+        ss << file.rdbuf();
         
         return ss.str();
     }
@@ -774,19 +669,17 @@ namespace ss {
         return n;
     }
 
-    std::string stringify(ss::array<std::string> arr) { return stringify(arr, 0, arr.size()); }
-
     std::string stringify(ss::array<std::string> arr, std::size_t beg) { return stringify(arr, beg, arr.size() - beg); }
 
     std::string stringify(const std::size_t len, std::string* arr) {
         if (!len)
-            return EMPTY;
+            return empty();
         
         std::stringstream ss;
         
         if (len) {
             for (std::size_t i = 0; i < len - 1; ++i)
-                ss << arr[i] << ',';
+                ss << arr[i] << pattern();
             
             ss << arr[len - 1];
         }
@@ -800,7 +693,7 @@ namespace ss {
         if (len) {
             std::size_t i, n = beg + len;
             for (i = beg; i < n - 1; ++i)
-                ss << arr[i] << ',';
+                ss << arr[i] << pattern();
             
             ss << arr[i];
         }
@@ -858,25 +751,25 @@ namespace ss {
             s = 0;  std::size_t e = 0;
             while (e < dst[i].length()) {
                 std::size_t j;
-                for (j = 0; j < sizeof (delimeters) / sizeof(delimeters[0]); ++j) {
-                    if (e + delimeters[j].length() > dst[i].length())
+                for (j = 0; j < sizeof (delim) / sizeof(delim[0]); ++j) {
+                    if (e + delim[j].length() > dst[i].length())
                         continue;
                     
                     std::size_t k = 0;
-                    while (k < delimeters[j].length() && dst[i][e + k] == delimeters[j][k])
+                    while (k < delim[j].length() && dst[i][e + k] == delim[j][k])
                         ++k;
                     
-                    if (k == delimeters[j].length())
+                    if (k == delim[j].length())
                         break;
                 }
                 
-                if (j == sizeof (delimeters) / sizeof(delimeters[0]))
+                if (j == sizeof (delim) / sizeof(delim[0]))
                     ++e;
                 else {
                     if (s != e)
                         tokenv[tokenc++] = dst[i].substr(s, e - s);
                     
-                    tokenv[tokenc++] = delimeters[j];
+                    tokenv[tokenc++] = delim[j];
                     s = ++e;
                 }
             }
@@ -898,7 +791,7 @@ namespace ss {
             i += tokenc;
         }
         
-        n = merge(n, dst, EMPTY);
+        n = merge(n, dst, empty());
         
         int p = 0;
         for (i = 0; i < n; ++i) {
@@ -1000,7 +893,7 @@ namespace ss {
         return os.str();
     }
 
-    void write_csv(const std::string filename, const std::size_t len, std::string* arr) {
+    void write(const std::string filename, const std::size_t len, std::string* arr, const std::string pat) {
         assert(!filename.empty());
         
         std::ofstream file;
@@ -1013,62 +906,47 @@ namespace ss {
                 
                 value = decode(value);
                 
-                std::size_t k = 0;
-                while (k < value.length() && value[k] != '\"' && value[k] != ',')
-                    ++k;
+                std::size_t k;
+                for (k = 0; k < value.length(); ++k) {
+                    if (value[k] == '\"')
+                        break;
+                    
+                    if (k > value.length() - pat.length())
+                        continue;
+                    
+                    size_t l = 0;
+                    while (l < pat.length() && pat[l] == value[k + l])
+                        ++l;
+                    
+                    if (l == pat.length())
+                        break;
+                }
                 
                 if (k != value.length())
                     value = encode(value);
                 
-                file << value << ",";
+                file << value << pat;
             }
             
             std::string value = arr[i * stoi(arr[0]) + stoi(arr[i * stoi(arr[0]) + 1]) + 1];
             
             value = decode(value);
             
-            std::size_t j = 0;
-            while (j < value.length() && value[j] != '\"' && value[j] != ',')
-                ++j;
-            
-            if (j != value.length())
-                value = encode(value);
+            std::size_t j;
+            for (j = 0; j < value.length(); ++j) {
+                if (value[j] == '\"')
+                    break;
                 
-            file << value << "\n";
-        }
-        
-        file.close();
-    }
-    void write_tsv(const std::string filename, const std::size_t len, std::string* arr) {
-        assert(!filename.empty());
-        
-        std::ofstream file;
-        
-        file.open(filename);
-        
-        for (std::size_t i = 0; i < (len - 1) / stoi(arr[0]); ++i) {
-            for (std::size_t j = 0; j < stoi(arr[i * stoi(arr[0]) + 1]) - 1; ++j) {
-                std::string value = arr[i * stoi(arr[0]) + j + 2];
-                
-                value = decode(value);
+                if (j > value.length() - pat.length())
+                    continue;
                 
                 std::size_t k = 0;
-                while (k < value.length() && value[k] != '\t' && value[k] != '\"')
+                while (k < pat.length() && pat[k] == value[j + k])
                     ++k;
                 
-                if (k != value.length())
-                    value = encode(value);
-                
-                file << value << "\t";
+                if (k == pat.length())
+                    break;
             }
-            
-            std::string value = arr[i * stoi(arr[0]) + stoi(arr[i * stoi(arr[0]) + 1]) + 1];
-            
-            value = decode(value);
-            
-            std::size_t j = 0;
-            while (j < value.length() && value[j] != '\t' && value[j] != '\"')
-                ++j;
             
             if (j != value.length())
                 value = encode(value);
@@ -1079,7 +957,7 @@ namespace ss {
         file.close();
     }
 
-    void write_txt(const std::string filename, const std::string str) {
+    void write(const std::string filename, const std::string str) {
         std::ofstream file;
         
         file.open(filename);
