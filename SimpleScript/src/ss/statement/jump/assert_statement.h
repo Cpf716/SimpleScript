@@ -15,6 +15,10 @@ namespace ss {
         //  MEMBER FIELDS
         
         string expression;
+
+        statement_t* parent = NULL;
+        
+        bool should_return = false;
     public:
         //  CONSTRUCTORS
         
@@ -25,13 +29,19 @@ namespace ss {
             this->expression = expression;
         }
         
-        void close() { delete this; }
+        void close() {
+            delete this;
+        }
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const { return false; }
+        bool analyze(interpreter* ssu) const {
+            return false;
+        }
         
-        bool compare(const string value) const { return false; }
+        bool compare(const int value) const {
+            return false;
+        }
         
         string evaluate(interpreter* ssu) {
             unsupported_error("evaluate()");
@@ -39,13 +49,27 @@ namespace ss {
         }
         
         string execute(interpreter* ssu) {
-            if (!ss::evaluate(ssu->evaluate(expression)))
-                throw error("Assertion failed: (" + expression + ")");
+            string value = ssu->evaluate(expression);
+            
+            if (should_return || ss::evaluate(value))
+                return empty();
+
+            this->parent->set_level(0);
+            throw ss::exception("Assertion failed: (" + expression + ")");
                 
             return empty();
         }
         
         void exit() { }
+        
+        size_t get_level() const {
+            unsupported_error("get_level()");
+            return 0;
+        };
+        
+        void kill() {
+            this->should_return = true;
+        }
         
         void set_break() {
             unsupported_error("set_break()");
@@ -55,7 +79,13 @@ namespace ss {
             unsupported_error("set_continue()");
         }
         
-        void set_parent(statement_t* parent) { }
+        void set_level(const size_t level) {
+            unsupported_error("set_level()");
+        }
+        
+        void set_parent(statement_t* parent) {
+            this->parent = parent;
+        }
         
         void set_return(const string result) {
             unsupported_error("set_return()");

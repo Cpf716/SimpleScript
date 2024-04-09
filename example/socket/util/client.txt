@@ -1,0 +1,50 @@
+//  Author: Corey Ferguson
+//  Date:   March 27, 2024
+//  File:   client.txt
+//
+
+include((dir = "@/exception/") + "expectExcept")
+include(dir + "rangeExcept")
+include("@/string")
+
+func `connectClient`(timeout)
+    sfd = -1
+    for i = 0, i < timeout && (sfd = client("127.0.0.1", port)) === -1, i += 1
+        sleep 1000
+    end for
+    
+    return sfd
+end func
+
+func main
+    if nrows(argv) >= 3
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    port = (argv row 1) slice 1
+    
+    if subtypeOf port !== "int"
+        typeExcept(subtypeOf port, "int")
+    end if
+    
+    if port < 0
+        rangeExcept(string(port))
+    end if
+
+    sfd = `connectClient`(10)
+    
+    if sfd === -1
+        echo "Still loading...\n"
+        
+        sfd = `connectClient`(20)
+        
+        if sfd === -1
+            echo "Connection to the server timed out.\n\n"
+            return -1
+        end if
+    end if
+    
+    return sfd
+end func
+
+return main()

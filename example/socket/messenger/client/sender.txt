@@ -3,39 +3,41 @@
 //  File:   sender.txt
 //
 
+include("@/string")
+
 func main
-    echo "Searching...\n"
-
-    sfd = -1
-    for i = 0, i < 30 && (sfd = client("127.0.0.1", 8080)) === -1, i += 1
-        sleep 1000
-    end for
-    
-    if sfd === -1
-        echo "Connection to the server timed out.\n"
-        return
-    end if
-    
-    echo "Connected...\n"
-    
-    askBeforeExit = true
-    
-    listen(sfd, 8082)
-
     while 1
-        echo "> "
+        setAskBeforeExit(false)
     
-        req = null
-        while !(req = input())
-            continue
+        sfd = -1
+        while (sfd = client("127.0.0.1", 8080)) === -1
+            sleep 1000
         end while
+        
+        echo "Connected...\n"
+        
+        setAskBeforeExit(true)
+        
+        listen(sfd, 8082)
 
-        if send(sfd, req) <= 0
-            break
-        end if
+        while 1
+            echo "> "
+        
+            req = null
+        
+            while !(req = string(input() ?? ""))
+                continue
+            end while
+
+            if req === "exit" || send(sfd, req) <= 0
+                break
+            end if
+        end while
+        
+        closeSocket(sfd)
+        
+        echo "Disconnected.\n"
     end while
-
-    echo "Disconnected.\n"
 end func
 
 main()

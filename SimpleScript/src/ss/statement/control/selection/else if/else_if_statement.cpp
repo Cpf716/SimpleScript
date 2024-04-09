@@ -16,8 +16,8 @@ namespace ss {
         
         this->expression = expression;
         
-        if (statementc && (statementv[statementc - 1]->compare("catch") ||
-            statementv[statementc - 1]->compare("finally")))
+        if (statementc && (statementv[statementc - 1]->compare(1) ||
+            statementv[statementc - 1]->compare(5)))
             expect_error("expression");
         
         this->statementc = statementc;
@@ -53,8 +53,8 @@ namespace ss {
         return false;
     }
 
-    bool else_if_statement::compare(const string value) const {
-        return value == "elseif";
+    bool else_if_statement::compare(const int value) const {
+        return value == 3;
     }
 
     string else_if_statement::evaluate(interpreter* ssu) {

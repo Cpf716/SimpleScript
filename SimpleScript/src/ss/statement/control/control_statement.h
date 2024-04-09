@@ -16,9 +16,22 @@ namespace ss {
         
         void exit() {
             this->should_return = true;
+            this->parent->exit();
+        }
+        
+        size_t get_level() const {
+            return this->parent->get_level();
+        };
+        
+        void kill() {
+            this->should_return = true;
             
             for (size_t i = 0; i < this->statementc; ++i)
-                this->statementv[i]->exit();
+                this->statementv[i]->kill();
+        }
+        
+        void set_level(const size_t level) {
+            this->parent->set_level(level);
         }
         
         void set_parent(statement_t* parent) {

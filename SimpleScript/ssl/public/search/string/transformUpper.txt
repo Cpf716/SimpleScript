@@ -16,6 +16,10 @@ func main
         typeExcept(typeOf str, "string")
     end if
     
+    if str === null
+        throw "null"
+    end if
+    
     arr = toArray str
     
     for i = 0, i < count arr, i += 1

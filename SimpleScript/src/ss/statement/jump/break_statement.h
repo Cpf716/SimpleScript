@@ -30,8 +30,8 @@ namespace ss {
             return true;
         }
         
-        bool compare(const string value) const {
-            return value == "break";
+        bool compare(const int value) const {
+            return value == 0;
         }
         
         string evaluate(interpreter* ssu) {
@@ -46,12 +46,23 @@ namespace ss {
         
         void exit() { }
         
+        size_t get_level() const {
+            unsupported_error("get_level()");
+            return 0;
+        };
+        
+        void kill() { }
+        
         void set_break() {
             parent->set_break();
         }
         
         void set_continue() {
             unsupported_error("set_continue()");
+        }
+        
+        void set_level(const size_t level) {
+            unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) {

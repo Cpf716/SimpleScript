@@ -26,12 +26,10 @@ namespace ss {
     class arithmetic {
         //  MEMBER FIELDS
         
-        size_t listenerc = 0;
-        vector<tuple<size_t, string, std::function<void(double)>>> listenerv;
-        
         bst<pair<string, int>>* number_bst = NULL;
         bst<pair<string, int>>* symbol_bst = NULL;
         
+        size_t _backupc = 0;
         size_t backupc = 0;
         pair<size_t, tuple<string, double, pair<bool, bool>>**>** bu_numberv = NULL;
         
@@ -78,7 +76,7 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        size_t add_listener(const string symbol, std::function<void(double)> callback);
+        void add_symbol(const string symbol);
         
         string backup();
         
@@ -86,25 +84,21 @@ namespace ss {
         
         void consume(const string symbol);
         
-        void disable_write(const string symbol);
-        
-        void drop(const string symbol);
-        
         double evaluate(const string expression);
         
         double get_number(const string symbol);
-        
-        void insert(const string symbol);
         
         int io_number(const string symbol) const;
         
         bool is_defined(const string symbol) const;
         
-        void remove_listener(const size_t listener);
+        void remove_symbol(const string symbol);
         
-        void restore(const string uuid, bool verbose = true, size_t symbolc = 0, string* symbolv = nullptr);
+        void restore(const string uuid, bool verbose = true, bool update = true, size_t symbolc = 0, string* symbolv = nullptr);
         
         void set_number(const string symbol, const double new_value);
+        
+        void set_read_only(const string symbol, const bool value);
     };
 
     //  NON-MEMBER FUNCTIONS

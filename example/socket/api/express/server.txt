@@ -1,0 +1,62 @@
+//  Author: Corey Ferguson
+//  Date:   March 27, 2024
+//  File:   server.txt
+//
+
+include("@/exception/expectExcept")
+include("@/exception/rangeExcept")
+include("@/string")
+
+func main
+    if nrows(argv) < 2
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    if nrows(argv) >= 4
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    backlog = ((argv row 1) slice 1, (argv cell 1, 0))
+    
+    if subtypeOf backlog !== "int"
+        typeExcept(subtypeOf backlog, "int")
+    end if
+    
+    if backlog < 0
+        rangeExcept(string(backlog))
+    end if
+    
+    verbose = false
+    
+    if nrows(argv) === 3
+        _verbose = ((argv row 2) slice 1, (argv cell 2, 0))
+        
+        if typeOf _verbose !== "number"
+            typeExcept(typeOf _verbose, "number")
+        end if
+        
+        verbose = _verbose
+    end if
+    
+    port = 8080
+    
+    while 1
+        try
+            sfd = server(port, backlog)
+                
+            if verbose
+                echo "Server listening on port {}...\n" format port
+            end if
+            
+            return sfd
+        catch exc
+            if parse exc === 48
+                port += 1
+            else
+                throw exc
+            end if
+        end try
+    end while
+end func
+
+return main()

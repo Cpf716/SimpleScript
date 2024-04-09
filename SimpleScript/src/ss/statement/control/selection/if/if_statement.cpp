@@ -14,12 +14,12 @@ namespace ss {
                 
         this->expression = expression;
         
-        if (statementc && (statementv[statementc - 1]->compare("catch") ||
-            statementv[statementc - 1]->compare("finally")))
+        if (statementc && (statementv[statementc - 1]->compare(1) ||
+            statementv[statementc - 1]->compare(5)))
             expect_error("expression");
         
         index = 0;
-        while (index < statementc && !statementv[index]->compare("elseif") && !statementv[index]->compare("else"))
+        while (index < statementc && !statementv[index]->compare(3) && !statementv[index]->compare(2))
             ++index;
         
         this->statementc = statementc;
@@ -57,7 +57,7 @@ namespace ss {
         return false;
     }
 
-    bool if_statement::compare(const string value) const {
+    bool if_statement::compare(const int value) const {
         return false;
     }
 
@@ -87,7 +87,7 @@ namespace ss {
             for (i = this->index; i < this->statementc; ++i) {
                 buid = ssu->backup();
                 
-                bool flag = !this->statementv[i]->compare("elseif") || ss::evaluate(this->statementv[i]->evaluate(ssu));
+                bool flag = !this->statementv[i]->compare(3) || ss::evaluate(this->statementv[i]->evaluate(ssu));
                 
                 if (flag)
                     this->statementv[i]->execute(ssu);

@@ -1,0 +1,63 @@
+//  Author: Corey Ferguson
+//  Date:   March 27, 2024
+//  File:   padDecimal.txt
+//
+
+include((dir = "@/exception/") + "expectExcept")
+include(dir + "rangeExcept")
+include("@/string")
+
+func main
+    if nrows(argv) !== 3
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+    
+    num = ((argv row 1) slice 1, (argv cell 1, 0))
+    
+    if typeOf num !== "number"
+        typeExcept(typeOf num, "number")
+    end if
+    
+    len = ((argv row 2) slice 1, (argv cell 2, 0))
+    
+    if subtypeOf len !== "int"
+        typeExcept(subtypeOf len, "int")
+    end if
+    
+    if len < 0
+        rangeExcept(string(len))
+    end if
+
+    array arr = string(num)
+
+    if !len
+        return arr
+    end if
+
+    if num - floor(num)
+        x = num - floor(num)
+        
+        i = 0
+        for , x - floor(x), i += 1
+            x *= 10
+        end for
+        
+        if len - i >= 1
+            array padStr = array(len - i)
+            
+            arr += padStr fill 0
+        end if
+        
+        //  x * 10 pow (-1 * i)
+    else
+        arr += "."
+        
+        array padStr = array(len)
+        
+        arr += padStr fill 0
+    end if
+
+    return arr join ""
+end func
+
+return main()

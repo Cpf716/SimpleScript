@@ -3,8 +3,9 @@
 //  File:   parseBody.txt
 //
 
-include("@/search/string/trim")
-include("@/table/parse", parseTable)
+include("@/array/table/parseTable")
+include((dir = "@/search/string/") + "split")
+include(dir + "trim")
 
 if typeOf PATTERN === "undefined"
     define PATTERN ","
@@ -20,57 +21,56 @@ func main
     if typeOf req !== "string"
         typeExcept(typeOf req, "string")
     end if
+    
+    if req === null
+        throw "null"
+    end if
 
     array body = split(req, "?")
     
-    body insert 0, array(2, "url")
+    if count body > 2
+        return 1
+    end if
     
-    `max` = 1
+    array params = (count body === 1 ? null, last body)
     
-    if count body > 3
-        if count body !== 4
-            return 1
-        end if
+    body = array(2, "url", first body)
+    ncols = 1
     
-        array params = split(last body, "&")
-        
-        body splice (count body - 1)
-        
+    if first params !== null
+        params = split(first params, "&")
+    
         for param in params
-            array key = split(param, "=")
+            array pair = split(param, "=")
             array val = ""
             
-            if count key !== 2
+            if count pair !== 2 || first pair === "url"
                 return 1
             end if
             
-            if (key.0 = trim(first key)) === "url"
-                return 1
-            end if
-                
-            if count last key
-                val = parseTable(last key, PATTERN) slice 2
+            if count last pair
+                val = parseTable(last pair, PATTERN) slice 2
             end if
             
-            if count val > `max`
-                `max` = count val
+            if count val > ncols
+                ncols = count val
             end if
             
-            key = ((toArray key) insert 0, count val + 1) splice count key
-            body += key + val
+            pair = array(count val + 1, first pair) + val
+            body += pair
         end for
         
         //  normalize
         for i = 0, i <= count params, i += 1
-            j = body.(i * (`max` + 2))
+            j = body.(i * (ncols + 2))
             
-            for k = 0, k <= `max` - j, k += 1
-                body insert i * (`max` + 2) + j + k + 1, null
+            for k = 0, k <= ncols - j, k += 1
+                body insert i * (ncols + 2) + j + k + 1, null
             end for
         end for
     end if
     
-    body insert 0, `max` + 2
+    body insert 0, ncols + 2
     
     return body
 end func

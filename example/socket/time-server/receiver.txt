@@ -3,37 +3,42 @@
 //  File:   receiver.txt
 //
 
-include("@/datetime/parseTime")
-include("@/datetime/isoString")
+include((dir = "@/datetime/") + "parseTime")
+include(dir + "isoString")
+include("/Library/Application Support/SimpleScript/example/socket/util/client.txt", connectClient)
 
 func main
-    timeoutMessage = "Disconnected."
+    if nrows(argv) >= 3
+        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+    end if
 
-    while 1
-        askBeforeExit = false
-        timeout = 0
-    
-        echo "Searching...\n"
-    
-        sfd = -1
-        for i = 0, i < 30 && (sfd = client("127.0.0.1", 8080)) === -1, i += 1
-            sleep 1000
-        end for
+    port = 8080
+
+    if nrows(argv) === 2
+        _port = (argv row 1) slice 1
         
-        if sfd === -1
-            echo "Connection to the server timed out.\n"
-            return
+        if subtypeOf _port !== "int"
+            typeExcept(subtypeOf _port)
         end if
         
-        echo "Connected...\n"
+        if _port < 0
+            rangeExcept(string(_port))
+        end if
         
-        //  askBeforeExit = true
-        timeout = 90
+        port = _port
+    end if
+
+    while 1
+        sfd = connectClient(port)
+        
+        if sfd === -1
+            return
+        end if
         
         req = null
 
         while 1
-            if !(req = recv(sfd))
+            if !(req = recv(sfd, 30))
                 break
             end if
             
@@ -43,10 +48,10 @@ func main
                 echo "{}\n" format isoString(parseTime(str))
             end for
         end while
-
-        echo "Disconnected.\n"
         
-        close(sfd)
+        closeSocket(sfd)
+        
+        echo "\n"
     end while
 end func
 

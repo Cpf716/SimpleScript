@@ -48,14 +48,14 @@ namespace ss {
             logger_write("Unreachable code\n");
                 
         if (this->statementv[i]->analyze(ssu) &&
-            (this->statementv[i]->compare("break") ||
-             this->statementv[i]->compare("return")))
+            (this->statementv[i]->compare(0) ||
+             this->statementv[i]->compare(6)))
             logger_write("'do while' statement will execute at most once\n");
         
         return false;
     }
 
-    bool do_while_statement::compare(const string value) const {
+    bool do_while_statement::compare(const int value) const {
         return false;
     }
 

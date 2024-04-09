@@ -58,12 +58,9 @@ func main
     end while
 
     timestamp -= minutes * 60
-
     seconds = timestamp
     
-    `time` = (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
-    
-    return `time`
+    return (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
 end func
 
 return main()

@@ -32,43 +32,43 @@ namespace ss {
                 dst[len++] = src.substr(beg, end - beg);
         }
         
-        beg = 0;
-        for (std::size_t end = 0; end < dst[3].length(); ++end) {
-            if (dst[3][end] == ':') {
-                dst[len] = dst[3].substr(beg, end - beg);
-                beg = end + 1;
-                
-                for (size_t i = len; i > len - 1; --i)
-                    std::swap(dst[i], dst[i - 1]);
-                
-                ++len;
-            }
-        }
-        
-        dst[len] = dst[3].substr(beg);
-        
-        for (size_t i = len; i > len - 1; --i)
-            std::swap(dst[i], dst[i - 1]);
-        
-        for (size_t i = 3; i < len; ++i)
+        for (size_t i = 0; i < len - 1; ++i)
             std::swap(dst[i], dst[i + 1]);
+        
+        --len;
+        
+        for (size_t i = len - 1; i > 0; --i)
+            std::swap(dst[i], dst[i - 1]);
         
         std::string months[12] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
         
-        size_t i = 0;
+        std::size_t i = 0;
         while (i < 12 && months[i] != dst[1])
             ++i;
         
+        dst[1] = std::to_string(i + 1);
+        
+        if (dst[1].length() == 1)
+            dst[1] = "0" + dst[1];
+            
+        char str[dst[3].length() + 1];
+        
+        strcpy(str, dst[3].c_str());
+        
+        for (i = 0; i < 2; ++i)
+            str[i * 3 + 2] = 46;
+        
+        dst[3] = std::string(str);
+        
         std::ostringstream filename;
         
-        filename << "/tmp/";
+        filename << "/tmp/SimpleScript.";
         
-        filename << dst[6] << (i + 1) << dst[2];
+        for (i = 0; i < 2; ++i)
+            filename << dst[i] << "-";
         
-        for (size_t j = 0; j < 3; ++j)
-            filename << dst[j + 3];
-        
-        filename << ".log";
+        filename << dst[i] << " ";
+        filename << dst[3] << ".log";
         
         std::ofstream file;
         

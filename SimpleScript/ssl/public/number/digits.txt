@@ -15,6 +15,9 @@ func main
     if subtypeOf num !== "int"
         typeExcept(subtypeOf num, "int")
     end if
+    
+    sign = num / abs num
+    num *= sign
 
     array arr = null, n = 0
 
@@ -32,6 +35,8 @@ func main
         
         num = floor (num / 10)
     end while
+    
+    arr.0 *= sign
 
     return arr
 end func

@@ -3,6 +3,8 @@
 //  File:   addMinutes.txt
 //
 
+include("@/exception/expectExcept")
+
 func main
     if nrows(argv) !== 3
         expectExcept("2 argument(s), got {}" format (nrows(argv)))

@@ -172,7 +172,7 @@ namespace ss {
             ++i;
         
         if (i != n)
-            expect_error("expression");
+            throw error("Unexpected token: */");
         
         //  semicolons are fourth
         i = 0;
@@ -331,7 +331,7 @@ namespace ss {
                 
                 else if (!is_symbol(tokenv[1]))
                     expect_error("symbol in 'include' statement specificer");
-                
+
                 j = 0;
                 while (j < this->functionc && this->functionv[j]->first->name() != tokenv[1])
                     ++j;
@@ -339,7 +339,7 @@ namespace ss {
                 if (j != this->functionc) {
                     if (arr.index_of(tokenv[1]) == -1) {
                         logger_write("'" + tokenv[1] + "' is defined\n");
-                        
+
                         arr.push(tokenv[1]);
                     }
 
@@ -372,8 +372,12 @@ namespace ss {
                 
                 ssu->reload();
                 
-                this->functionv[this->functionc] = new pair<::file*, bool>(new ::file(tokenv[0], node, ssu), true);
-                this->functionv[this->functionc]->first->rename(tokenv[1]);
+                ::file* file = new ::file(tokenv[0], node, ssu);
+                
+                file->parent = this;
+                file->rename(tokenv[1]);
+                
+                this->functionv[this->functionc] = new pair<::file*, bool>(file, true);
                 
                 ssu->restore(_buid);
                 
@@ -433,7 +437,7 @@ namespace ss {
         
         this->filename = filename;
         this->ssu = ssu;
-        this->target = new file_statement(statementc, statementv);
+        this->target = new file_statement(this, statementc, statementv);
     }
 
     void file::close() {
@@ -446,9 +450,9 @@ namespace ss {
 
     //  MEMBER FUNCTIONS
 
-    size_t file::build(statement_t** dst, string* src, const size_t si, const size_t ei) const {
-        size_t i = si, s = 0;
-        while (i < ei) {
+    size_t file::build(statement_t** dst, string* src, const size_t beg, const size_t end) const {
+        size_t i = beg, s = 0;
+        while (i < end) {
             string* tokenv = new string[src[i].length() + 1];
             size_t tokenc = tokens(tokenv, src[i]);
             
@@ -464,7 +468,7 @@ namespace ss {
                     expect_error("';' after expression");
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -517,7 +521,7 @@ namespace ss {
                 j += 5;
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -545,7 +549,7 @@ namespace ss {
                     }
                 }
                 
-                if (k == ei)
+                if (k == end)
                     expect_error("'end while'");
                 
                 statement_t** _dst = new statement_t*[k - i - 1];
@@ -569,7 +573,7 @@ namespace ss {
                 j += 2;
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -608,7 +612,7 @@ namespace ss {
                     expect_error("';' after expression");
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -647,7 +651,7 @@ namespace ss {
                     expect_error("';' after expression");
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     if (tokenv[0] == "try")
                         ++p;
                     else {
@@ -682,7 +686,7 @@ namespace ss {
                 delete[] tokenv;
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -703,7 +707,7 @@ namespace ss {
                         delete[] tokenv;
                 }
                 
-                if (k == ei)
+                if (k == end)
                     expect_error("'end for'");
                 
                 statement_t** _dst = new statement_t*[k - i - 1];
@@ -716,7 +720,7 @@ namespace ss {
                 delete[] tokenv;
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -737,7 +741,7 @@ namespace ss {
                         delete[] tokenv;
                 }
                 
-                if (k == ei)
+                if (k == end)
                     expect_error("'end func'");
                 
                 statement_t** _dst = new statement_t*[k - i - 1];
@@ -749,7 +753,7 @@ namespace ss {
                 delete[] tokenv;
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -770,7 +774,7 @@ namespace ss {
                         delete[] tokenv;
                 }
                 
-                if (k == ei)
+                if (k == end)
                     expect_error("'end if'");
                 
                 statement_t** _dst = new statement_t*[k - i - 1];
@@ -786,7 +790,7 @@ namespace ss {
                     expect_error("';' after expression");
                 
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -807,7 +811,7 @@ namespace ss {
                         delete[] tokenv;
                 }
                 
-                if (k == ei)
+                if (k == end)
                     expect_error("'end try'");
                 
                 statement_t** _dst = new statement_t*[k - i - 1];
@@ -819,7 +823,7 @@ namespace ss {
                 delete[] tokenv;
         
                 size_t k;   int p = 1;
-                for (k = i + 1; k < ei; ++k) {
+                for (k = i + 1; k < end; ++k) {
                     tokenv = new string[src[k].length() + 1];
                     tokenc = tokens(tokenv, src[k]);
                     
@@ -848,7 +852,7 @@ namespace ss {
                     }
                 }
                 
-                if (k == ei)
+                if (k == end)
                     expect_error("'end while'");
                 
                 statement_t** _dst = new statement_t*[k - i - 1];
@@ -875,6 +879,9 @@ namespace ss {
                 } else if (tokenv[0] == "echo") {
                     delete[] tokenv;
                     dst[s] = new echo_statement(ltrim(src[i].substr(4)));
+                } else if (src[i] == "exit") {
+                    delete[] tokenv;
+                    dst[s] = new exit_statement();
                 } else if (tokenv[0] == "return") {
                     delete[] tokenv;
                     dst[s] = new return_statement(ltrim(src[i].substr(6)));
@@ -883,7 +890,7 @@ namespace ss {
                     dst[s] = new sleep_statement(ltrim(src[i].substr(5)));
                 } else if (tokenv[0] == "throw") {
                     delete[] tokenv;
-                    dst[s] = new exception_statement(ltrim(src[i].substr(5)));
+                    dst[s] = new throw_statement(ltrim(src[i].substr(5)));
                 } else {
                     delete[] tokenv;
                     dst[s] = new statement(src[i]);
@@ -926,7 +933,22 @@ namespace ss {
     }
 
     void file::exit() {
-        this->target->exit();
+        if (this->parent == NULL)
+            this->kill();
+        else
+            this->parent->exit();
+    }
+
+    size_t file::get_level() const {
+        return this->level;
+    }
+
+    void file::kill() {
+        this->target->kill();
+        
+        for (size_t i = 0; i < this->functionc; ++i)
+            if (this->functionv[i]->second)
+                this->functionv[i]->first->kill();
     }
 
     ss::array<string> file::marshall(const size_t argc, string* argv) const {
@@ -961,6 +983,13 @@ namespace ss {
             data.insert(k + 2, empty());
         
         return data;
+    }
+
+    void file::set_level(const size_t level) {
+        this->level = level + 1;
+        
+        if (this->parent != NULL)
+            this->parent->set_level(this->get_level());
     }
 
     //  NON-MEMBER FUNCTIONS

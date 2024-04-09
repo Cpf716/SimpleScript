@@ -16,8 +16,8 @@ namespace ss {
         
         this->symbol = symbol;
         
-        if (statementc && (statementv[statementc - 1]->compare("else") ||
-            statementv[statementc - 1]->compare("elseif")))
+        if (statementc && (statementv[statementc - 1]->compare(2) ||
+            statementv[statementc - 1]->compare(3)))
             expect_error("expression");
         
         this->statementc = statementc;
@@ -50,8 +50,8 @@ namespace ss {
         return false;
     }
 
-    bool catch_statement::compare(const string value) const {
-        return value == "catch";
+    bool catch_statement::compare(const int value) const {
+        return value == 1;
     }
 
     string catch_statement::evaluate(interpreter* ssu) {

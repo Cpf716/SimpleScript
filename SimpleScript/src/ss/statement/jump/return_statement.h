@@ -20,8 +20,8 @@ namespace ss {
     public:
         //  CONSTRUCTORS
         
-        return_statement(string result) {
-            expression = trim(result).empty() ? encode("undefined") : result;
+        return_statement(string expression) {
+            this->expression = rtrim(expression).empty() ? encode("undefined") : expression;
         }
         
         void close() {
@@ -34,8 +34,8 @@ namespace ss {
             return true;
         }
         
-        bool compare(const string value) const {
-            return value == "return";
+        bool compare(const int value) const {
+            return value == 6;
         }
         
         string evaluate(interpreter* ssu) {
@@ -44,11 +44,18 @@ namespace ss {
         }
         
         string execute(interpreter* ssu) {
-            set_return(expression.empty() ? empty() : ssu->evaluate(expression));
+            this->set_return(ssu->evaluate(expression));
             return empty();
         }
         
         void exit() { }
+        
+        size_t get_level() const {
+            unsupported_error("get_level()");
+            return 0;
+        };
+        
+        void kill() { }
         
         void set_break() {
             unsupported_error("set_break()");
@@ -56,6 +63,10 @@ namespace ss {
         
         void set_continue() {
             unsupported_error("set_continue()");
+        }
+        
+        void set_level(const size_t level) {
+            unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) {

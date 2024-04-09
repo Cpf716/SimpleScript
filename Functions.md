@@ -20,6 +20,11 @@ Postcondition:  returns the current GMT time string
 Precondition:   none<br>
 Postcondition:  returns a number or string from stdin
 
+#### lap(): double
+
+Precondition:   none<br>
+Postcondition:  returns the stopwatch time (seconds)
+
 #### local(): string
 
 Precondition:   none<br>
@@ -37,33 +42,49 @@ Postcondition:  starts a new stopwatch and returns its descriptor
 
 #### stop(sw: int): double
 
-Precondition:   `sw >= 0`
-Postcondition:  returns the stopwatch time (seconds)
+Precondition:   `sw >= 0`<br>
+Postcondition:  stops the stopwatch; returns its time (seconds)
 
 <!-- -->
 
 ### File System
 
-#### exists(path: string): int
+#### closeFile(filedes: int): string
 
-Precondition:   `count path > 0`<br>
-Postcondition:  returns 1 if a file exists at `path`, otherwise returns 0
+Precondition:   `fildes >= 0`<br>
+Postcondition:  closes file; returns undefined
 
-#### read(path: string): string
-#### read(path: string, type: string): string | table
+#### delete(filename: string): int
 
-Precondition:   `count path > 0 && array("csv", "tsv", "txt") contains type`<br>
-Postcondition:  returns data read from the file at `path`, otherwise returns `undefined` if the file does not exist
+Precondition:   `count filename > 0`<br>
+Postcondition:  returns 1 if the file at `filename` is removed, otherwise returns 0
 
-#### remove(path: string): int
+#### exists(filename: string): int
 
-Precondition:   `count path > 0`<br>
-Postcondition:  returns 1 if the file at `path` is removed, otherwise returns 0
+Precondition:   `count filename > 0`<br>
+Postcondition:  returns 1 if a file exists at `filename`, otherwise returns 0
 
-#### write(path: string, data: any): string
-#### write(path: string, data: any, type: string): string
+#### file(filename: string): int
 
-Precondition:   `count path >= 0 && ((typeOf data === "string" && data !== null) || typeOf data !== "string" && array("csv", "tsv") contains type)`<br>
+Precondition:   `filename !== null && count filename`<br>
+Postcondition:  opens a new file at `filename`; returns its file descriptor, otherwise returns -1
+
+#### read(filename: string): string
+#### read(filename: string, type: string): string | table
+
+Precondition:   `count filename > 0 && array("csv", "tsv", "txt") contains type`<br>
+Postcondition:  returns data read from the file at `filename`, otherwise returns `undefined` if the file does not exist
+
+#### rename(old: string, new: string): string
+
+Precondition: `old !== null && count old && new !== 0 && count new`<br>
+Postcondition:  renames file `old` to `new`; returns undefined
+
+#### write(filedes: int, data: string): string
+#### write(filename: string, data: string): string
+#### write(filename: string, data: any, type: string): string
+
+Precondition:   `(filedes >= 0 || count filename > 0) && ((typeOf data === "string" && data !== null) || typeOf data !== "string" && array("csv", "tsv") contains type)`<br>
 Postcondition:  writes `data` to file; returns `undefined`
 
 <!-- -->
@@ -74,12 +95,12 @@ Postcondition:  writes `data` to file; returns `undefined`
 #### client(src: string, port: int, timeout: int): int
 
 Precondition:   `count src > 0 && port >= 0 && timeout >= 0`<br>
-Postcondition:  returns a file descriptor identifying the server at `src` and `port`, otherwise returns -1 if `timeout` expires or throws socket_exception if an error occurs (blocking)
+Postcondition:  returns a file descriptor identifying the server at `src` and `port`, otherwise returns -1 if the connection failed or throws socket_exception if an error occurs
 
-#### close(fildes: int): int
+#### closeSocket(fildes: int): int
 
 Precondition:   `fildes >= 0`<br>
-Postcondition:  returns 0 upon successful closure of the socket `fildes`, otherwise throws socket_exception if an error occurs
+Postcondition:  returns 0 upon successful closure of the socket `fildes`, otherwise returns -1 if no such socket exists or throws socket_exception if an error occurs
 
 #### listen(fildes: int, port: int): int
 
@@ -92,8 +113,9 @@ Precondition:   `fildes >= 0`<br>
 Postcondition:  returns an array of file descriptors identifying clients of the server `fildes`, otherwise returns `null` if the server has no clients or an error occurs
 
 #### recv(fildes: int): string
+#### recv(fildes: int, timeout: int): string
 
-Precondition:   `fildes >= 0`<br>
+Precondition:   `fildes >= 0 && timeout >= 0`<br>
 Postcondition:  returns data received from the socket `fildes`, otherwise returns `undefined` if disconnected or an error occurs (blocking)
 
 #### send(fildes: int, data: string): int
@@ -115,7 +137,7 @@ Postcondition:  starts a server at `port` with the capacity of `backlog`; return
 Precondition:   `count host > 0 && count usr > 0 && count pwd > 0`<br>
 Postcondition:  returns the MySQL connection to `hostName` given `userName` and `password`, otherwise throws an exception if an error occurs
 
-#### close(con: int): int
+#### closeConnection(con: int): int
 
 Precondition:   `con >= 0`<br>
 Postcondition:  returns 0 upon successful closure of the MySQL connection, otherwise returns -1 or throws an exception if an error occurs

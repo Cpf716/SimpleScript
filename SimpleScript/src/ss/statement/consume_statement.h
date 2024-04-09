@@ -35,7 +35,7 @@ namespace ss {
             return false;
         }
         
-        bool compare(const string value) const {
+        bool compare(const int value) const {
             return false;
         }
         
@@ -51,12 +51,23 @@ namespace ss {
         
         void exit() { }
         
+        size_t get_level() const {
+            unsupported_error("get_level()");
+            return 0;
+        };
+        
+        void kill() { }
+        
         void set_break() {
             unsupported_error("set_break()");
         }
         
         void set_continue() {
             unsupported_error("set_continue()");
+        }
+        
+        void set_level(const size_t level) {
+            unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) { }

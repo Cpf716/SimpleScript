@@ -33,6 +33,7 @@ func main
     
     date = arr tospliced 2
     
+    //  swap year to first
     for i = count date - 1, i > 0, i -= 1
         tmp = date.i
         
@@ -40,6 +41,7 @@ func main
         date.(i - 1) = tmp
     end for
     
+    //  sanitize
     for i = 0, i < count first date, i += 1
         if !isDigit (first date).i
             return
@@ -58,6 +60,7 @@ func main
         return
     end if
     
+    //  sanitize
     for i = 0, i < count last date, i += 1
         if !isDigit (last date).i
             return

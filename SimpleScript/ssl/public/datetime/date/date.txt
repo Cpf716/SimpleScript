@@ -47,12 +47,11 @@ func main
 
     timestamp -= 86400 * day
 
-    day += 1
-
-    `date` = array(month, day)
-    `date` = (arr map val, padStart(string(val), 2, "0"))
+    `date` = array(year, month, day + 1)
     
-    `date` insert 0, year
+    for i = 0, i < 2, i += 1
+        `date`.(i + 1) = padStart(string(`date`.(i + 1)), 2, "0")
+    end for
 
     return `date` join "-"
 end func

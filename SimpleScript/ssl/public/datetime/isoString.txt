@@ -38,22 +38,12 @@ func main
 
     timestamp -= seconds
 
-    month += 1
-
     day = 0
     while timestamp >= (day + 1) * 86400
         day += 1
     end while
 
     timestamp -= 86400 * day
-
-    day += 1
-    
-    date = (array(month, day) map val, padStart(string(val), 2, "0"))
-    
-    date insert 0, year
-    
-    date = date join "-"
 
     hours = 0
     while timestamp >= (hours + 1) * 3600
@@ -68,12 +58,18 @@ func main
     end while
 
     timestamp -= minutes * 60
-
     seconds = timestamp
     
-    date += (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
+    date = array(year, month + 1, day + 1)
+
+    for i = 0, i < 2, i += 1
+        date.(i + 1) = padStart(string(date.(i + 1)), 2, "0")
+    end for
     
-    return date join " "
+    time = (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
+    date = array(date join "-", time)
+    
+    return date join "T"
 end func
 
 return main()

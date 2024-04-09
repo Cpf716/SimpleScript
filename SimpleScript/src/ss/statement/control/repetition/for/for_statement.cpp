@@ -10,9 +10,9 @@
 namespace ss {
     //  CONSTRUCTORS
 
-    for_statement::for_statement(const string specificer, const size_t statementc, statement_t** statementv) {
-        string tokenv[specificer.length() * 2 + 1];
-        size_t tokenc = tokens(tokenv, specificer);
+    for_statement::for_statement(const string specifier, const size_t statementc, statement_t** statementv) {
+        string tokenv[specifier.length() * 2 + 1];
+        size_t tokenc = tokens(tokenv, specifier);
         
         size_t e = 0, s = e;   int p = 0;
         for (; e < tokenc; ++e) {
@@ -44,6 +44,7 @@ namespace ss {
             --tokenc;
         }
         
+        //  for-in
         if (tokenc == 1) {
             tokenc = tokens(tokenv, tokenv[0]);
             
@@ -57,6 +58,7 @@ namespace ss {
             for (size_t i = 3; i < tokenc; ++i)
                 this->expressionv[1] += " " + tokenv[i];
         } else {
+            //  for ,,
             for (size_t i = 0, n = (size_t)floor(tokenc / 2) + 1; i < n; ++i) {
                 if (tokenv[i * 2] == ",") {
                     tokenv[tokenc] = empty();
@@ -109,7 +111,6 @@ namespace ss {
     bool for_statement::analyze(interpreter* ssu) const {
         if (!this->statementc) {
             logger_write("'for' statement has empty body\n");
-            
             return false;
         }
         
@@ -121,14 +122,14 @@ namespace ss {
             logger_write("Unreachable code\n");
                 
         if (this->statementv[i]->analyze(ssu) &&
-            (this->statementv[i]->compare("break") ||
-             this->statementv[i]->compare("return")))
+            (this->statementv[i]->compare(0) ||
+             this->statementv[i]->compare(6)))
             logger_write("'for' statement will execute at most once\n");
         
         return false;
     }
 
-    bool for_statement::compare(const string value) const {
+    bool for_statement::compare(const int value) const {
         return false;
     }
 
@@ -145,12 +146,13 @@ namespace ss {
         
         if (this->expressionc == 2) {
             if (ssu->is_defined(this->expressionv[0]))
-                ssu->drop(this->expressionv[0]);
+                ssu->remove_symbol(this->expressionv[0]);
             
-            string result = ssu->evaluate(this->expressionv[1]);
+            string value = ssu->evaluate(this->expressionv[1]);
             
-            this->valuev = new string[result.length() + 1];
-            valuec = parse(this->valuev, result);
+            this->valuev = new string[value.length() + 1];
+            
+            valuec = parse(this->valuev, value);
         } else {
             string tokenv[this->expressionv[0].length() + 1];
             size_t tokenc = tokens(tokenv, this->expressionv[0]);
@@ -169,7 +171,7 @@ namespace ss {
                 this->valuev = new string[valuec = 1];
                 this->valuev[0] = tokenv[i];
                 
-                ssu->drop(this->valuev[0]);
+                ssu->remove_symbol(this->valuev[0]);
             }
             
             //  available to every iteration
@@ -182,8 +184,7 @@ namespace ss {
             
             if (this->expressionc == 2) {
                 if (index == valuec) {
-                    ssu->restore(_buid, true, 1, this->expressionv);
-                    
+                    ssu->restore(_buid, true, true, 1, this->expressionv);
                     break;
                 }
                 
@@ -212,7 +213,7 @@ namespace ss {
             
             if (this->should_return) {
                 if (this->expressionc == 2)
-                    ssu->restore(_buid, true, 1, this->expressionv);
+                    ssu->restore(_buid, true, true, 1, this->expressionv);
                 else
                     ssu->restore(_buid);
                 
@@ -220,7 +221,7 @@ namespace ss {
             }
             
             if (this->expressionc == 2)
-                ssu->restore(_buid, true, 1, this->expressionv);
+                ssu->restore(_buid, true, true, 1, this->expressionv);
             else {
                 //  available once
                 ssu->evaluate(this->expressionv[2]);
@@ -231,7 +232,7 @@ namespace ss {
         if (this->expressionc == 2 || !valuec)
             ssu->restore(buid);
         else
-            ssu->restore(buid, true, 1, valuev);
+            ssu->restore(buid, true, true, 1, valuev);
         
         if (valuev != NULL) {
             delete[] valuev;

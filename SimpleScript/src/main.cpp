@@ -11,26 +11,32 @@ using namespace ss;
 
 //  NON-MEMBER FIELDS
 
-size_t listenerc = 0;
+bool alive = true, ready = false;
 
-bool ready = false;
+size_t listenerc = 0;
 
 interpreter ssu;
 
-file* target;
-
 //  NON-MEMBER FUNCTIONS
 
-void sched_exit() {
+string format(const string value) {
+    string valuev[value.length() + 1];
+    size_t valuec = parse(valuev, value);
+    
+    ostringstream ss;
+    
+    for (size_t i = 0; i < valuec - 1; ++i)
+        ss << (valuev[i].empty() ? "null" : decode(valuev[i])) << "\t";
+    
+    ss << (valuev[valuec - 1].empty() ? "null" : decode(valuev[valuec - 1]));
+    
+    return ss.str();
+}
+
+void set_timeout() {
     size_t lis = listenerc++;
     
     double num = ssu.get_number("timeout");
-    
-    if (num - (int)num)
-        type_error("double", "int");
-    
-    if (num < 0)
-        ss::range_error(rtrim(num));
     
     if (!num)
         return;
@@ -38,19 +44,22 @@ void sched_exit() {
     this_thread::sleep_for(seconds((int)num));
     
     if (lis == listenerc - 1) {
-        target->exit();
+        alive = false;
+        
+        ssu.kill();
         
         while (!ready);
         
-        string timmes = ssu.get_string("timeoutMessage");
+        string timemes = decode(ssu.get_string("timeoutMessage"));
         
-        cout << flush << decode(timmes) << endl;
+        if (!timemes.empty())
+            cout << timemes << endl;
     }
 }
 
 void signal_handler(int signum) {
-    if (signum == SIGINT && ssu.get_number("askBeforeExit")) {
-        cout << "\nAre you sure? (Y|n)\t";
+    if (ssu.get_number("askBeforeExit")) {
+        cout << "\nAre you sure? (Y/n)\t";
         
         string str;
         getline(cin, str);
@@ -59,7 +68,6 @@ void signal_handler(int signum) {
             return;
     }
     
-    //  close APIs
     api::mysql_close();
     api::socket_close();
     
@@ -69,72 +77,163 @@ void signal_handler(int signum) {
     exit(signum);
 }
 
+void write_out(const string value) {
+    if (!value.empty())
+        cout << "  " << value << endl;
+}
+
 int main(int argc, char* argv[]) {
     //  register signal callbacks
     signal(SIGINT, signal_handler);
-    signal(SIGKILL, signal_handler);
+    signal(SIGTERM, signal_handler);
+    
+    ssu.set_listener("timeout", [&](const string val) {
+        thread(set_timeout).detach();
+    });
+    
+    string filename;
+    
+    if (argc == 1)
+        filename = base_dir() + "main.txt";
+    
+    else if (tolower(string(argv[1])) == "cli") {
+        cout << "Building...\n";
+        
+        logger_write("Building...\n");
+        
+        time_point<steady_clock> beg = steady_clock::now();;
+        
+        ifstream file(base_dir() + "lib.txt");
+        
+        while (getline(file, filename)) {
+            node<string>* root = new node<string>(empty(), NULL);
+            class file* target = new class file(filename, root, &ssu);
+            
+            root->close();
+            
+            ssu.set_function(target);
+        }
+        
+        file.close();
+        
+        double dif = duration<double>(steady_clock::now() - beg).count();
+        
+        cout << "Done in " << dif << " s.\n";
+        
+        logger_write("Done in " + to_string(dif) + " s.\n");
+        
+        cout << "Running...\n";
+        
+        logger_write("Running...\n");
+        
+        bool flag = false;
+        string str;
+        
+        while (1) {
+            if (!alive)
+                break;
+            
+            if (!flag)
+                cout << "> ";
+            
+            getline(cin, str);
+            
+            str = trim(str);
+            
+            if ((flag = str.empty()))
+                continue;
+            
+            logger_write("> " + str + "\n");
+            
+            try {
+                try {
+                    str = format(ssu.evaluate(str));
+                    
+                    if (alive) {
+                        write_out(str);
+                        logger_write("  " + str + "\n");
+                    }
+                } catch (ss::exception& e) {
+                    throw error(e.what());
+                }
+            } catch (error& e) {
+                if (alive) {
+                    cout << "  ERROR: " << e.what() << endl;
+                    
+                    logger_write("  ERROR: " + string(e.what()) + "\n");
+                }
+            }
+        }
+        
+        ready = true;
+        
+        logger_close();
+        
+        return 0;
+    } else
+        filename = decode(raw(argv[1]));
     
     logger_write("Building...\n");
     
-    string filename = argc == 1 ? base_dir() + "main.txt" : decode(raw(argv[1]));
-    
-    time_point<steady_clock> beg;
-    
-    beg = steady_clock::now();
+    time_point<steady_clock> beg = steady_clock::now();;
     
     //  initialize filepath tree
-    //  this prevents recursive file inclusion
+    //  prevents recursive file inclusion
     node<string>* root = new node<string>(empty(), NULL);
-    
-    target = new file(filename, root, &ssu);
+    file* target = new file(filename, root, &ssu);
      
     root->close();
     
     ssu.set_function(target);
     
-    time_point<steady_clock> end;
-    
-    end = steady_clock::now();
+    time_point<steady_clock> end = steady_clock::now();
         
-    logger_write("Done in " + to_string(duration<double>(end - beg).count()) + "s.\n");
+    logger_write("Done in " + to_string(duration<double>(end - beg).count()) + " s.\n");
     logger_write("Running...\n");
     
-    ostringstream ss;
+    string _argv[max(0, argc - 2)];
     
-    ss << target->name() << "(";
-    
-    if (argc >= 3) {
-        for (size_t i = 2; i < argc - 1; i += 1)
-            ss << raw(argv[i]) << ",";
-        
-        ss << raw(argv[argc - 1]);
-    }
-    
-    ss << ")";
+    for (size_t i = 0; i < sizeof(_argv) / sizeof(_argv[0]); i += 1)
+        _argv[i] = raw(argv[i + 2]);
     
     beg = steady_clock::now();
     
-    thread(sched_exit).detach();
-    
-    ssu.add_listener("timeout", [&](const double num) {
-        thread(sched_exit).detach();
-    });
-    
     try {
-        statement(ss.str()).execute(&ssu);
-        
+        try {
+            ssu.stack_push(target);
+            
+            string result = format(target->call(sizeof(_argv) / sizeof(_argv[0]), _argv));
+            
+            if (alive)
+                write_out(result);
+            
+        } catch (ss::exception& e) {
+            ostringstream ss;
+            
+            ss << "EXCEPTION : " << e.what() << endl;
+            ss << ssu.stack_trace();
+            
+            cout << ss.str();
+            
+            logger_write(ss.str());
+        }
     } catch (error& e) {
-        logger_write("ERROR : " + string(e.what()) + "\n");
-        
-        ssu.print_stack_trace();
-        
-        throw e;
+        if (alive) {
+            ostringstream ss;
+            
+            ss << "ERROR : " << e.what() << endl;
+            ss << ssu.stack_trace();
+            
+            cout << ss.str();
+            
+            logger_write(ss.str());
+        }
     }
     
     ready = true;
     
     end = steady_clock::now();
     
-    logger_write("Done in " + to_string(duration<double>(end - beg).count()) + "s.\n");
+    logger_write("Done in " + to_string(duration<double>(end - beg).count()) + " s.\n");
     logger_close();
 }

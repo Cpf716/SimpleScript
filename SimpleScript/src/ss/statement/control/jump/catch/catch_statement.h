@@ -26,7 +26,7 @@ namespace ss {
         
         bool analyze(interpreter* ssu) const;
         
-        bool compare(const string value) const;
+        bool compare(const int value) const;
         
         string evaluate(interpreter* ssu);
         
@@ -36,7 +36,7 @@ namespace ss {
         
         void set_continue();
         
-        void set_return(const string result);
+        void set_return(const string value);
     };
 }
 

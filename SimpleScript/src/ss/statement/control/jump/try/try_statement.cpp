@@ -12,7 +12,7 @@ namespace ss {
 
     try_statement::try_statement(const size_t statementc, statement_t** statementv) {
         this->index = 0;
-        while (this->index < statementc && !statementv[this->index]->compare("catch"))
+        while (this->index < statementc && !statementv[this->index]->compare(1))
             ++this->index;
         
         if (this->index == statementc)
@@ -57,7 +57,7 @@ namespace ss {
         return false;
     }
 
-    bool try_statement::compare(const string value) const { return false; }
+    bool try_statement::compare(const int value) const { return false; }
 
     string try_statement::evaluate(interpreter* ssu) {
         unsupported_error("evaluate()");
@@ -80,28 +80,31 @@ namespace ss {
             ssu->restore(buid);
             
         } catch (exception& e) {
+            if (this->get_level() != 1)
+                throw error(e.what());
+            
             size_t i = this->statementc - 1;
             
-            if (this->statementv[i]->compare("finally"))
+            if (this->statementv[i]->compare(5))
                 --i;
             
             string buid = ssu->backup();
             string symbol = decode(this->statementv[i]->evaluate(ssu));
             
             if (ssu->is_defined(symbol))
-                ssu->drop(symbol);
+                ssu->remove_symbol(symbol);
             
             ssu->set_string(symbol, encode(e.what()));
             
             this->statementv[i]->execute(ssu);
             
-            ssu->drop(symbol);
+            ssu->remove_symbol(symbol);
             
             string symbolv[1];
             
             symbolv[0] = symbol;
             
-            ssu->restore(buid, true, 1, symbolv);
+            ssu->restore(buid, true, true, 1, symbolv);
             
             if (i != this->statementc - 1)
                 this->statementv[this->statementc - 1]->execute(ssu);

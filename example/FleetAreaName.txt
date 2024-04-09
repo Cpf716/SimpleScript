@@ -4,17 +4,18 @@
 //
 
 include("@/search/string/padStart")
+include("@/string")
 
 define PATTERN ","
 
 //  FUNCTIONS
 
 func main
-    echo "Path:\t"
+    echo "Filename:\t"
 
-    path = input()
+    filename = string(string(input()) ?? "")
 
-    arr = read(path, PATTERN)
+    arr = read(filename, PATTERN)
 
     assert arr
 

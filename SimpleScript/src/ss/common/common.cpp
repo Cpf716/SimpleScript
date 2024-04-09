@@ -162,7 +162,7 @@ namespace ss {
     }
 
     std::string empty() {
-        return "";
+        return std::string();
     }
 
     std::string encode(const std::string str) {
@@ -365,8 +365,8 @@ namespace ss {
             return false;
         
         std::size_t j = i + 1;
-        while (j < str.length() - i && (str[j] == '_' || isalnum(str[i])))
-            ++i;
+        while (j < str.length() - i && (str[j] == '_' || isalnum(str[j])))
+            ++j;
         
         return j == str.length() - i;
     }
@@ -492,7 +492,7 @@ namespace ss {
         return pow(2, ceil(log(num) / log(2)));
     }
 
-    std::string raw(const std::string val) {
+    std::string raw(const std::string val, std::string pat) {
         if (val.empty())
             return val;
         
@@ -516,7 +516,23 @@ namespace ss {
             --n;
         }
         
-        return encode(std::string(str));
+        std::string _str(str);
+        
+        if (!pat.empty()) {
+            for (i = 0; i <= _str.length() - pat.length(); ++i) {
+                size_t j = 0;
+                while (j < pat.length() && pat[j] == _str[i + j])
+                    ++j;
+                
+                if (j == pat.length())
+                    break;
+            }
+            
+            if (i != _str.length() - pat.length() + 1)
+                _str = decode(str);
+        }
+        
+        return encode(_str);
     }
 
     int read(std::string* dst, const std::string src, const std::string pat) {
@@ -558,10 +574,10 @@ namespace ss {
             ++n;
             ++i;
             
-            dst[i] = raw(valuev[0]);
+            dst[i] = raw(valuev[0], pat);
             
             for (std::size_t j = 1; j < valuec; ++j) {
-                dst[n] = raw(valuev[j]);
+                dst[n] = raw(valuev[j], pat);
                 
                 for (std::size_t k = n; k > i + j; --k)
                     std::swap(dst[k], dst[k - 1]);
@@ -602,7 +618,7 @@ namespace ss {
         file.open(filename);
         
         if (!file)
-            return encode("undefined");
+            return "undefined";
         
         std::ostringstream ss;
         

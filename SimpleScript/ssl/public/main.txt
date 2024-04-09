@@ -3,4 +3,10 @@
 //  File:   main.txt
 //
 
-echo ""
+array str = "--------------- SimpleScript ---------------\n"
+
+str += "  cli\t\t\tcommand line interface\n"
+str += "  <filename> <args>\tSimpleScript file\n"
+str += "  --------------------------------------------\n"
+
+return str join ""

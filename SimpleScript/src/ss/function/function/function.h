@@ -30,9 +30,20 @@ namespace ss {
         //  MEMBER FUNCTIONS
         
         string call(const size_t argc, string* argv) {
-            //  this->consume();
-            
             return this->_function(argc, argv);
+        }
+        
+        void exit() { }
+        
+        size_t get_level() const {
+            unsupported_error("get_level()");
+            return 0;
+        }
+        
+        void kill() { }
+ 
+        void set_level(const size_t level) {
+            unsupported_error("set_level()");
         }
     };
 }

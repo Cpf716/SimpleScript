@@ -126,7 +126,7 @@ namespace ss {
             this->ensure_capacity(new_size);
             
             while (this->size() < new_size)
-                this->push("");
+                this->push(std::string());
             
             while (this->size() > new_size)
                 this->remove(new_size);

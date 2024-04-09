@@ -53,30 +53,56 @@ namespace ss {
         initialize();
        
         set_number("E", exp(1));
-        disable_write("E");
+        set_read_only("E", true);
         
         set_number("false", 0);
-        disable_write("false");
+        set_read_only("false", true);
         
         set_number("nan", NAN);
-        disable_write("nan");
+        set_read_only("nan", true);
         
         set_number("pi", 2 * acos(0.0));
-        disable_write("pi");
+        set_read_only("pi", true);
         
         set_number("true", 1);
-        disable_write("true");
+        set_read_only("true", true);
     }
 
     //  MEMBER FUNCTIONS
 
-    size_t arithmetic::add_listener(const string symbol, std::function<void(double)> callback) {
-        if (io_number(symbol) == -1)
-            undefined_error(symbol);
+    void arithmetic::add_symbol(const string symbol) {
+        if (symbol.empty())
+            expect_error("symbol: " + symbol);
         
-        listenerv.push_back(tuple<size_t, string, std::function<void(double)>>(listenerc, symbol, callback));
+        int i = this->io_symbol(symbol);
         
-        return listenerc++;
+        if (i != -1)
+            defined_error(symbol);
+        
+        if (is_pow(this->symbolc, 2)) {
+            string* tmp = new string[this->symbolc * 2];
+            
+            for (size_t j = 0; j < this->symbolc; ++j)
+                tmp[j] = this->symbolv[j];
+            
+            delete[] this->symbolv;
+            this->symbolv = tmp;
+        }
+        
+        this->symbolv[this->symbolc] = symbol;
+        
+        size_t j = this->symbolc++;
+        
+        while (j > 0 && symbol < this->symbolv[j - 1]) {
+            swap(this->symbolv[j], this->symbolv[j - 1]);
+            
+            --j;
+        }
+        
+        if (this->symbol_bst != NULL)
+            this->symbol_bst->close();
+        
+        this->symbol_bst = build(this->symbolv, 0, (int)this->symbolc);
     }
 
     void arithmetic::analyze(const size_t n, string* data) const {
@@ -262,7 +288,7 @@ namespace ss {
     }
 
     string arithmetic::backup() {
-        string _uuid = uuid();
+        string _uuid = to_string(_backupc++);
         
         //  resize backups
         if (is_pow(backupc, 2)) {
@@ -318,6 +344,9 @@ namespace ss {
     }
 
     void arithmetic::backup(const string buid) {
+        if (stoi(buid) >= _backupc)
+            ss::range_error(buid);
+        
         size_t i = 0;
         while (i < backupc && std::get<0>(* bu_symbolv[i]) != buid)
             ++i;
@@ -376,19 +405,16 @@ namespace ss {
         backupc++;
     }
 
-    void arithmetic::disable_write(const string symbol) {
+    void arithmetic::consume(const string symbol) {
         if (symbol.empty())
-            expect_error(symbol);
+            expect_error("symbol: " + symbol);
         
         int i = io_number(symbol);
         
         if (i == -1)
             undefined_error(symbol);
         
-        if (std::get<2>(* numberv[i]).first)
-            write_error(symbol);
-        
-        std::get<2>(* numberv[i]).first = true;
+        std::get<2>(* numberv[i]).second = true;
     }
 
     int arithmetic::io_symbol(const string symbol) const {
@@ -396,43 +422,6 @@ namespace ss {
             return -1;
         
         return index_of(symbol_bst, symbol);
-    }
-
-    void arithmetic::drop(const string symbol) {
-        int i = io_symbol(symbol);
-        
-        if (i == -1)
-            undefined_error(symbol);
-        
-        for (size_t j = i; j < symbolc - 1; ++j)
-            swap(symbolv[j], symbolv[j + 1]);
-        
-        --symbolc;
-        
-        symbol_bst->close();
-        
-        symbol_bst = symbolc ? build(symbolv, 0, (int)symbolc) : NULL;
-        
-        int j = io_number(symbol);
-        
-        if (j == -1)
-            return;
-        
-        delete numberv[j];
-        
-        for (size_t k = j; k < numberc - 1; ++k)
-            swap(numberv[k], numberv[k + 1]);
-        
-        --numberc;
-        
-        number_bst->close();
-        
-        string _symbolv[numberc];
-        
-        for (size_t j = 0; j < numberc; ++j)
-            _symbolv[j] = std::get<0>(* numberv[j]);
-        
-        number_bst = build(_symbolv, 0, (int)numberc);
     }
 
     //  precondition:   expr is non-empty
@@ -625,41 +614,6 @@ namespace ss {
         baov[8][10] = (bao_t *)aov[35];      //  =
     }
 
-    void arithmetic::insert(const string symbol) {
-        if (symbol.empty())
-            expect_error("symbol: " + symbol);
-        
-        int i = this->io_symbol(symbol);
-        
-        if (i != -1)
-            defined_error(symbol);
-        
-        if (is_pow(this->symbolc, 2)) {
-            string* tmp = new string[this->symbolc * 2];
-            
-            for (size_t j = 0; j < this->symbolc; ++j)
-                tmp[j] = this->symbolv[j];
-            
-            delete[] this->symbolv;
-            this->symbolv = tmp;
-        }
-        
-        this->symbolv[this->symbolc] = symbol;
-        
-        size_t j = this->symbolc++;
-        
-        while (j > 0 && symbol < this->symbolv[j - 1]) {
-            swap(this->symbolv[j], this->symbolv[j - 1]);
-            
-            --j;
-        }
-        
-        if (this->symbol_bst != NULL)
-            this->symbol_bst->close();
-        
-        this->symbol_bst = build(this->symbolv, 0, (int)this->symbolc);
-    }
-
     bool arithmetic::is_defined(const string symbol) const {
         return this->io_symbol(symbol) != -1;
     }
@@ -762,18 +716,44 @@ namespace ss {
         return n;
     }
 
-    void arithmetic::remove_listener(const size_t listener) {
-        size_t i = 0;
-        while (i < listenerv.size() &&  std::get<0>(listenerv[i]) != listener)
-            ++i;
+    void arithmetic::remove_symbol(const string symbol) {
+        int i = io_symbol(symbol);
         
         if (i == -1)
-            undefined_error(to_string(listener));
+            undefined_error(symbol);
         
-        listenerv.erase(listenerv.begin() + i);
+        for (size_t j = i; j < symbolc - 1; ++j)
+            swap(symbolv[j], symbolv[j + 1]);
+        
+        --symbolc;
+        
+        symbol_bst->close();
+        
+        symbol_bst = symbolc ? build(symbolv, 0, (int)symbolc) : NULL;
+        
+        int j = io_number(symbol);
+        
+        if (j == -1)
+            return;
+        
+        delete numberv[j];
+        
+        for (size_t k = j; k < numberc - 1; ++k)
+            swap(numberv[k], numberv[k + 1]);
+        
+        --numberc;
+        
+        number_bst->close();
+        
+        string _symbolv[numberc];
+        
+        for (size_t j = 0; j < numberc; ++j)
+            _symbolv[j] = std::get<0>(* numberv[j]);
+        
+        number_bst = build(_symbolv, 0, (int)numberc);
     }
 
-    void arithmetic::restore(const string uuid, bool verbose, size_t symbolc, string* symbolv) {
+    void arithmetic::restore(const string uuid, bool verbose, bool update, size_t symbolc, string* symbolv) {
         //  find backup
         size_t i = 0;
         while (i < backupc && std::get<0>(* bu_symbolv[i]) != uuid)
@@ -804,9 +784,8 @@ namespace ss {
                 if (l == symbolc) {
                     std::get<1>(* bu_numberv[i]->second[k]) = std::get<1>(* numberv[j]);
                     std::get<2>(* bu_numberv[i]->second[k]).second = std::get<2>(* numberv[j]).second;
-                } else {
+                } else if (update) {
                     //  remove exception
-                    
                     for (; l < symbolc - 1; ++l)
                         swap(symbolv[l], symbolv[l + 1]);
                     
@@ -901,7 +880,7 @@ namespace ss {
                 --j;
             }
             
-            insert(symbol);
+            add_symbol(symbol);
             
             if (number_bst != NULL)
                 number_bst->close();
@@ -917,11 +896,16 @@ namespace ss {
                 write_error(symbol);
             
             std::get<1>(* numberv[i]) = value;
-            
-            for (size_t j = 0; j < listenerv.size(); ++j)
-                if (std::get<1>(listenerv[j]) == symbol)
-                    std::get<2>(listenerv[j])(value);
         }
+    }
+
+    void arithmetic::set_read_only(const string symbol, const bool value) {
+        int i = io_number(symbol);
+        
+        if (i == -1)
+            undefined_error(symbol);
+        
+        std::get<2>(* numberv[i]).first = value;
     }
 
     //  precondition:   sizeof(data) / sizeof(data[0]) >= expr.length()
@@ -1160,18 +1144,6 @@ namespace ss {
         //  sign numbervc
             
         return n;
-    }
-
-    void arithmetic::consume(const string symbol) {
-        if (symbol.empty())
-            expect_error("symbol: " + symbol);
-        
-        int i = io_number(symbol);
-        
-        if (i == -1)
-            undefined_error(symbol);
-        
-        std::get<2>(* numberv[i]).second = true;
     }
 
     double arithmetic::value(string val) {

@@ -13,13 +13,20 @@ namespace ss {
     interpreter::interpreter() {
         initialize();
         
+        //  setAskBeforeExit()
         set_number("askBeforeExit", 0);
+        set_read_only("askBeforeExit", true);
         
         set_string("null", empty());
         std::get<2>(* stringv[io_string("null")]) = pair<bool, bool>(true, false);
         
-        set_number("timeout", 90);
+        //  setTimeout()
+        set_number("timeout", 0);
+        set_read_only("timeout", true);
+        
+        //  setTimeoutMessage()
         set_string("timeoutMessage", empty());
+        std::get<2>(* stringv[io_string("timeoutMessage")]) = pair<bool, bool>(true, false);
         
         for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); ++i)
             set_array("types", i, encode(types[i]));
@@ -29,13 +36,19 @@ namespace ss {
         std::get<1>(* arrayv[i]).shrink_to_fit();
         std::get<2>(* arrayv[i]) = pair<bool, bool>(true, false);
         
-        set_string("undefined", encode("undefined"));
+        set_string("undefined", encode(types[5]));
         std::get<2>(* stringv[io_string("undefined")]) = pair<bool, bool>(true, false);
         
         buid = backup();
     }
 
     interpreter::~interpreter() {
+        //  close files
+        for (size_t i = 0; i < filev.size(); ++i) {
+            filev[i].second->close();
+            delete filev[i].second;
+        }
+        
         //  restore backups
         while (backupc)
             restore(bu_numberv[backupc - 1], false);
@@ -94,7 +107,6 @@ namespace ss {
     string interpreter::backup() {
         //  resize backups
         if (is_pow(backupc, 2)) {
-            
             //  resize numbers
             string* _bu_numberv = new string[backupc * 2];
             
@@ -268,7 +280,10 @@ namespace ss {
         ++backupc;
     }
 
-    void interpreter::drop(const string symbol) {
+    void interpreter::consume(const string symbol) {
+        if (symbol.empty())
+            expect_error("symbol: " + symbol);
+        
         int i = io_function(symbol);
         
         if (i == -1) {
@@ -277,70 +292,23 @@ namespace ss {
             if (i == -1) {
                 i = io_string(symbol);
                 
-                if (i == -1) {
-                    arithmetic::drop(symbol);
-                    return;
-                }
-                
-                for (size_t j = i; j < stringc - 1; ++j)
-                    swap(stringv[j], stringv[j + 1]);
-                
-                delete stringv[--stringc];
-                
-                arithmetic::drop(symbol);
-                
-                string_bst->close();
-                
-                string symbolv[stringc];
-                
-                for (size_t j = 0; j < stringc; ++j)
-                    symbolv[j] = std::get<0>(* stringv[j]);
-                
-                string_bst = stringc ? build(symbolv, 0, (int)stringc) : NULL;
-                
-                return;
-            }
-            
-            for (size_t j = i; j < arrayc - 1; ++j)
-                swap(arrayv[j], arrayv[j + 1]);
-            
-            delete arrayv[--arrayc];
-            
-            arithmetic::drop(symbol);
-            
-            array_bst->close();
-            
-            string symbolv[arrayc];
-            
-            for (size_t j = 0; j < arrayc; ++j)
-                symbolv[j] = std::get<0>(* arrayv[j]);
-            
-            array_bst = arrayc ? build(symbolv, 0, (int)arrayc) : NULL;
-        }
-        
-        for (size_t j = i; j < functionc - 1; ++j)
-            swap(functionv[j], functionv[j + 1]);
-        
-        --functionc;
-        
-        if (function_bst != NULL)
-            function_bst->close();
-        
-        string symbolv[functionc];
-        
-        for (size_t j = 0; j < functionc; ++j)
-            symbolv[j] = functionv[j]->name();
-        
-        function_bst = functionc ? build(symbolv, 0, (int)functionc) : NULL;
+                if (i == -1)
+                    arithmetic::consume(symbol);
+                else
+                    std::get<2>(* stringv[i]).second = true;
+            } else
+                std::get<2>(* arrayv[i]).second = true;
+        } else
+            functionv[i]->consume();
     }
 
     string interpreter::element(const string val) {
         if (ss::is_array(val))
             type_error(0, 4);
-            //  array => string
+            //  array != string
         
         if (val.empty())
-            return val;
+            return empty();
         
         if (is_string(val))
             return encode(decode(val));
@@ -348,7 +316,7 @@ namespace ss {
         if (is_symbol(val)) {
             if (io_array(val) != -1)
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             int i = io_string(val);
             if (i == -1)
@@ -367,13 +335,6 @@ namespace ss {
         
         string data[expression.length() * 2 + 1];
         int n = prefix(data, expression);
-        
-        /*
-        for (size_t i = 0; i < n; ++i)
-            cout << data[i] << "\t\t";
-        
-        cout << endl;
-        //  */
         
         ss::stack<string> operands = ss::stack<string>();
         
@@ -414,7 +375,7 @@ namespace ss {
                             
                             if (tokenc == 1 && !is_string(tokenv[0]) &&
                                 !is_symbol(tokenv[0]) && !is_number(tokenv[0]))
-                                    throw error("Unexpected token: " + data[i]);
+                                throw error("Unexpected token: " + data[i]);
                             
                             operands.push(data[i]);
                         } else {
@@ -467,12 +428,12 @@ namespace ss {
                                 argv[k] = evaluate(argv[k]);
                             }
                             
-                            stack_trace.push(functionv[j]->name());
+                            stack.push(functionv[j]);
                             
                             //  call function and push its result
                             operands.push(functionv[j]->call(argc, argv));
                             
-                            stack_trace.pop();
+                            stack.pop();
                         }
                     } else {
                         double d;
@@ -684,8 +645,7 @@ namespace ss {
                     size_t s;
                     
                     if (j >= 25) {
-                        string lhs = operands.top();
-                                        operands.pop();
+                        string lhs = operands.pop();
                         
                         if (lhs.empty())
                             operation_error();
@@ -715,7 +675,7 @@ namespace ss {
                                 
                                 if (rhs.empty())
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                 
                                 dst = new string[rhs.length() + 1];
                                 s = parse(dst, rhs);
@@ -723,21 +683,21 @@ namespace ss {
                                 
                                 if (s != 1)
                                     type_error(0, 2);
-                                    //  array => double
+                                    //  array != double
                                 
                                 if (is_string(rhs))
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                     
                                 double b;
                                 if (is_symbol(rhs)) {
                                     if (io_array(rhs) != -1)
                                         type_error(0, 2);
-                                        //  array => double
+                                        //  array != double
                                     
                                     if (io_string(rhs) != -1)
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     b = get_number(rhs);
                                 } else
@@ -758,15 +718,14 @@ namespace ss {
                                 if (data[l] != uov[indexer_oi]->opcode())
                                     operation_error();
                                 
-                                rhs =   operands.top();
-                                        operands.pop();
+                                rhs = operands.pop();
                                 
                                 if (rhs.empty()) {
                                     if (is_dictionary(std::get<1>(* arrayv[k])))
                                         null_error();
                                     
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 }
                                 
                                 dst = new string[rhs.length() + 1];
@@ -775,12 +734,12 @@ namespace ss {
                                 
                                 if (s != 1)
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 if (is_string(rhs)) {
                                     if (!is_dictionary(std::get<1>(* arrayv[k])))
                                         type_error(0, 6);
-                                        //  array => dictionary
+                                        //  array != dictionary
                                     
                                     rhs = decode(rhs);
                                     
@@ -798,13 +757,13 @@ namespace ss {
                                     
                                     if (std::get<1>(* arrayv[k])[l * 2 + 1].empty() || is_string(std::get<1>(* arrayv[k])[l * 2 + 1]))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     rhs = operands.top();
                                     
                                     if (rhs.empty())
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     dst = new string[rhs.length() + 1];
                                     s = parse(dst, rhs);
@@ -812,21 +771,21 @@ namespace ss {
                                     
                                     if (s != 1)
                                         type_error(0, 2);
-                                        //  array => double
+                                        //  array != double
                                     
                                     if (is_string(rhs))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     double b;
                                     if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 2);
-                                            //  array => double
+                                            //  array != double
                                         
                                         if (io_string(rhs) != -1)
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         b = get_number(rhs);
                                     } else
@@ -843,7 +802,7 @@ namespace ss {
                                 } else if (is_symbol(rhs)) {
                                     if (io_array(rhs) != -1)
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     int l = io_string(rhs);
                                     if (l == -1) {
@@ -851,20 +810,20 @@ namespace ss {
                                         
                                         if (!is_int(idx))
                                             type_error(2, 3);
-                                            //  double => int
+                                            //  double != int
                                         
                                         if (idx < 0 || idx >= std::get<1>(* arrayv[k]).size())
                                             range_error("index " + rtrim(idx) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
                                         
                                         if (std::get<1>(* arrayv[k])[(size_t)idx].empty() || is_string(std::get<1>(* arrayv[k])[(size_t)idx]))
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         rhs = operands.top();
                                         
                                         if (rhs.empty())
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         dst = new string[rhs.length() + 1];
                                         s = parse(dst, rhs);
@@ -872,21 +831,21 @@ namespace ss {
                                         
                                         if (s != 1)
                                             type_error(0, 2);
-                                            //  array =>  double
+                                            //  array !=  double
                                         
                                         if (is_string(rhs))
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         double b;
                                         if (is_symbol(rhs)) {
                                             if (io_array(rhs) != -1)
                                                 type_error(0, 2);
-                                                //  array => double
+                                                //  array != double
                                             
                                             if (io_string(rhs) != -1)
                                                 type_error(4, 2);
-                                                //  string => double
+                                                //  string != double
                                             
                                             b = get_number(rhs);
                                         } else
@@ -902,7 +861,7 @@ namespace ss {
                                     } else {
                                         if (!is_dictionary(std::get<1>(* arrayv[k])))
                                             type_error(0, 6);
-                                            //  array => dictionary
+                                            //  array != dictionary
                                         
                                         rhs = std::get<1>(* stringv[l]);
                                         
@@ -910,7 +869,7 @@ namespace ss {
                                             null_error();
                                         
                                         if (rhs.length() == 2)
-                                            undefined_error(encode(empty()));
+                                            undefined_error(empty());
                                         
                                         size_t m = 0;
                                         while (m < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[m * 2] != rhs)
@@ -921,13 +880,13 @@ namespace ss {
                                         
                                         if (std::get<1>(* arrayv[k])[m * 2 + 1].empty() || is_string(std::get<1>(* arrayv[k])[m * 2 + 1]))
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         rhs = operands.top();
                                         
                                         if (rhs.empty())
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         dst = new string[rhs.length() + 1];
                                         s = parse(dst, rhs);
@@ -935,21 +894,21 @@ namespace ss {
                                         
                                         if (s != 1)
                                             type_error(0, 2);
-                                            //  array => double
+                                            //  array != double
                                         
                                         if (is_string(rhs))
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         double b;
                                         if (is_symbol(rhs)) {
                                             if (io_array(rhs) != -1)
                                                 type_error(0, 2);
-                                                //  array => double
+                                                //  array != double
                                             
                                             if (io_string(rhs) != -1)
                                                 type_error(4, 2);
-                                                //  string => double
+                                                //  string != double
                                             
                                             b = get_number(rhs);
                                         } else
@@ -968,20 +927,20 @@ namespace ss {
                                     
                                     if (!is_int(idx))
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     
                                     if (idx < 0 || idx >= std::get<1>(* arrayv[k]).size())
                                         range_error("index " + rtrim(idx) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
                                     
                                     if (std::get<1>(* arrayv[k])[(size_t)idx].empty() || is_string(std::get<1>(* arrayv[k])[(size_t)idx]))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     rhs = operands.top();
                                     
                                     if (rhs.empty())
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     dst = new string[rhs.length() + 1];
                                     s = parse(dst, rhs);
@@ -989,21 +948,21 @@ namespace ss {
                                     
                                     if (s != 1)
                                         type_error(0, 2);
-                                        //  array =>  double
+                                        //  array !=  double
                                     
                                     if (is_string(rhs))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     double b;
                                     if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 2);
-                                            //  array => double
+                                            //  array != double
                                         
                                         if (io_string(rhs) != -1)
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         b = get_number(rhs);
                                     } else
@@ -1028,8 +987,7 @@ namespace ss {
                                 operation_error();
                             }
                             
-                            rhs =   operands.top();
-                                    operands.pop();
+                            rhs = operands.pop();
                             
                             if (rhs.empty()) {
                                 delete[] dst;
@@ -1038,7 +996,7 @@ namespace ss {
                                     null_error();
                                 
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                             }
                             
                             string* _dst = new string[rhs.length() + 1];
@@ -1047,14 +1005,14 @@ namespace ss {
                             if (_s != 1) {
                                 delete[] dst;
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             }
                             
                             if (is_string(rhs)) {
                                 if (!is_dictionary(s, dst)) {
                                     delete[] dst;
                                     type_error(0, 6);
-                                    //  array => dictionary
+                                    //  array != dictionary
                                 }
                                 
                                 rhs = decode(rhs);
@@ -1077,13 +1035,13 @@ namespace ss {
                                 
                                 if (dst[k * 2 + 1].empty() || is_string(dst[k * 2 + 1]))
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                 
                                 rhs = operands.top();
                                 
                                 if (rhs.empty())
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                 
                                 _dst = new string[rhs.length() + 1];
                                 _s = parse(_dst, rhs);
@@ -1091,21 +1049,21 @@ namespace ss {
                                 
                                 if (_s != 1)
                                     type_error(0, 2);
-                                    //  array => double
+                                    //  array != double
                                 
                                 if (is_string(rhs))
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                 
                                 double b;
                                 if (is_symbol(rhs)) {
                                     if (io_array(rhs) != -1)
                                         type_error(0, 2);
-                                        //  array => double
+                                        //  array != double
                                     
                                     if (io_string(rhs) != -1)
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     b = get_number(rhs);
                                 } else
@@ -1122,7 +1080,7 @@ namespace ss {
                             } else if (is_symbol(rhs)) {
                                 if (io_array(rhs) != -1)
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 int k = io_string(rhs);
                                 if (k == -1) {
@@ -1131,7 +1089,7 @@ namespace ss {
                                     if (!is_int(idx)) {
                                         delete[] dst;
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     }
                                     
                                     if (idx < 0 || idx >= s)
@@ -1141,7 +1099,7 @@ namespace ss {
                                     
                                     if (rhs.empty())
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     _dst = new string[rhs.length() + 1];
                                     _s = parse(_dst, rhs);
@@ -1149,21 +1107,21 @@ namespace ss {
                                     
                                     if (_s != 1)
                                         type_error(0, 2);
-                                        //  array => double
+                                        //  array != double
                                     
                                     if (is_string(rhs))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     double b;
                                     if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 2);
-                                            //  array => double
+                                            //  array != double
                                         
                                         if (io_string(rhs) != -1)
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         b = get_number(rhs);
                                     } else
@@ -1181,7 +1139,7 @@ namespace ss {
                                     if (!is_dictionary(s, dst)) {
                                         delete[] dst;
                                         type_error(0, 6);
-                                        //  array => dictionary
+                                        //  array != dictionary
                                     }
                                     
                                     rhs = std::get<1>(* stringv[k]);
@@ -1207,13 +1165,13 @@ namespace ss {
                                     
                                     if (dst[l * 2 + 1].empty() || is_string(dst[l * 2 + 1]))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     rhs = operands.top();
                                     
                                     if (rhs.empty())
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     _dst = new string[rhs.length() + 1];
                                     _s = parse(_dst, rhs);
@@ -1221,21 +1179,21 @@ namespace ss {
                                     
                                     if (_s != 1)
                                         type_error(0, 2);
-                                        //  array => double
+                                        //  array != double
                                     
                                     if (is_string(rhs))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     double b;
                                     if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 2);
-                                            //  array => double
+                                            //  array != double
                                         
                                         if (io_string(rhs) != -1)
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         b = get_number(rhs);
                                     } else
@@ -1255,7 +1213,7 @@ namespace ss {
                                 if (!is_int(idx)) {
                                     delete[] dst;
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 }
                                 
                                 if (idx < 0 || idx >= s)
@@ -1265,7 +1223,7 @@ namespace ss {
                                 
                                 if (rhs.empty())
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                 
                                 _dst = new string[rhs.length() + 1];
                                 _s = parse(_dst, rhs);
@@ -1273,21 +1231,21 @@ namespace ss {
                                 
                                 if (_s != 1)
                                     type_error(0, 2);
-                                    //  array => double
+                                    //  array != double
                                 
                                 if (is_string(rhs))
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                 
                                 double b;
                                 if (is_symbol(rhs)) {
                                     if (io_array(rhs) != -1)
                                         type_error(0, 2);
-                                        //  array => double
+                                        //  array != double
                                     
                                     if (io_string(rhs) != -1)
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     b = get_number(rhs);
                                 } else
@@ -1307,7 +1265,7 @@ namespace ss {
                         
                         if (rhs.empty())
                             type_error(4, 2);
-                            //  string => double
+                            //  string != double
                         
                         dst = new string[rhs.length() + 1];
                         s = parse(dst, rhs);
@@ -1315,21 +1273,21 @@ namespace ss {
                         
                         if (s != 1)
                             type_error(0, 2);
-                            //  array => double
+                            //  array != double
                         
                         if (is_string(rhs))
                             type_error(4, 2);
-                            //  string => double
+                            //  string != double
                         
                         double a;
                         if (is_symbol(rhs)) {
                             if (io_array(rhs) != -1)
                                 type_error(0, 2);
-                                //  array => double
+                                //  array != double
                             
                             if (io_string(rhs) != -1)
                                 type_error(4, 2);
-                                //  string => double
+                                //  string != double
                             
                             a = get_number(rhs);
                         } else
@@ -1346,21 +1304,21 @@ namespace ss {
                             
                             if (s != 1)
                                 type_error(0, 2);
-                                //  array => double
+                                //  array != double
                             
                             if (is_string(rhs))
                                 type_error(4, 2);
-                                //  string => double
+                                //  string != double
                             
                             double b;
                             if (is_symbol(rhs)) {
                                 if (io_array(rhs) != -1)
                                     type_error(0, 2);
-                                    //  array => double
+                                    //  array != double
                                 
                                 if (io_string(rhs) != -1)
                                     type_error(4, 2);
-                                    //  string => douoble
+                                    //  string != douoble
                                 
                                 b = get_number(rhs);
                             } else
@@ -1416,6 +1374,7 @@ namespace ss {
                     else if (j == aggregate_oi ||
                              j == filter_oi ||
                              j == find_oi ||
+                             j == find_index_oi ||
                              j == map_oi) {
                         string ctr = operands.pop();
                         
@@ -1436,11 +1395,11 @@ namespace ss {
                         if (valuec == 1) {
                             if (lhs.empty() || is_string(lhs))
                                 type_error(4, 0);
-                                //  string => array
+                                //  string != array
                             
                             if (!is_symbol(lhs))
                                 type_error(2, 0);
-                                //  double => array
+                                //  double != array
                             
                             int k = io_array(lhs);
                             if (k == -1) {
@@ -1448,13 +1407,13 @@ namespace ss {
                                 if (k == -1) {
                                     if (is_defined(lhs))
                                         type_error(2, 0);
-                                        //  double => array
+                                        //  double != array
                                     
                                     undefined_error(lhs);
                                 }
                                 
                                 type_error(4, 0);
-                                //  string => array
+                                //  string != array
                             }
                             
                             rhs = operands.pop();
@@ -1464,14 +1423,14 @@ namespace ss {
                             
                             if (ss::is_array(rhs))
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             
                             if (rhs.empty()) {
                                 if (is_dictionary(std::get<1>(* arrayv[k])))
                                     null_error();
                                 
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                             }
                             
                             if (is_string(rhs)) {
@@ -1491,12 +1450,12 @@ namespace ss {
                                 
                                 if (!is_dictionary(std::get<1>(* arrayv[k])))
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 
                                 rhs = decode(rhs);
                                 
                                 if (rhs.empty())
-                                    undefined_error(encode(empty()));
+                                    undefined_error(empty());
                                 
                                 rhs = encode(rhs);
                                 
@@ -1529,7 +1488,7 @@ namespace ss {
                                 
                                 if (!is_int(s))
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 
                                 if (s >= std::get<1>(* arrayv[k]).size())
                                     range_error("start " + rtrim(s) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
@@ -1551,16 +1510,16 @@ namespace ss {
                                     
                                     if (ss::is_array(rhs))
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     if (rhs.empty() || is_string(rhs))
                                         type_error(4, 3);
-                                        //  string => int
+                                        //  string != int
                                     
                                     double e = stod(rhs);
                                     if (!is_int(e))
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     
                                     k = io_array(lhs);
                                     
@@ -1593,7 +1552,7 @@ namespace ss {
                                 delete[] valuev;
                                 
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             }
                             
                             if (rhs.empty()) {
@@ -1603,7 +1562,7 @@ namespace ss {
                                     null_error();
                                 
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                             }
                             
                             if (is_string(rhs)) {
@@ -1611,7 +1570,7 @@ namespace ss {
                                     delete[] valuev;
                                     
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 }
                                 
                                 size_t k = i + 1;   int q = 1;
@@ -1635,8 +1594,7 @@ namespace ss {
                                 
                                 if (rhs.empty()) {
                                     delete[] valuev;
-                                    
-                                    undefined_error(encode(empty()));
+                                    undefined_error(empty());
                                 }
                                 
                                 rhs = encode(rhs);
@@ -1663,7 +1621,7 @@ namespace ss {
                                     delete[] valuev;
                                     
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 }
                                 
                                 if (s >= valuec) {
@@ -1691,14 +1649,14 @@ namespace ss {
                                         delete[] valuev;
                                         
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     }
                                     
                                     if (rhs.empty() || is_string(rhs)) {
                                         delete[] valuev;
                                         
                                         type_error(4, 3);
-                                        //  string => int
+                                        //  string != int
                                     }
                                     
                                     double e = stod(rhs);
@@ -1706,7 +1664,7 @@ namespace ss {
                                         delete[] valuev;
                                         
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     }
                                     
                                     if (e < 0 || s + e > valuec) {
@@ -1749,17 +1707,17 @@ namespace ss {
                                 
                                 if (ss::is_array(rhs))
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 if (rhs.empty() || is_string(rhs))
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 
                                 double s = stod(rhs);
                                 
                                 if (!is_int(s))
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 
                                 if (s < 0 || s > text.length())
                                     range_error("start " + rtrim(s) + ", count " + to_string(text.length()));
@@ -1783,17 +1741,17 @@ namespace ss {
                                     
                                     if (ss::is_array(rhs))
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     if (rhs.empty() || is_string(rhs))
                                         type_error(4, 3);
-                                        //  string => int
+                                        //  string != int
                                     
                                     double l = stod(rhs);
                                     
                                     if (!is_int(l))
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     
                                     if (l < 0 || s + l > text.length())
                                         range_error("start " + rtrim(s) + ", length " + rtrim(l) + ", count " + to_string(text.length()));
@@ -1806,7 +1764,7 @@ namespace ss {
                             } else {
                                 if (!is_symbol(lhs))
                                     type_error(2, 0);
-                                    //  double => array
+                                    //  double != array
                                 
                                 int k = io_array(lhs);
                                 if (k == -1) {
@@ -1814,7 +1772,7 @@ namespace ss {
                                     if (k == -1) {
                                         if (is_defined(lhs))
                                             type_error(2, 0);
-                                            //  double => array
+                                            //  double != array
                                         
                                         undefined_error(lhs);
                                     }
@@ -1831,17 +1789,17 @@ namespace ss {
                                     
                                     if (ss::is_array(rhs))
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     if (rhs.empty() || is_string(rhs))
                                         type_error(4, 3);
-                                        //  string => int
+                                        //  string != int
                                     
                                     double s = stod(rhs);
                                     
                                     if (!is_int(s))
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     
                                     if (s < 0 || s > text.length())
                                         range_error("start " + rtrim(s) + ", count " + to_string(text.length()));
@@ -1863,17 +1821,17 @@ namespace ss {
                                         
                                         if (ss::is_array(rhs))
                                             type_error(0, 3);
-                                            //  array => int
+                                            //  array != int
                                         
                                         if (rhs.empty() || is_string(rhs))
                                             type_error(4, 3);
-                                            //  string => int
+                                            //  string != int
                                         
                                         double l = stod(rhs);
                                         
                                         if (!is_int(l))
                                             type_error(2, 3);
-                                            //  double => int
+                                            //  double != int
                                         
                                         if (l < 0 || s + l > text.length())
                                             range_error("start " + rtrim(s) + ", length " + rtrim(l) + ", count " + to_string(text.length()));
@@ -1893,17 +1851,17 @@ namespace ss {
                                     
                                     if (ss::is_array(rhs))
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     if (rhs.empty() || is_string(rhs))
                                         type_error(4, 3);
-                                        //  string => int
+                                        //  string != int
                                     
                                     double s = stod(rhs);
                                     
                                     if (!is_int(s))
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     
                                     if (s > arr.size())
                                         range_error("start " + rtrim(s) + ", count " + to_string(arr.size()));
@@ -1925,17 +1883,17 @@ namespace ss {
                                         
                                         if (ss::is_array(rhs))
                                             type_error(0, 3);
-                                            //  array => int
+                                            //  array != int
                                         
                                         if (rhs.empty() || is_string(rhs))
                                             type_error(4, 3);
-                                            //  string => int
+                                            //  string != int
                                         
                                         double e = stod(rhs);
                                         
                                         if (!is_int(e))
                                             type_error(2, 3);
-                                            //  double => int
+                                            //  double != int
                                         
                                         if (s + e > arr.size())
                                             range_error("start " + rtrim(s) + ", length " + rtrim(e) + ", count " + to_string(arr.size()));
@@ -1953,17 +1911,17 @@ namespace ss {
                             
                             if (ss::is_array(rhs))
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             
                             if (rhs.empty() || is_string(rhs))
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                             
                             double s = stod(rhs);
                             
                             if (!is_int(s))
                                 type_error(2, 3);
-                                //  double => int
+                                //  double != int
                             
                             if (s > valuec)
                                 range_error("start " + rtrim(s) + ", count " + to_string(valuec));
@@ -1986,17 +1944,17 @@ namespace ss {
                                 
                                 if (ss::is_array(rhs))
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 if (rhs.empty() || is_string(rhs))
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 
                                 double e = stod(rhs);
                                 
                                 if (!is_int(e))
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 
                                 if (s + e > valuec)
                                     range_error("start " + rtrim(s) + ", length " + rtrim(e) + ", count " + to_string(valuec));
@@ -2019,7 +1977,7 @@ namespace ss {
                     } else if (j == substr_oi) {
                         if (ss::is_array(lhs))
                             type_error(0, 4);
-                            //  array => string
+                            //  array != string
                         
                         if (lhs.empty())
                             null_error();
@@ -2027,17 +1985,17 @@ namespace ss {
                         if (!is_string(lhs)) {
                             if (!is_symbol(lhs))
                                 type_error(2, 4);
-                                //  double => string
+                                //  double != string
                             
                             if (io_array(lhs) != -1)
                                 type_error(0, 4);
-                                //  array => string
+                                //  array != string
                             
                             int k = io_string(lhs);
                             if (k == -1) {
                                 if (is_defined(lhs))
                                     type_error(2, 4);
-                                    //  double => string
+                                    //  double != string
                                 
                                 undefined_error(lhs);
                             }
@@ -2057,17 +2015,17 @@ namespace ss {
                         
                         if (ss::is_array(rhs))
                             type_error(0, 3);
-                            //  array => int
+                            //  array != int
                         
                         if (rhs.empty() || is_string(rhs))
                             type_error(4, 3);
-                            //  string => int
+                            //  string != int
                         
                         double s = stod(rhs);
                         
                         if (!is_int(s))
                             type_error(2, 3);
-                            //  double => int
+                            //  double != int
                         
                         if (s < 0 || s > lhs.length())
                             range_error("start " + rtrim(s) + ", count " + to_string(lhs.length()));
@@ -2090,17 +2048,17 @@ namespace ss {
                             
                             if (ss::is_array(rhs))
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             
                             if (rhs.empty() || is_string(rhs))
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                                 
                             double e = stod(rhs);
                             
                             if (!is_int(e))
                                 type_error(2, 3);
-                                //  double => int
+                                //  double != int
                             
                             if (e < s || e > lhs.length())
                                 range_error("start " + rtrim(s) + ", end " + rtrim(e) + ", count " + to_string(lhs.length()));
@@ -2134,17 +2092,17 @@ namespace ss {
                             
                             if (ss::is_array(rhs))
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             
                             if (rhs.empty() || is_string(rhs))
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                             
                             double s = stod(rhs);
                             
                             if (!is_int(s))
                                 type_error(2, 3);
-                                //  double => int
+                                //  double != int
                             
                             k = io_array(lhs);
                             
@@ -2171,17 +2129,17 @@ namespace ss {
                                 
                                 if (ss::is_array(rhs))
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 if (rhs.empty() || is_string(rhs))
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 
                                 double e = stod(rhs);
                                 
                                 if (!is_int(e))
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 
                                 k = io_array(lhs);
                                 
@@ -2216,17 +2174,17 @@ namespace ss {
                             
                             if (ss::is_array(rhs))
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             
                             if (rhs.empty() || is_string(rhs))
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                             
                             double s = stod(rhs);
                             
                             if (!is_int(s))
                                 type_error(2, 3);
-                                //  double => int
+                                //  double != int
                             
                             if (s < 0 || s > valuec)
                                 range_error("start " + rtrim(s) + ", count " + to_string(valuec));
@@ -2251,17 +2209,17 @@ namespace ss {
                                 
                                 if (ss::is_array(rhs))
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 if (rhs.empty() || is_string(rhs))
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 
                                 double e = stod(rhs);
                                 
                                 if (!is_int(e))
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 
                                 if (e < 0 || s + e > valuec)
                                     range_error("start " + rtrim(s) + ", length " + rtrim(e) + ", count " + to_string(valuec));
@@ -2293,11 +2251,10 @@ namespace ss {
                         if (p == 1) {
                             delete[] v;
                             
-                            if (is_string(lhs) || !is_symbol(lhs))
+                            if (!is_symbol(lhs))
                                 operation_error();
                             
-                            rhs =   operands.top();
-                                    operands.pop();
+                            rhs = operands.pop();
                             
                             int k = io_array(lhs);
                             if (k == -1) {
@@ -2314,7 +2271,7 @@ namespace ss {
                                     
                                     if (rhs.empty())
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     v = new string[rhs.length() + 1];
                                     p = parse(v, rhs);
@@ -2322,20 +2279,20 @@ namespace ss {
                                     
                                     if (p != 1)
                                         type_error(0, 2);
-                                        //  array => double
+                                        //  array != double
                                     
                                     if (is_string(rhs))
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     
                                     if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 2);
-                                            //  array => double
+                                            //  array != double
                                         
                                         if (io_string(rhs) != -1)
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         
                                         d += get_number(rhs);
                                     } else
@@ -2374,14 +2331,14 @@ namespace ss {
                                     
                                     if (p != 1)
                                         type_error(0, 4);
-                                        //  array => string
+                                        //  array != string
                                     
                                     if (is_string(rhs))
                                         rhs = decode(rhs);
                                     else if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 4);
-                                            //  array => string
+                                            //  array != string
                                         
                                         int j = io_string(rhs);
                                         if (j == -1)
@@ -2415,21 +2372,17 @@ namespace ss {
                                             null_error();
                                         
                                         type_error(4, 3);
-                                        //  string => int
+                                        //  string != int
                                     }
                                     
-                                    v = new string[rhs.length() + 1];
-                                    p = parse(v, rhs);
-                                    delete[] v;
-                                    
-                                    if (p != 1)
+                                    if (ss::is_array(rhs))
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     if (is_string(rhs)) {
                                         if (!is_dictionary(std::get<1>(* arrayv[k])))
                                             type_error(4, 3);
-                                            //  string => int
+                                            //  string != int
                                         
                                         rhs = decode(rhs);
                                         
@@ -2453,20 +2406,15 @@ namespace ss {
                                         if (lhs.empty())
                                             null_error();
                                             
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         if (rhs.empty())
                                             null_error();
                                         
-                                        v = new string[rhs.length() + 1];
-                                        p = parse(v, rhs);
-                                        delete[] v;
-                                        
                                         if (is_string(lhs)) {
-                                            if (p != 1)
+                                            if (ss::is_array(rhs))
                                                 type_error(0, 4);
-                                                //  array => string
+                                                //  array != string
                                             
                                             lhs = decode(lhs);
                                             
@@ -2479,7 +2427,7 @@ namespace ss {
                                             else if (is_symbol(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(0, 4);
-                                                    //  array => string
+                                                    //  array != string
                                                 
                                                 int q = io_string(rhs);
                                                 if (q == -1)
@@ -2506,20 +2454,20 @@ namespace ss {
                                             
                                             if (p != 1)
                                                 type_error(0, 2);
-                                                //  array => double
+                                                //  array != double
                                             
                                             if (is_string(rhs))
                                                 type_error(4, 2);
-                                                //  string => double
+                                                //  string != double
                                                 
                                             if (is_symbol(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(0, 2);
-                                                    //  array => double
+                                                    //  array != double
                                                 
                                                 if (io_string(rhs) != -1)
                                                     type_error(4, 2);
-                                                    //  string => double
+                                                    //  string != double
                                                 
                                                 d += get_number(rhs);
                                             } else
@@ -2535,7 +2483,7 @@ namespace ss {
                                     } else if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 3);
-                                            //  array => int
+                                            //  array != int
                                         
                                         int m = io_string(rhs);
                                         if (m == -1) {
@@ -2543,7 +2491,7 @@ namespace ss {
                                             
                                             if (!is_int(index))
                                                 type_error(2, 3);
-                                                //  double => int
+                                                //  double != int
                                             
                                             if (index < 0 || index >= std::get<1>(* arrayv[k]).size())
                                                 range_error("index " + rtrim(index) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
@@ -2556,8 +2504,7 @@ namespace ss {
                                             if (lhs.empty())
                                                 null_error();
                                                 
-                                            rhs =   operands.top();
-                                                    operands.pop();
+                                            rhs = operands.pop();
                                             
                                             if (rhs.empty())
                                                 null_error();
@@ -2569,7 +2516,7 @@ namespace ss {
                                             if (is_string(lhs)) {
                                                 if (p != 1)
                                                     type_error(0, 4);
-                                                    //  array => string
+                                                    //  array != string
                                                 
                                                 lhs = decode(lhs);
                                                 
@@ -2582,7 +2529,7 @@ namespace ss {
                                                 else if (is_symbol(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(0, 4);
-                                                        //  array => string
+                                                        //  array != string
                                                     
                                                     l = io_string(rhs);
                                                     if (l == -1)
@@ -2609,20 +2556,20 @@ namespace ss {
                                                 
                                                 if (p != 1)
                                                     type_error(0, 2);
-                                                    //  array => double
+                                                    //  array != double
                                                 
                                                 if (is_string(rhs))
                                                     type_error(4, 2);
-                                                    //  string => double
+                                                    //  string != double
                                                     
                                                 if (is_symbol(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(0, 2);
-                                                        //  array => double
+                                                        //  array != double
                                                     
                                                     if (io_string(rhs) != -1)
                                                         type_error(4, 2);
-                                                        //  string => double
+                                                        //  string != double
                                                     
                                                     d += get_number(rhs);
                                                 } else
@@ -2638,7 +2585,7 @@ namespace ss {
                                         } else {
                                             if (!is_dictionary(std::get<1>(* arrayv[k])))
                                                 type_error(4, 3);
-                                                //  string => int
+                                                //  string != int
                                             
                                             rhs = std::get<1>(* stringv[m]);
                                             
@@ -2660,8 +2607,7 @@ namespace ss {
                                             if (lhs.empty())
                                                 null_error();
                                                 
-                                            rhs =   operands.top();
-                                                    operands.pop();
+                                            rhs = operands.pop();
                                             
                                             if (rhs.empty())
                                                 null_error();
@@ -2673,7 +2619,7 @@ namespace ss {
                                             if (is_string(lhs)) {
                                                 if (p != 1)
                                                     type_error(0, 4);
-                                                    //  array => string
+                                                    //  array != string
                                                 
                                                 lhs = decode(lhs);
                                                 
@@ -2686,7 +2632,7 @@ namespace ss {
                                                 else if (is_symbol(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(0, 4);
-                                                        //  array => string
+                                                        //  array != string
                                                     
                                                     size_t r = io_string(rhs);
                                                     if (r == -1)
@@ -2713,20 +2659,20 @@ namespace ss {
                                                 
                                                 if (p != 1)
                                                     type_error(0, 2);
-                                                    //  array => double
+                                                    //  array != double
                                                 
                                                 if (is_string(rhs))
                                                     type_error(4, 2);
-                                                    //  string => double
+                                                    //  string != double
                                                     
                                                 if (is_symbol(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(0, 2);
-                                                        //  array => double
+                                                        //  array != double
                                                     
                                                     if (io_string(rhs) != -1)
                                                         type_error(4, 2);
-                                                        //  string => double
+                                                        //  string != double
                                                     
                                                     d += get_number(rhs);
                                                 } else
@@ -2745,7 +2691,7 @@ namespace ss {
                                         
                                         if (!is_int(index))
                                             type_error(2, 3);
-                                            //  double => int
+                                            //  double != int
                                         
                                         if (index < 0 || index >= std::get<1>(* arrayv[k]).size())
                                             range_error("index " + rtrim(index) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
@@ -2758,8 +2704,7 @@ namespace ss {
                                         if (lhs.empty())
                                             null_error();
                                             
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         if (rhs.empty())
                                             null_error();
@@ -2771,7 +2716,7 @@ namespace ss {
                                         if (is_string(lhs)) {
                                             if (p != 1)
                                                 type_error(0, 4);
-                                                //  array => string
+                                                //  array != string
                                             
                                             lhs = decode(lhs);
                                             
@@ -2784,7 +2729,7 @@ namespace ss {
                                             else if (is_symbol(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(0, 4);
-                                                    //  array => string
+                                                    //  array != string
                                                 
                                                 int m = io_string(rhs);
                                                 if (m == -1)
@@ -2811,20 +2756,20 @@ namespace ss {
                                             
                                             if (p != 1)
                                                 type_error(0, 2);
-                                                //  array => double
+                                                //  array != double
                                             
                                             if (is_string(rhs))
                                                 type_error(4, 2);
-                                                //  string => double
+                                                //  string != double
                                                 
                                             if (is_symbol(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(0, 2);
-                                                    //  array => double
+                                                    //  array != double
                                                 
                                                 if (io_string(rhs) != -1)
                                                     type_error(4, 2);
-                                                    //  string => double
+                                                    //  string != double
                                                 
                                                 d += get_number(rhs);
                                             } else
@@ -2843,7 +2788,6 @@ namespace ss {
                                         if (std::get<2>(* arrayv[k]).first)
                                             write_error(lhs);
                                         
-                                        std::get<2>(* arrayv[k]).second = true;
                                         std::get<1>(* arrayv[k]).push(rhs);
                                     } else {
                                         v = new string[rhs.length() + 1];
@@ -2887,6 +2831,7 @@ namespace ss {
                                                     std::get<2>(* arrayv[l]).second = true;
                                                     
                                                     size_t m = std::get<1>(* arrayv[l]).size();
+                                                    
                                                     for (size_t q = 0; q < m; ++q)
                                                         std::get<1>(* arrayv[k]).push(std::get<1>(* arrayv[l])[q]);
                                                 }
@@ -2902,20 +2847,26 @@ namespace ss {
                                         } else {
                                             if (std::get<2>(* arrayv[k]).first)
                                                 write_error(lhs);
-                                            
-                                            std::get<2>(* arrayv[k]).second = true;
-                                            
+                                                                                        
                                             for (size_t l = 0; l < p; ++l)
                                                 std::get<1>(* arrayv[k]).push(v[l]);
                                             
                                             delete[] v;
                                         }
                                     }
+                                    
+                                    rhs = to_string(std::get<1>(* arrayv[k]).size());
                                 }
                             }
                         } else {
-                            rhs =   operands.top();
-                                    operands.pop();
+                            size_t k = i + 1;
+                            while (k < n && data[k] == "(")
+                                ++k;
+                            
+                            if (data[k] != uov[indexer_oi]->opcode())
+                                operation_error();
+                            
+                            rhs = operands.pop();
                             
                             //  empty indexer argument
                             if (rhs.empty()) {
@@ -2926,32 +2877,27 @@ namespace ss {
                                     null_error();
                                 
                                 type_error(4, 3);
-                                //  string => int
+                                //  string != int
                             }
                             
-                            string* _v = new string[rhs.length() + 1];
-                            size_t _p = parse(_v, rhs);
-                            
-                            delete[] _v;
-                            
-                            if (_p != 1) {
+                            if (ss::is_array(rhs)) {
                                 delete[] v;
                                 type_error(0, 3);
-                                //  array => int
+                                //  array != int
                             }
                             
                             if (is_string(rhs)) {
                                 if (!is_dictionary(p, v)) {
                                     delete[] v;
                                     type_error(0, 6);
-                                    //  array => dictionary
+                                    //  array != dictionary
                                 }
                                 
                                 rhs = decode(rhs);
                                 
                                 if (rhs.empty()) {
                                     delete[] v;
-                                    undefined_error(encode(empty()));
+                                    undefined_error(empty());
                                 }
                                 
                                 rhs = encode(rhs);
@@ -2975,8 +2921,7 @@ namespace ss {
                                     
                                     text = decode(text);
                                     
-                                    rhs =   operands.top();
-                                            operands.pop();
+                                    rhs = operands.pop();
                                     
                                     rhs = element(rhs);
                                     rhs = decode(rhs);
@@ -2988,13 +2933,12 @@ namespace ss {
                                 } else {
                                     double number = stod(v[l * 2 + 1]);
                                     
-                                    rhs =   operands.top();
-                                            operands.pop();
+                                    rhs = operands.pop();
                                     
                                     if (rhs.empty() || is_string(rhs)) {
                                         delete[] v;
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     }
                                     
                                     number += stod(rhs);
@@ -3004,7 +2948,7 @@ namespace ss {
                             } else if (is_symbol(rhs)) {
                                 if (io_array(rhs) != -1)
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 int l = io_string(rhs);
                                 if (l == -1) {
@@ -3013,7 +2957,7 @@ namespace ss {
                                     if (!is_int(idx)) {
                                         delete[] v;
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     }
                                     
                                     if (idx < 0 || idx >= p)
@@ -3029,8 +2973,7 @@ namespace ss {
                                         
                                         text = decode(text);
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         rhs = element(rhs);
                                         rhs = decode(rhs);
@@ -3042,13 +2985,12 @@ namespace ss {
                                     } else {
                                         double number = stod(v[(size_t)idx]);
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         if (rhs.empty() || is_string(rhs)) {
                                             delete[] v;
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         }
                                         
                                         number += stod(rhs);
@@ -3059,7 +3001,7 @@ namespace ss {
                                     if (!is_dictionary(p, v)) {
                                         delete[] v;
                                         type_error(0, 6);
-                                        //  array => dictionary
+                                        //  array != dictionary
                                     }
                                     
                                     rhs = std::get<1>(* stringv[l]);
@@ -3071,7 +3013,7 @@ namespace ss {
                                     
                                     if (rhs.length() == 2) {
                                         delete[] v;
-                                        undefined_error(encode(empty()));
+                                        undefined_error(empty());
                                     }
                                     
                                     size_t m = 0;
@@ -3093,8 +3035,7 @@ namespace ss {
                                         
                                         text = decode(text);
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         rhs = element(rhs);
                                         rhs = decode(rhs);
@@ -3106,13 +3047,12 @@ namespace ss {
                                     } else {
                                         double number = stod(v[m * 2 + 1]);
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         if (rhs.empty() || is_string(rhs)) {
                                             delete[] v;
                                             type_error(4, 2);
-                                            //  string => double
+                                            //  string != double
                                         }
                                         
                                         number += stod(rhs);
@@ -3126,7 +3066,7 @@ namespace ss {
                                 if (!is_int(idx)) {
                                     delete[] v;
                                     type_error(2, 3);
-                                    //  double => int
+                                    //  double != int
                                 }
                                 
                                 if (idx < 0 || idx >= p)
@@ -3142,8 +3082,7 @@ namespace ss {
                                     
                                     text = decode(text);
                                     
-                                    rhs =   operands.top();
-                                            operands.pop();
+                                    rhs = operands.pop();
                                     
                                     rhs = element(rhs);
                                     rhs = decode(rhs);
@@ -3155,13 +3094,12 @@ namespace ss {
                                 } else {
                                     double number = stod(v[(size_t)idx]);
                                     
-                                    rhs =   operands.top();
-                                            operands.pop();
+                                    rhs = operands.pop();
                                     
                                     if (rhs.empty() || is_string(rhs)) {
                                         delete[] v;
                                         type_error(4, 2);
-                                        //  string => double
+                                        //  string != double
                                     }
                                     
                                     number += stod(rhs);
@@ -3180,8 +3118,7 @@ namespace ss {
                         string* v = new string[lhs.length() + 1];
                         size_t p = parse(v, lhs);
                         
-                        rhs =   operands.top();
-                                operands.pop();
+                        rhs = operands.pop();
                         
                         size_t k = i + 1;
                         while (k < n && data[k] == "(")
@@ -3193,55 +3130,44 @@ namespace ss {
                                 ++k;
                             
                             if (p == 1) {
-                                if (is_string(lhs))
-                                    write_error(lhs);
-                                
                                 if (!is_symbol(lhs))
                                     operation_error();
                                 
                                 int k = io_array(lhs);
                                 if (k == -1) {
-                                    k = io_string(lhs);
-                                    if (k != -1)
-                                        write_error(lhs);
+                                    if (io_string(lhs) != -1)
+                                        operation_error();
                                     
                                     if (is_defined(lhs))
                                         type_error(2, 4);
-                                        //  double => string
+                                        //  double != string
                                     
                                     if (rhs.empty())
                                         null_error();
                                     
-                                    v = new string[rhs.length() + 1];
-                                    p = parse(v, rhs);
-                                    delete[] v;
-                                    
-                                    if (p != 1)
+                                    if (ss::is_array(rhs))
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     if (is_string(rhs)) {
                                         rhs = decode(rhs);
                                         
                                         if (rhs.empty())
-                                            undefined_error(encode(empty()));
+                                            undefined_error(empty());
                                         
                                         rhs = encode(rhs);
                                         
-                                        string key = rhs;
+                                        string ctr = rhs;
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = element(operands.pop());
                                         
-                                        rhs = element(rhs);
-                                        
-                                        set_array(lhs, 0, key);
+                                        set_array(lhs, 0, ctr);
                                         set_array(lhs, 1, rhs);
                                         
                                     } else if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 3);
-                                            //  array => int
+                                            //  array != int
                                         
                                         k = io_string(rhs);
                                         if (k == -1) {
@@ -3249,14 +3175,13 @@ namespace ss {
                                             
                                             if (!is_int(idx))
                                                 type_error(2, 3);
-                                                //  double => int
+                                                //  double != int
                                             
                                             if (idx)
                                                 range_error(rtrim(idx));
                                                 //  revisit
                                             
-                                            rhs =   operands.top();
-                                                    operands.pop();
+                                            rhs = operands.pop();
                                             
                                             rhs = element(rhs);
                                             
@@ -3267,14 +3192,12 @@ namespace ss {
                                             if (rhs.empty())
                                                 null_error();
 
-                                            //  empty
                                             if (rhs.length() == 2)
-                                                undefined_error(encode(empty()));
+                                                undefined_error(empty());
 
                                             string key = rhs;
                                             
-                                            rhs =   operands.top();
-                                                    operands.pop();
+                                            rhs = operands.pop();
                                             
                                             rhs = element(rhs);
                                             
@@ -3286,13 +3209,13 @@ namespace ss {
                                         
                                         if (!is_int(idx))
                                             type_error(2, 3);
-                                            //  double => int
+                                            //  double != int
                                         
                                         if (idx)
                                             range_error(rtrim(idx));
                                             //  revisit
                                         
-                                        rhs =   operands.pop();
+                                        rhs = operands.pop();
                                         
                                         rhs = element(rhs);
                                         
@@ -3304,7 +3227,7 @@ namespace ss {
                                             null_error();
                                         
                                         type_error(4, 3);
-                                        //  string => int
+                                        //  string != int
                                     }
                                     
                                     v = new string[rhs.length() + 1];
@@ -3313,12 +3236,12 @@ namespace ss {
                                     
                                     if (p != 1)
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     if (is_string(rhs)) {
                                         if (!is_dictionary(std::get<1>(* arrayv[k])))
                                             type_error(0, 6);
-                                            //  array => table
+                                            //  array != table
                                         
                                         rhs = decode(rhs);
                                         
@@ -3328,8 +3251,7 @@ namespace ss {
                                         string ctr = rhs;
                                         ctr = encode(ctr);
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         rhs = element(rhs);
                                         
@@ -3348,7 +3270,7 @@ namespace ss {
                                     } else if (is_symbol(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(0, 3);
-                                            //  array => int
+                                            //  array != int
                                         
                                         int l = io_string(rhs);
                                         if (l == -1) {
@@ -3356,13 +3278,12 @@ namespace ss {
                                             
                                             if (!is_int(d))
                                                 type_error(2, 3);
-                                                //  double => int
+                                                //  double != int
                                             
                                             if (d < 0 || d > std::get<1>(* arrayv[k]).size())
                                                 range_error("index " + rtrim(d) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
                                             
-                                            rhs =   operands.top();
-                                                    operands.pop();
+                                            rhs = operands.pop();
                                             
                                             rhs = element(rhs);
                                             
@@ -3379,10 +3300,7 @@ namespace ss {
                                             if (ctr.length() == 2)
                                                 undefined_error(ctr);
                                             
-                                            rhs =   operands.top();
-                                                    operands.pop();
-                                            
-                                            rhs = element(rhs);
+                                            rhs = element(operands.pop());
                                             
                                             if (std::get<2>(* arrayv[k]).first)
                                                 write_error(lhs);
@@ -3398,63 +3316,51 @@ namespace ss {
                                                 std::get<1>(* arrayv[k])[m * 2 + 1] = rhs;
                                         }
                                     } else {
-                                        double d = stod(rhs);
+                                        double num = stod(rhs);
                                         
-                                        if (!is_int(d))
+                                        if (!is_int(num))
                                             type_error(2, 3);
-                                            //  double => int
+                                            //  double != int
                                         
-                                        if (d < 0 || d > std::get<1>(* arrayv[k]).size())
-                                            range_error("index " + rtrim(d) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
+                                        if (num < 0 || num > std::get<1>(* arrayv[k]).size())
+                                            range_error("index " + rtrim(num) + ", count " + to_string(std::get<1>(* arrayv[k]).size()));
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
-                                        
-                                        rhs = element(rhs);
+                                        rhs = element(operands.pop());
                                         
                                         if (std::get<2>(* arrayv[k]).first)
                                             write_error(lhs);
                                         
-                                        set_array(lhs, (int)d, rhs);
+                                        set_array(lhs, (int)num, rhs);
                                     }
                                 }
                             } else {
-                                //  search index, key
-                                
                                 if (rhs.empty()) {
                                     if (is_dictionary(p, v))
                                         null_error();
                                     
                                     type_error(4, 3);
-                                    //  string => int
+                                    //  string != int
                                 }
                                 
-                                string* _v = new string[rhs.length() + 1];
-                                size_t _p = parse(_v, rhs);
-                                
-                                delete[] _v;
-                                
-                                if (_p != 1)
+                                if (ss::is_array(rhs))
                                     type_error(0, 3);
-                                    //  array => int
+                                    //  array != int
                                 
                                 if (is_string(rhs)) {
                                     if (!is_dictionary(p, v))
                                         type_error(0, 6);
-                                        //  array => dictionary
+                                        //  array != dictionary
                                     
                                     rhs = decode(rhs);
                                     
-                                    //  empty string
                                     if (rhs.empty())
-                                        undefined_error(encode(empty()));
+                                        undefined_error(empty());
                                     
                                     rhs = encode(rhs);
                                     
                                     string key = rhs;
                                     
-                                    rhs =   operands.top();
-                                            operands.pop();
+                                    rhs = operands.pop();
                                     
                                     rhs = element(rhs);
                                     
@@ -3481,20 +3387,19 @@ namespace ss {
                                     
                                     if (io_array(rhs) != -1)
                                         type_error(0, 3);
-                                        //  array => int
+                                        //  array != int
                                     
                                     int k = io_string(rhs);
                                     if (k == -1) {
                                         double idx = get_number(rhs);
                                         if (!is_int(idx))
                                             type_error(2, 3);
-                                            //  double => int
+                                            //  double != int
                                         
                                         if (idx < 0 || idx > p)
                                             range_error("index " + rtrim(p) + ", count " + to_string(p));
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.top();
                                         
                                         rhs = element(rhs);
                                         
@@ -3513,21 +3418,19 @@ namespace ss {
                                     } else {
                                         if (!is_dictionary(p, v))
                                             type_error(0, 6);
-                                            //  array => dictionary
+                                            //  array != dictionary
                                         
                                         rhs = std::get<1>(* stringv[k]);
                                         
                                         if (rhs.empty())
                                             null_error();
                                         
-                                        //  empty string
                                         if (rhs.length() == 2)
-                                            undefined_error(encode(empty()));
+                                            undefined_error(empty());
                                         
                                         string key = rhs;
                                         
-                                        rhs =   operands.top();
-                                                operands.pop();
+                                        rhs = operands.pop();
                                         
                                         rhs = element(rhs);
                                         
@@ -3538,6 +3441,7 @@ namespace ss {
                                         
                                         if (l == (size_t)floor(p / 2)) {
                                             string* tmp = new string[p + 2];
+                                            
                                             for (size_t m = 0; m < p; ++m)
                                                 tmp[m] = v[m];
                                             
@@ -3556,13 +3460,12 @@ namespace ss {
                                     double idx = stod(rhs);
                                     if (!is_int(idx))
                                         type_error(2, 3);
-                                        //  double => int
+                                        //  double != int
                                     
                                     if (idx < 0 || idx > p)
                                         range_error("index " + rtrim(p) + ", count " + to_string(p));
                                     
-                                    rhs =   operands.top();
-                                            operands.pop();
+                                    rhs = operands.pop();
                                     
                                     rhs = element(rhs);
                                     
@@ -3583,7 +3486,7 @@ namespace ss {
                                 rhs = stringify(p, v);
                             }
                         } else {
-                            if (/* p != 1 || is_string(lhs) || */ !is_symbol(lhs)) {
+                            if (!is_symbol(lhs)) {
                                 delete[] v;
                                 operation_error();
                             }
@@ -3666,22 +3569,22 @@ namespace ss {
                                             
                                             if (ss::is_array(rhs))
                                                 type_error(0, 2);
-                                                //  array => double
+                                                //  array != double
                                             
                                             if (rhs.empty() || is_string(rhs))
                                                 type_error(4, 2);
-                                                //  string => double
+                                                //  string != double
                                             
                                             double d;
                                             
                                             if (is_symbol(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(0, 2);
-                                                    //  array => double
+                                                    //  array != double
                                                     
                                                 if (io_string(rhs) != -1)
                                                     type_error(4, 2);
-                                                    //  string => double
+                                                    //  string != double
                                                 
                                                 d = get_number(rhs);
                                             } else
@@ -3721,7 +3624,7 @@ namespace ss {
                                                                 set_number(lhs, d);
                                                                 
                                                                 if (data[i + 1] == uov[const_oi]->opcode())
-                                                                    disable_write(lhs);
+                                                                    set_read_only(lhs, true);
                                                                 
                                                                 rhs = rtrim(d);
                                                             } else {
@@ -3754,7 +3657,7 @@ namespace ss {
                                                         set_number(lhs, d);
                                                         
                                                         if (data[i + 1] == uov[const_oi]->opcode())
-                                                            disable_write(lhs);
+                                                            set_read_only(lhs, true);
                                                         
                                                         rhs = rtrim(d);
                                                     }
@@ -3777,7 +3680,7 @@ namespace ss {
                                         
                                         if (ss::is_array(rhs))
                                             type_error(0, 4);
-                                            //  array => string
+                                            //  array != string
                                         
                                         if (is_string(rhs))
                                             rhs = encode(decode(rhs));
@@ -3785,13 +3688,13 @@ namespace ss {
                                         else if (is_symbol(rhs)) {
                                             if (io_array(rhs) != -1)
                                                 type_error(0, 4);
-                                                //  array => string
+                                                //  array != string
                                             
                                             int k = io_string(rhs);
                                             if (k == -1) {
                                                 if (is_defined(rhs))
                                                     type_error(2, 4);
-                                                    //  double => string
+                                                    //  double != string
                                                 
                                                 undefined_error(rhs);
                                             }
@@ -3800,7 +3703,7 @@ namespace ss {
                                             std::get<2>(* stringv[k]).second = true;
                                         } else
                                             type_error(2, 4);
-                                            //  double => string
+                                            //  double != string
                                         
                                         set_string(lhs, rhs);
                                     }
@@ -3907,24 +3810,20 @@ namespace ss {
                         }
                         
                         if (flag) {
-                            rhs = evaluate(operands.top());
+                            rhs = evaluate(operands.pop());
                             
-                            operands.pop();
                             operands.pop();
                         } else {
                             operands.pop();     //  discard lhs
                             
-                            rhs = evaluate(operands.top());
-                            
-                            operands.pop();
+                            rhs = evaluate(operands.pop());
                         }
                         
                         //  implement ternary operators
                         //  hybrid binary-ternary operators must still live in evaluate()
                         //  as must logical operators
                     } else {
-                        rhs =   operands.top();
-                                operands.pop();
+                        rhs = operands.pop();
                         rhs =   ((buo *)uov[j])->apply(lhs, rhs);
                     }
                     
@@ -4037,7 +3936,9 @@ namespace ss {
     }
 
     void interpreter::initialize() {
-        uov = new operator_t*[58];
+        //  BEGIN OPERATORS
+        
+        uov = new operator_t*[59];
 
         uov[uoc++] = new uuo("count", [this](const string rhs) {
             if (rhs.empty())
@@ -4052,7 +3953,6 @@ namespace ss {
                 
                 if (is_string(rhs)) {
                     string str = decode(rhs);
-                    
                     return to_string(str.length());
                 }
                 
@@ -4129,7 +4029,7 @@ namespace ss {
         uov[uoc++] = new uuo("inverse", [this](string rhs) {
            if (rhs.empty())
                type_error(4, 7);
-                //  string => table
+                //  string != table
             
             string* data = new string[rhs.length() + 1];
             size_t n = parse(data, rhs);
@@ -4139,28 +4039,28 @@ namespace ss {
                 
                 if (is_string(rhs))
                     type_error(4, 7);
-                    //  string => table
+                    //  string != table
                 
                 if (!is_symbol(rhs))
                     type_error(2, 7);
-                    //  double => table
+                    //  double != table
                 
                 int i = io_array(rhs);
                 if (i == -1) {
                     if (io_string(rhs) != -1)
                         type_error(4, 7);
-                        //  string => table
+                        //  string != table
                     
                     if (is_defined(rhs))
                         type_error(2, 7);
-                        //  double => table
+                        //  double != table
                     
                     undefined_error(rhs);
                 }
                 
                 if (!is_table(std::get<1>(* arrayv[i])))
                     type_error(0, 7);
-                    //  array => table
+                    //  array != table
                 
                 size_t c = stoi(std::get<1>(* arrayv[i])[0]);
                 size_t r = (std::get<1>(*  arrayv[i]).size() - 1) / c;
@@ -4182,7 +4082,7 @@ namespace ss {
             
             if (!is_table(n, data))
                 type_error(0, 7);
-                //  array => table
+                //  array != table
             
             size_t c = stoi(data[0]);
             size_t r = (n - 1) / c;
@@ -4206,23 +4106,23 @@ namespace ss {
             string v[rhs.length() + 1];
             if (parse(v, rhs) != 1)
                 type_error(0, 1);
-                //  array => char
+                //  array != char
             
             int i = -1;
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 1);
-                    //  array => char
+                    //  array != char
                 
                 i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                         
                     undefined_error(rhs);
                 }
@@ -4237,7 +4137,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             if (i != -1)
                 std::get<2>(* stringv[i]).second = true;
@@ -4253,23 +4153,23 @@ namespace ss {
             string v[rhs.length() + 1];
             if (parse(v, rhs) != 1)
                 type_error(0, 1);
-                //  array => char
+                //  array != char
             
             int i = -1;
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 1);
-                    //  array => char
+                    //  array != char
                 
                 i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                         
                     undefined_error(rhs);
                 }
@@ -4284,7 +4184,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             if (i != -1)
                 std::get<2>(* stringv[i]).second = true;
@@ -4300,23 +4200,23 @@ namespace ss {
             string v[rhs.length() + 1];
             if (parse(v, rhs) != 1)
                 type_error(0, 1);
-                //  array => char
+                //  array != char
             
             int i = -1;
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 1);
-                    //  array => char
+                    //  array != char
                 
                 i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                         
                     undefined_error(rhs);
                 }
@@ -4331,7 +4231,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             if (i != -1)
                 std::get<2>(* stringv[i]).second = true;
@@ -4347,23 +4247,23 @@ namespace ss {
             string v[rhs.length() + 1];
             if (parse(v, rhs) != 1)
                 type_error(0, 1);
-                //  array => char
+                //  array != char
             
             int i = -1;
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 1);
-                    //  array => char
+                    //  array != char
                 
                 i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                         
                     undefined_error(rhs);
                 }
@@ -4378,7 +4278,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             if (i != -1)
                 std::get<2>(* stringv[i]).second = true;
@@ -4394,23 +4294,23 @@ namespace ss {
             string values[rhs.length() + 1];
             if (parse(values, rhs) != 1)
                 type_error(0, 1);
-                //  array => char
+                //  array != char
             
             int i = -1;
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 1);
-                    //  array => char
+                    //  array != char
                 
                 i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                         
                     undefined_error(rhs);
                 }
@@ -4425,7 +4325,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             if (i != -1)
                 std::get<2>(* stringv[i]).second = true;
@@ -4440,23 +4340,23 @@ namespace ss {
             string v[rhs.length() + 1];
             if (parse(v, rhs) != 1)
                 type_error(0, 1);
-                //  array => char
+                //  array != char
             
             int i = -1;
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 1);
-                    //  array => char
+                    //  array != char
                 
                 i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                         
                     undefined_error(rhs);
                 }
@@ -4471,7 +4371,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             if (i != -1)
                 std::get<2>(* stringv[i]).second = true;
@@ -4483,7 +4383,7 @@ namespace ss {
         uov[uoc++] = new uuo("keys", [this](string rhs) {
             if (rhs.empty())
                 type_error(4, 6);
-                //  string => dictionary
+                //  string != dictionary
             
             string v[rhs.length() + 1];
             size_t n = parse(v, rhs);
@@ -4491,25 +4391,25 @@ namespace ss {
             if (n == 1) {
                 if (is_string(rhs))
                     type_error(4, 6);
-                    //  string => dictionary
+                    //  string != dictionary
                 
                 if (is_symbol(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         if (io_string(rhs) != -1)
                             type_error(4, 6);
-                            //  string => dictionary
+                            //  string != dictionary
                         
                         if (is_defined(rhs))
                             type_error(2, 6);
-                            //  double => dictionary
+                            //  double != dictionary
                         
                         undefined_error(rhs);
                     }
                     
                     if (!is_dictionary(std::get<1>(* arrayv[i])))
                         type_error(0, 6);
-                        //  array => dictionary
+                        //  array != dictionary
                     
                     std::get<2>(* arrayv[i]).second = true;
                     
@@ -4526,7 +4426,7 @@ namespace ss {
             
             if (!is_dictionary(n, v))
                 type_error(0, 6);
-                //  array => dictionary
+                //  array != dictionary
             
             stringstream ss;
             size_t i;
@@ -4578,22 +4478,22 @@ namespace ss {
             string v[rhs.length() + 1];
             if (parse(v, rhs) != 1)
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                
                 int i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 4);
-                        //  double => string
+                        //  double != string
                    
                     undefined_error(rhs);
                 }
@@ -4653,8 +4553,7 @@ namespace ss {
             if (rhs.empty())
                 null_error();
             
-            string v[rhs.length() + 1];
-            if (parse(v, rhs) != 1 || is_string(rhs) || !is_symbol(rhs))
+            if (!is_symbol(rhs))
                 operation_error();
             
             int i = io_array(rhs);
@@ -4788,7 +4687,7 @@ namespace ss {
                         if (i == -1) {
                             if (is_defined(rhs))
                                 type_error(2, 4);
-                                //  double => string
+                                //  double != string
                             
                             undefined_error(rhs);
                         }
@@ -4825,7 +4724,7 @@ namespace ss {
                 }
                 
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             }
             
             return rhs;
@@ -4843,17 +4742,17 @@ namespace ss {
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 1);
-                    //  array => char
+                    //  array != char
                     
                 i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                     
                     undefined_error(rhs);
                 }
@@ -4868,7 +4767,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             if (i != -1)
                 std::get<2>(* stringv[i]).second = true;
@@ -4879,27 +4778,27 @@ namespace ss {
         uov[uoc++] = new uuo("tochar", [this](string rhs) {
             if (rhs.empty())
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             string v[rhs.length() + 1];
             if (parse(v, rhs) != 1)
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             double d;
             
             if (is_string(rhs))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             if (is_symbol(rhs)) {
                 if (io_array(rhs) != -1)
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (io_string(rhs) != -1)
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 d = get_number(rhs);
             } else
@@ -4907,7 +4806,7 @@ namespace ss {
             
             if (!is_int(d))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (d < 0 || d >= 128)
                 range_error(to_string((size_t)d));
@@ -4928,22 +4827,22 @@ namespace ss {
             
             if (ss::is_array(rhs))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 int i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 4);
-                        //  double => string
+                        //  double != string
                         
                     undefined_error(rhs);
                 }
@@ -4960,7 +4859,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
             
             rhs = tolower(rhs);
             
@@ -4974,22 +4873,22 @@ namespace ss {
             
             if (ss::is_array(rhs))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (!is_string(rhs)) {
                 if (!is_symbol(rhs))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 if (io_array(rhs) != -1)
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 int i = io_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(2, 4);
-                        //  double => string
+                        //  double != string
                         
                     undefined_error(rhs);
                 }
@@ -5006,7 +4905,7 @@ namespace ss {
             
             if (rhs.length() != 1)
                 type_error(4, 1);
-                //  string => char
+                //  string != char
                 
             rhs = toupper(rhs);
             
@@ -5053,7 +4952,7 @@ namespace ss {
         uov[uoc++] = new uuo("values", [this](string rhs) {
             if (rhs.empty())
                 type_error(4, 6);
-                //  string => dictionary
+                //  string != dictionary
             
             string v[rhs.length() + 1];
             size_t n = parse(v, rhs);
@@ -5061,25 +4960,25 @@ namespace ss {
             if (n == 1) {
                 if (is_string(rhs))
                     type_error(4, 6);
-                    //  string => dictionary
+                    //  string != dictionary
                 
                 if (is_symbol(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         if (io_string(rhs) != -1)
                             type_error(4, 6);
-                            //  string => dictionary
+                            //  string != dictionary
                         
                         if (is_defined(rhs))
                             type_error(2, 6);
-                            //  double => dictionary
+                            //  double != dictionary
                         
                         undefined_error(rhs);
                     }
                     
                     if (!is_dictionary(std::get<1>(* arrayv[i])))
                         type_error(0, 6);
-                        //  array => dictionary
+                        //  array != dictionary
                     
                     std::get<2>(* arrayv[i]).second = true;
                     
@@ -5096,7 +4995,7 @@ namespace ss {
             
             if (!is_dictionary(n, v))
                 type_error(0, 6);
-                //  array => dictionary
+                //  array != dictionary
             
             stringstream ss;
             size_t i;
@@ -5118,55 +5017,50 @@ namespace ss {
             if (lhs.empty())
                 null_error();
             
-            string* v = new string[lhs.length() + 1];
-            size_t n = parse(v, lhs);
+            string valuev[lhs.length() + 1];
+            size_t valuec = parse(valuev, lhs);
             
-            if (n == 1) {
-                delete[] v;
-                
+            if (valuec == 1) {
                 if (is_string(lhs)) {
                     lhs = decode(lhs);
                     
                     if (rhs.empty())
                         type_error(4, 3);
-                        //  string => int
+                        //  string != int
                     
-                    v = new string[rhs.length() + 1];
-                    n = parse(v, rhs);
-                    delete[] v;
-                    
-                    if (n != 1)
+                    if (ss::is_array(rhs))
                         type_error(0, 3);
-                        //  array => int
+                        //  array != int
                     
                     if (is_string(rhs))
                         type_error(4, 3);
-                        //  string => int
+                        //  string != int
                     
-                    double d;
+                    double num;
+                    
                     if (is_symbol(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(0, 3);
-                            //  array => int
+                            //  array != int
                         
                         if (io_string(rhs) != -1)
                             type_error(4, 3);
-                            //  string => int
+                            //  string != int
                         
-                        d = get_number(rhs);
+                        num = get_number(rhs);
                     } else
-                        d = stod(rhs);
+                        num = stod(rhs);
                     
-                    if (!is_int(d))
+                    if (!is_int(num))
                         type_error(2, 3);
-                        //  double => int
+                        //  double != int
                     
-                    if (d < 0 || d >= lhs.length())
-                        range_error("index " + rtrim(d) + ", count " + to_string(lhs.length()));
+                    if (num < 0 || num >= lhs.length())
+                        range_error("index " + rtrim(num) + ", count " + to_string(lhs.length()));
                     
                     char str[2];
                     
-                    str[0] = lhs[(size_t)d];
+                    str[0] = lhs[(size_t)num];
                     str[1] = '\0';
                     rhs = string(str);
                     
@@ -5175,7 +5069,7 @@ namespace ss {
                 
                 if (!is_symbol(lhs))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 int i = io_array(lhs);
                 if (i == -1) {
@@ -5183,7 +5077,7 @@ namespace ss {
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(2, 4);
-                            //  double => string
+                            //  double != string
                         
                         undefined_error(lhs);
                     }
@@ -5197,46 +5091,43 @@ namespace ss {
                     
                     if (rhs.empty())
                         type_error(4, 3);
-                        //  string => int
+                        //  string != int
                     
-                    v = new string[rhs.length() + 1];
-                    n = parse(v, rhs);
-                    delete[] v;
-                    
-                    if (n != 1)
+                    if (ss::is_array(rhs))
                         type_error(0, 3);
-                        //  array => int
+                        //  array != int
                     
                     if (is_string(rhs))
                         type_error(4, 3);
-                        //  string => int
+                        //  string != int
                     
-                    double d;
+                    double num;
+                    
                     if (is_symbol(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(0, 3);
-                            //  array => int
+                            //  array != int
                         
                         if (io_string(rhs) != -1)
                             type_error(4, 3);
-                            //  string => int
+                            //  string != int
                         
-                        d = get_number(rhs);
+                        num = get_number(rhs);
                     } else
-                        d = stod(rhs);
+                        num = stod(rhs);
                     
-                    if (!is_int(d))
+                    if (!is_int(num))
                         type_error(2, 3);
-                        //  double => int
+                        //  double != int
                     
-                    if (d < 0 || d >= lhs.length())
-                        range_error("index " + rtrim(d) + ", count " + to_string(lhs.length()));
+                    if (num < 0 || num >= lhs.length())
+                        range_error("index " + rtrim(num) + ", count " + to_string(lhs.length()));
                     
                     std::get<2>(* stringv[i]).second = true;
                     
                     char str[2];
                     
-                    str[0] = lhs[(size_t)d];
+                    str[0] = lhs[(size_t)num];
                     str[1] = '\0';
                     
                     rhs = string(str);
@@ -5249,26 +5140,21 @@ namespace ss {
                         null_error();
                     
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 }
                 
-                v = new string[rhs.length() + 1];
-                n = parse(v, rhs);
-                delete[] v;
-                
-                if (n != 1)
+                if (ss::is_array(rhs))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (is_string(rhs))  {
                     if (!is_dictionary(std::get<1>(* arrayv[i])))
                         type_error(0, 6);
-                        //  array => dictionary
+                        //  array != dictionary
                     
                     std::get<2>(* arrayv[i]).second = true;
                     
-                    rhs = decode(rhs);
-                    rhs = encode(rhs);
+                    rhs = encode(decode(rhs));
                     
                     size_t j = 0;
                     while (j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) && std::get<1>(* arrayv[i])[j * 2] != rhs)
@@ -5283,26 +5169,27 @@ namespace ss {
                 if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(0, 3);
-                        //  array => int
+                        //  array != int
                     
                     int j = io_string(rhs);
                     if (j == -1) {
-                        double d = get_number(rhs);
-                        if (!is_int(d))
-                            type_error(2, 3);
-                            //  double => int
+                        double num = get_number(rhs);
                         
-                        if (d < 0 || d >= std::get<1>(* arrayv[i]).size())
-                            range_error("index " + rtrim(d) + ", count " + to_string(std::get<1>(* arrayv[i]).size()));
+                        if (!is_int(num))
+                            type_error(2, 3);
+                            //  double != int
+                        
+                        if (num < 0 || num >= std::get<1>(* arrayv[i]).size())
+                            range_error("index " + rtrim(num) + ", count " + to_string(std::get<1>(* arrayv[i]).size()));
                         
                         std::get<2>(* arrayv[i]).second = true;
                         
-                        return std::get<1>(* arrayv[i])[(size_t)d];
+                        return std::get<1>(* arrayv[i])[(size_t)num];
                     }
                     
                     if (!is_dictionary(std::get<1>(* arrayv[i])))
                         type_error(0, 6);
-                        //  array => dictionary
+                        //  array != dictionary
                     
                     rhs = std::get<1>(* stringv[j]);
                     
@@ -5322,79 +5209,71 @@ namespace ss {
                     return std::get<1>(* arrayv[i])[k * 2 + 1];
                 }
                 
-                double d = stod(rhs);
-                if (!is_int(d))
-                    type_error(2, 3);
-                    //  double => int
+                double num = stod(rhs);
                 
-                if (d < 0 || d >= std::get<1>(* arrayv[i]).size())
-                    range_error("index " + rtrim(d) + ", count " + to_string(std::get<1>(* arrayv[i]).size()));
+                if (!is_int(num))
+                    type_error(2, 3);
+                    //  double != int
+                
+                if (num < 0 || num >= std::get<1>(* arrayv[i]).size())
+                    range_error("index " + rtrim(num) + ", count " + to_string(std::get<1>(* arrayv[i]).size()));
                 
                 std::get<2>(* arrayv[i]).second = true;
                 
-                return std::get<1>(* arrayv[i])[(size_t)d];
+                return std::get<1>(* arrayv[i])[(size_t)num];
             }
             
             if (rhs.empty()) {
-                if (is_dictionary(n, v))
+                if (is_dictionary(valuec, valuev))
                     null_error();
                 
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             }
             
-            string _v[rhs.length() + 1];
-            size_t p = parse(_v, rhs);
-            
-            if (p != 1) {
-                delete[] v;
+            if (ss::is_array(rhs))
                 type_error(0, 3);
-                //  array => int
-            }
+                //  array != int
             
             if (is_string(rhs)) {
-                if (!is_dictionary(n, v))
+                if (!is_dictionary(valuec, valuev))
                     type_error(0, 6);
-                    //  array => dictionary
+                    //  array != dictionary
                 
-                rhs = decode(rhs);
-                rhs = encode(rhs);
+                rhs = encode(decode(rhs));
                 
                 size_t i = 0;
-                while (i < (size_t)floor(n / 2) && v[i * 2] != rhs)
+                while (i < (size_t)floor(valuec / 2) && valuev[i * 2] != rhs)
                     ++i;
                 
-                if (i == (size_t)floor(n / 2))
+                if (i == (size_t)floor(valuec / 2))
                     return encode(types[5]);
                 
-                return v[i * 2 + 1];
+                return valuev[i * 2 + 1];
             }
             
             if (is_symbol(rhs)) {
-                if (io_array(rhs) != -1) {
-                    delete[] v;
+                if (io_array(rhs) != -1)
                     type_error(0, 3);
-                    //  array => int
-                }
+                    //  array != int
                 
                 int i = io_string(rhs);
                 if (i == -1) {
-                    double d = get_number(rhs);
-                    if (!is_int(d)) {
-                        delete[] v;
+                    double num = get_number(rhs);
+                    
+                    if (!is_int(num))
                         type_error(2, 3);
-                        //  double => int
-                    }
+                        //  double != int
                     
-                    if (d < 0 || d >= n)
-                        range_error("index " + rtrim(d) + ", count " + to_string(n));
+                    if (num < 0 || num >= valuec)
+                        range_error("index " + rtrim(num) + ", count " + to_string(valuec));
                     
-                    return v[(size_t)d];
+                    return valuev[(size_t)num];
                 }
                 
-                if (!is_dictionary(n, v))
+                if (!is_dictionary(valuec, valuev))
                     type_error(0, 6);
-                    //  array => dictionary
+                    //  array != dictionary
                 
                 rhs = std::get<1>(* stringv[i]);
                 
@@ -5404,31 +5283,29 @@ namespace ss {
                 std::get<2>(* stringv[i]).second = true;
                 
                 size_t j = 0;
-                while (j < (size_t)floor(n / 2) && v[j * 2] != rhs)
+                while (j < (size_t)floor(valuec / 2) && valuev[j * 2] != rhs)
                     ++j;
                 
-                if (j == (size_t)floor(n / 2))
+                if (j == (size_t)floor(valuec / 2))
                     return encode(types[5]);
                 
-                return v[j * 2 + 1];
+                return valuev[j * 2 + 1];
             }
             
-            double d = stod(rhs);
-            if (!is_int(d)) {
-                delete[] v;
+            double num = stod(rhs);
+                
+            if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
-            }
+                //  double != int
             
-            if (d < 0 || d >= n)
-                range_error("index " + rtrim(d) + ", count " + to_string(n));
+            if (num < 0 || num >= valuec)
+                range_error("index " + rtrim(num) + ", count " + to_string(valuec));
             
-            return v[(size_t)d];
+            return valuev[(size_t)num];
         });
         //  18
         
         uov[aggregate_oi = uoc++] = new tuo("aggregate", [this](const string lhs, const string ctr, const string rhs) {
-            
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -5442,11 +5319,11 @@ namespace ss {
                 if (i == -1) {
                     if (io_string(lhs) != -1)
                         type_error(4, 0);
-                        //  string => array
+                        //  string != array
                     
                     if (is_defined(lhs))
                         type_error(2, 0);
-                        //  double => array
+                        //  double != array
                     
                     undefined_error(lhs);
                 }
@@ -5475,7 +5352,7 @@ namespace ss {
                     
                     if (ss::is_array(result))
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     set_array(ctr, 0, result);
                 }
@@ -5488,7 +5365,7 @@ namespace ss {
                 
                 result = std::get<1>(* arrayv[io_array(ctr)])[0];
                 
-                drop(ctr);
+                remove_symbol(ctr);
                 
                 return result;
             }
@@ -5511,7 +5388,7 @@ namespace ss {
                 
                 if (ss::is_array(result))
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 set_array(ctr, 0, result);
             }
@@ -5520,7 +5397,7 @@ namespace ss {
             
             result = std::get<1>(* arrayv[io_array(ctr)])[0];
             
-            drop(ctr);
+            remove_symbol(ctr);
             
             return result;
         });
@@ -5545,21 +5422,21 @@ namespace ss {
                 
                 if (!is_table(std::get<1>(* arrayv[i])))
                     type_error(0, 7);
-                    //  array => table
+                    //  array != table
                 
                 if (ss::is_array(ctr))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (ctr.empty()|| is_string(ctr))
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 double y = stod(ctr);
                 
                 if (!is_int(y))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 size_t c = stoi(std::get<1>(* arrayv[i])[0]);
                 
@@ -5568,17 +5445,17 @@ namespace ss {
                 
                 if (ss::is_array(rhs))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (rhs.empty() || is_string(rhs))
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 double x = stod(rhs);
                 
                 if (!is_int(x))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (x < 0 || x >= c)
                     range_error("index " + rtrim(x) + ", cols " + to_string(c));
@@ -5591,16 +5468,16 @@ namespace ss {
             if (!is_table(valuec, valuev)) {
                 delete[] valuev;
                 type_error(0, 7);
-                //  array => table
+                //  array != table
             }
             
             if (ss::is_array(ctr))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (rhs.empty() || is_string(rhs))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double y = stod(ctr);
             if (!is_int(y)) {
@@ -5615,11 +5492,11 @@ namespace ss {
             
             if (ss::is_array(rhs))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (rhs.empty() || is_string(rhs))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double x = stod(rhs);
             if (!is_int(x)) {
@@ -5640,11 +5517,11 @@ namespace ss {
         uov[col_oi = uoc++] = new buo("col", [this](string lhs, string rhs) {
             if (lhs.empty())
                 type_error(4, 7);
-                //  string => table
+                //  string != table
             
             if (rhs.empty())
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             string* v = new string[lhs.length() + 1];
             size_t n = parse(v, lhs);
@@ -5654,28 +5531,28 @@ namespace ss {
                 
                 if (is_string(lhs))
                     type_error(4, 7);
-                    //  string => table
+                    //  string != table
                 
                 if  (!is_symbol(lhs))
                     type_error(2, 7);
-                    //  double => table
+                    //  double != table
                 
                 int i = io_array(lhs);
                 if (i == -1) {
                     if (io_string(lhs) != -1)
                         type_error(4, 7);
-                        //  string => table
+                        //  string != table
                     
                     if (is_defined(lhs))
                         type_error(2, 7);
-                        //  double => table
+                        //  double != table
                     
                     undefined_error(lhs);
                 }
                 
                 if (!is_table(std::get<1>(* arrayv[i])))
                     type_error(0, 7);
-                    //  array => table
+                    //  array != table
                 
                 v = new string[rhs.length() + 1];
                 n = parse(v, rhs);
@@ -5683,7 +5560,7 @@ namespace ss {
                 
                 if (n != 1)
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 size_t c = stoi(std::get<1>(* arrayv[i])[0]);
                 
@@ -5716,14 +5593,14 @@ namespace ss {
                 if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(0, 3);
-                        //  array => int
+                        //  array != int
                     
                     int j = io_string(rhs);
                     if (j == -1) {
                         double idx = get_number(rhs);
                         if (!is_int(idx))
                             type_error(2, 3);
-                            //  double => int
+                            //  double != int
                         
                         if (idx < 0 || idx >= c)
                             range_error("index " + rtrim(idx) + ", cols " + to_string(c));
@@ -5771,7 +5648,7 @@ namespace ss {
                 double idx = stod(rhs);
                 if (!is_int(idx))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (idx < 0 || idx >= c)
                     range_error("index " + rtrim(idx) + ", cols " + to_string(c));
@@ -5791,14 +5668,14 @@ namespace ss {
             if (!is_table(n, v)) {
                 delete[] v;
                 type_error(0, 7);
-                //  array => table
+                //  array != table
             }
             
             string _v[rhs.length() + 1];
             if (parse(_v, rhs) != 1) {
                 delete[] v;
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             }
             
             size_t c = stoi(v[0]);
@@ -5833,7 +5710,7 @@ namespace ss {
                 if (io_array(rhs) != -1) {
                     delete[] v;
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 }
                 
                 int i = io_string(rhs);
@@ -5842,7 +5719,7 @@ namespace ss {
                     if (!is_int(idx)) {
                         delete[] v;
                         type_error(2, 3);
-                        //  double => int
+                        //  double != int
                     }
                     
                     if (idx < 0 || idx >= c) {
@@ -5895,7 +5772,7 @@ namespace ss {
             if (!is_int(idx)) {
                 delete[] v;
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             }
             
             if (idx < 0 || idx >= c) {
@@ -5928,7 +5805,7 @@ namespace ss {
                     
                     if (ss::is_array(rhs))
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     if (rhs.empty())
                         null_error();
@@ -5938,7 +5815,7 @@ namespace ss {
                         
                         if (pattern.length() != 1)
                             type_error(4, 1);
-                            //  string => char
+                            //  string != char
                         
                         size_t i = 0;
                         while (i < text.length() && text[i] != pattern[0])
@@ -5949,17 +5826,17 @@ namespace ss {
                     
                     if (!is_symbol(rhs))
                         type_error(2, 4);
-                        //  double => string
+                        //  double != string
                     
                     if (io_array(rhs) != -1)
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     int i = io_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             type_error(2, 4);
-                            //  double => string
+                            //  double != string
                         
                         undefined_error(rhs);
                     }
@@ -5973,7 +5850,7 @@ namespace ss {
                     
                     if (pattern.length() != 1)
                         type_error(4, 1);
-                        //  string => char
+                        //  string != char
                     
                     std::get<2>(* stringv[i]).second = true;
                     
@@ -5986,7 +5863,7 @@ namespace ss {
                 
                 if (!is_symbol(lhs))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 int i = io_array(lhs);
                 if (i == -1) {
@@ -5995,7 +5872,7 @@ namespace ss {
                         if (i == -1) {
                             if (is_defined(lhs))
                                 type_error(2, 4);
-                                //  double => string
+                                //  double != string
                             
                             undefined_error(lhs);
                         }
@@ -6009,7 +5886,7 @@ namespace ss {
                         
                         if (ss::is_array(rhs))
                             type_error(0, 4);
-                            //  array => string
+                            //  array != string
                         
                         if (rhs.empty())
                             null_error();
@@ -6019,7 +5896,7 @@ namespace ss {
                             
                             if (pattern.length() != 1)
                                 type_error(4, 1);
-                                //  string => char
+                                //  string != char
                             
                             size_t j = 0;
                             while (j < text.length() && text[j] != pattern[0])
@@ -6030,17 +5907,17 @@ namespace ss {
                         
                         if (!is_symbol(rhs))
                             type_error(2, 4);
-                            //  double => string
+                            //  double != string
                         
                         if (io_array(rhs) != -1)
                             type_error(0, 4);
-                            //  array => string
+                            //  array != string
                         
                         int j = io_string(rhs);
                         if (j == -1) {
                             if (is_defined(rhs))
                                 type_error(2, 4);
-                                //  double => string
+                                //  double != string
                             
                             undefined_error(rhs);
                         }
@@ -6054,7 +5931,7 @@ namespace ss {
                         
                         if (pattern.length() != 1)
                             type_error(4, 1);
-                            //  string => char
+                            //  string != char
                         
                         std::get<2>(* stringv[i]).second = true;
                         std::get<2>(* stringv[j]).second = true;
@@ -6085,7 +5962,7 @@ namespace ss {
         uov[fill_oi = uoc++] = new buo("fill", [this](string lhs, string rhs) {
             if (lhs.empty())
                 type_error(4, 0);
-                //  string => array
+                //  string != array
             
             string* v = new string[lhs.length() + 1];
             size_t n = parse(v, lhs);
@@ -6095,11 +5972,11 @@ namespace ss {
                 
                 if (is_string(lhs))
                     type_error(4, 0);
-                    //  string => array
+                    //  string != array
                 
                 if (!is_symbol(lhs))
                     type_error(2, 0);
-                    //  double => array
+                    //  double != array
                 
                 int i = io_array(lhs);
                 if (i == -1) {
@@ -6107,13 +5984,13 @@ namespace ss {
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(2, 0);
-                            //  double => array
+                            //  double != array
                         
                         undefined_error(lhs);
                     }
                     
                     type_error(4, 0);
-                    //  string => array
+                    //  string != array
                 }
                 
                 std::get<2>(* arrayv[i]).second = true;
@@ -6128,7 +6005,7 @@ namespace ss {
                             
                 if (_n != 1)
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 if (is_string(rhs)) {
                     rhs = decode(rhs);
@@ -6137,7 +6014,7 @@ namespace ss {
                 } else if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     int j = io_string(rhs);
                     if (j == -1)
@@ -6209,7 +6086,7 @@ namespace ss {
                     
                     if (ss::is_array(result))
                         type_error(0, 2);
-                        //  array => double
+                        //  array != double
                     
                     double flag;
                     if (result.empty())
@@ -6227,7 +6104,7 @@ namespace ss {
                         --valuec;
                     }
                     
-                    drop(ctr);
+                    remove_symbol(ctr);
                 }
                 
                 std::get<2>(* arrayv[io_array(lhs)]).second = true;
@@ -6256,7 +6133,7 @@ namespace ss {
                 
                 if (ss::is_array(result))
                     type_error(0, 2);
-                    //  array => double
+                    //  array != double
                 
                 double flag;
                 
@@ -6270,7 +6147,7 @@ namespace ss {
                     --valuec;
                 }
                 
-                drop(ctr);
+                remove_symbol(ctr);
             }
             
             string result = stringify(valuec, valuev);
@@ -6294,11 +6171,11 @@ namespace ss {
                 if (i == -1) {
                     if (io_string(lhs) != -1)
                         type_error(4, 0);
-                        //  string => array
+                        //  string != array
                     
                     if (is_defined(lhs))
                         type_error(2, 0);
-                        //  double => array
+                        //  double != array
                     
                     undefined_error(lhs);
                 }
@@ -6329,11 +6206,11 @@ namespace ss {
                     
                     string result = evaluate(rhs);
                     
-                    drop(ctr);
+                    remove_symbol(ctr);
                     
                     if (ss::is_array(result))
                         type_error(0, 2);
-                        //  array => double
+                        //  array != double
                     
                     if (!result.empty()) {
                         if (is_string(result)) {
@@ -6382,14 +6259,21 @@ namespace ss {
                 
                 string result = evaluate(rhs);
                 
-                drop(ctr);
+                remove_symbol(ctr);
                 
                 if (ss::is_array(result))
                     type_error(0, 2);
-                    //  array => double
+                    //  array != double
                 
-                if (!result.empty() && (is_string(result) || stod(result)))
-                    break;
+                if (!result.empty()) {
+                    if (is_string(result)) {
+                        result = decode(result);
+                        
+                        if (!result.empty() && result != types[5])
+                            break;
+                    } else if (stod(result))
+                        break;
+                }
             }
             
             if (i == valuec) {
@@ -6404,10 +6288,139 @@ namespace ss {
             return result;
         });
         
+        uov[find_index_oi = uoc++] = new tuo("findindex", [this](const string lhs, const string ctr, const string rhs) {
+            string* valuev = new string[lhs.length() + 1];
+            size_t valuec = parse(valuev, lhs);
+            
+            if (valuec == 1) {
+                delete[] valuev;
+                
+                if (!is_symbol(lhs))
+                    operation_error();
+                
+                int i = io_array(lhs);
+                if (i == -1) {
+                    if (io_string(lhs) != -1)
+                        type_error(4, 0);
+                        //  string != array
+                    
+                    if (is_defined(lhs))
+                        type_error(2, 0);
+                        //  double != array
+                    
+                    undefined_error(lhs);
+                }
+                
+                if (!is_symbol(ctr))
+                    operation_error();
+                
+                if (is_defined(ctr))
+                    defined_error(ctr);
+                
+                if (rhs.empty())
+                    operation_error();
+                
+                valuec = std::get<1>(* arrayv[i]).size();
+                valuev = new string[valuec];
+                
+                for (size_t j = 0; j < std::get<1>(* arrayv[i]).size(); ++j)
+                    valuev[j] = std::get<1>(* arrayv[i])[j];
+                
+                string result;
+                
+                size_t j;
+                for (j = 0; j < valuec; ++j) {
+                    if (valuev[j].empty() || is_string(valuev[j]))
+                        set_string(ctr, valuev[j]);
+                    else
+                        set_number(ctr, stod(valuev[j]));
+                    
+                    string result = evaluate(rhs);
+                    
+                    remove_symbol(ctr);
+                    
+                    if (ss::is_array(result))
+                        type_error(0, 2);
+                        //  array != double
+                    
+                    if (!result.empty()) {
+                        if (is_string(result)) {
+                            result = decode(result);
+                            
+                            if (!result.empty() && result != types[5])
+                                break;
+                        } else if (stod(result))
+                            break;
+                    }
+                }
+                
+                std::get<2>(* arrayv[io_array(lhs)]).second = true;
+                
+                if (j == valuec) {
+                    delete[] valuev;
+                    return encode(types[5]);
+                }
+                
+                result = valuev[j];
+                
+                delete[] valuev;
+                
+                return result;
+            }
+            
+            if (!is_symbol(ctr)) {
+                delete[] valuev;
+                operation_error();
+            }
+            
+            if (is_defined(ctr)) {
+                delete[] valuev;
+                defined_error(ctr);
+            }
+            
+            if (rhs.empty())
+                operation_error();
+            
+            size_t i;
+            for (i = 0; i < valuec; ++i) {
+                if (valuev[i].empty() || is_string(valuev[i]))
+                    set_string(ctr, valuev[i]);
+                else
+                    set_number(ctr, stod(valuev[i]));
+                
+                string result = evaluate(rhs);
+                
+                remove_symbol(ctr);
+                
+                if (ss::is_array(result))
+                    type_error(0, 2);
+                    //  array != double
+                
+                if (!result.empty()) {
+                    if (is_string(result)) {
+                        result = decode(result);
+                        
+                        if (!result.empty() && result != types[5])
+                            break;
+                    } else if (stod(result))
+                        break;
+                }
+            }
+            
+            if (i == valuec) {
+                delete[] valuev;
+                return to_string(-1);
+            }
+            
+            delete[] valuev;
+            
+            return to_string(i);
+        });
+        
         uov[format_oi = uoc++] = new buo("format", [this](const string lhs, const string rhs) {
             if (ss::is_array(lhs))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (lhs.empty())
                 null_error();
@@ -6431,7 +6444,6 @@ namespace ss {
                             return encode(text);
                         
                         string pattern = "null";
-                        
                         size_t n = text.length() + 1;
                         
                         char str[n + pattern.length() - 2];
@@ -6469,7 +6481,6 @@ namespace ss {
                             return encode(text);
                         
                         string pattern = decode(rhs);
-                        
                         size_t n = text.length() + 1;
                         
                         char str[n + pattern.length() - 2];
@@ -6511,7 +6522,6 @@ namespace ss {
                                     return encode(text);
                                 
                                 string pattern = rtrim(get_number(rhs));
-                                
                                 size_t n = text.length() + 1;
                                 
                                 char str[n + pattern.length() - 2];
@@ -6652,7 +6662,6 @@ namespace ss {
                         return encode(text);
                     
                     string pattern = rtrim(stod(rhs));
-                    
                     size_t n = text.length() + 1;
                     
                     char str[n + pattern.length() - 2];
@@ -6683,7 +6692,7 @@ namespace ss {
                 
                 size_t n = text.length() + 1;
                 
-                char str[n * 2];
+                char* str = new char[pow2(n)];
                 
                 strcpy(str, text.c_str());
                 
@@ -6707,10 +6716,22 @@ namespace ss {
                         
                         if (pattern.empty())
                             pattern = "null";
+                        
                         else if (is_string(pattern))
                             pattern = decode(pattern);
                         
                         for (size_t k = 0; k < pattern.length(); ++k) {
+                            if (is_pow(n, 2)) {
+                                char* tmp = new char[n * 2];
+                                
+                                for (size_t m = 0; m < n; ++m)
+                                    tmp[m] = str[m];
+                                
+                                delete[] str;
+                                
+                                str = tmp;
+                            }
+                            
                             str[n] = pattern[k];
                             
                             for (size_t l = n; l > j + k; --l)
@@ -6724,19 +6745,23 @@ namespace ss {
                         ++j;
                 }
                 
-                return encode(string(str));
+                string result = encode(string(str));
+                
+                delete[] str;
+                
+                return result;
             }
             
             if (is_symbol(lhs)) {
                 if (io_array(lhs) != -1)
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 int i = io_string(lhs);
                 if (i == -1) {
                     if (is_defined(lhs))
                         type_error(2, 4);
-                        //  double => string
+                        //  double != string
                     
                     undefined_error(lhs);
                 }
@@ -6766,7 +6791,6 @@ namespace ss {
                             return encode(text);
                         
                         string pattern = "null";
-                        
                         size_t n = text.length() + 1;
                         
                         char str[n + pattern.length() - 2];
@@ -6804,7 +6828,6 @@ namespace ss {
                             return encode(text);
                         
                         string pattern = decode(rhs);
-                        
                         size_t n = text.length() + 1;
                         
                         char str[n + pattern.length() - 2];
@@ -6846,7 +6869,6 @@ namespace ss {
                                     return encode(text);
                                 
                                 string pattern = rtrim(get_number(rhs));
-                                
                                 size_t n = text.length() + 1;
                                 
                                 char str[n + pattern.length() - 1];
@@ -6920,7 +6942,7 @@ namespace ss {
                         
                         size_t n = text.length() + 1;
                         
-                        char str[n * 2];
+                        char* str = new char[pow2(n)];
                         
                         strcpy(str, text.c_str());
                         
@@ -6944,10 +6966,22 @@ namespace ss {
                                 
                                 if (pattern.empty())
                                     pattern = "null";
+                                
                                 else if (is_string(pattern))
                                     pattern = decode(pattern);
                                 
                                 for (size_t m = 0; m < pattern.length(); ++m) {
+                                    if (is_pow(n, 2)) {
+                                        char* tmp = new char[n * 2];
+                                        
+                                        for (size_t m = 0; m < n; ++m)
+                                            tmp[m] = str[m];
+                                        
+                                        delete[] str;
+                                        
+                                        str = tmp;
+                                    }
+                                    
                                     str[n] = pattern[m];
                                     
                                     for (size_t p = n; p > l + m; --p)
@@ -6961,7 +6995,11 @@ namespace ss {
                                 ++l;
                         }
                         
-                        return encode(string(str));
+                        string result = encode(string(str));
+                        
+                        delete[] str;
+                        
+                        return result;
                     }
                     
                     size_t j = 0;
@@ -6972,7 +7010,6 @@ namespace ss {
                         return encode(text);
                     
                     string pattern = rtrim(stod(rhs));
-                    
                     size_t n = text.length() + 1;
                     
                     char str[n + pattern.length() - 2];
@@ -7003,7 +7040,7 @@ namespace ss {
                 
                 size_t n = text.length() + 1;
                 
-                char str[n * 2];
+                char* str = new char[pow2(n)];
                 
                 strcpy(str, text.c_str());
                 
@@ -7027,10 +7064,22 @@ namespace ss {
                         
                         if (pattern.empty())
                             pattern = "null";
+                        
                         else if (is_string(pattern))
                             pattern = decode(pattern);
                         
                         for (size_t l = 0; l < pattern.length(); ++l) {
+                            if (is_pow(n, 2)) {
+                                char* tmp = new char[n * 2];
+                                
+                                for (size_t m = 0; m < n; ++m)
+                                    tmp[m] = str[m];
+                                
+                                delete[] str;
+                                
+                                str = tmp;
+                            }
+                            
                             str[n] = pattern[l];
                             
                             for (size_t m = n; m > k + l; --m)
@@ -7044,11 +7093,15 @@ namespace ss {
                         ++k;
                 }
                 
-                return encode(string(str));
+                string result = encode(string(str));
+                
+                delete[] str;
+                
+                return result;
             }
             
             type_error(2, 4);
-            //  double => string
+            //  double != string
             
             return empty();
         });
@@ -7066,7 +7119,7 @@ namespace ss {
                     
                     if (ss::is_array(rhs))
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     if (rhs.empty())
                         null_error();
@@ -7076,7 +7129,7 @@ namespace ss {
                         
                         if (pattern.length() != 1)
                             type_error(4, 1);
-                            //  string => char
+                            //  string != char
                         
                         size_t i = 0;
                         while (i < text.length() && text[i] != pattern[0])
@@ -7087,17 +7140,17 @@ namespace ss {
                     
                     if (!is_symbol(rhs))
                         type_error(2, 4);
-                        //  double => string
+                        //  double != string
                     
                     if (io_array(rhs) != -1)
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     int i = io_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             type_error(2, 4);
-                            //  double => string
+                            //  double != string
                         
                         undefined_error(rhs);
                     }
@@ -7111,7 +7164,7 @@ namespace ss {
                     
                     if (pattern.length() != 1)
                         type_error(4, 1);
-                        //  string => char
+                        //  string != char
                     
                     std::get<2>(* stringv[i]).second = true;
                     
@@ -7124,7 +7177,7 @@ namespace ss {
                 
                 if (!is_symbol(lhs))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 int i = io_array(lhs);
                 if (i == -1) {
@@ -7133,7 +7186,7 @@ namespace ss {
                         if (i == -1) {
                             if (is_defined(lhs))
                                 type_error(2, 4);
-                                //  double => string
+                                //  double != string
                             
                             undefined_error(lhs);
                         }
@@ -7147,7 +7200,7 @@ namespace ss {
                         
                         if (ss::is_array(rhs))
                             type_error(0, 4);
-                            //  array => string
+                            //  array != string
                         
                         if (rhs.empty())
                             null_error();
@@ -7157,7 +7210,7 @@ namespace ss {
                             
                             if (pattern.length() != 1)
                                 type_error(4, 1);
-                                //  string => char
+                                //  string != char
                             
                             size_t j = 0;
                             while (j < text.length() && text[j] != pattern[0])
@@ -7168,17 +7221,17 @@ namespace ss {
                         
                         if (!is_symbol(rhs))
                             type_error(2, 4);
-                            //  double => string
+                            //  double != string
                         
                         if (io_array(rhs) != -1)
                             type_error(0, 4);
-                            //  array => string
+                            //  array != string
                         
                         int j = io_string(rhs);
                         if (j == -1) {
                             if (is_defined(rhs))
                                 type_error(2, 4);
-                                //  double => string
+                                //  double != string
                             
                             undefined_error(rhs);
                         }
@@ -7192,7 +7245,7 @@ namespace ss {
                         
                         if (pattern.length() != 1)
                             type_error(4, 1);
-                            //  string => char
+                            //  string != char
                         
                         std::get<2>(* stringv[i]).second = true;
                         std::get<2>(* stringv[j]).second = true;
@@ -7245,20 +7298,20 @@ namespace ss {
                 
                 if (ctr.empty())
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 if (ss::is_array(ctr))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (is_string(ctr))
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 double idx = stod(ctr);
                 if (!is_int(idx))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (idx < 0 || idx > std::get<1>(* arrayv[i]).size())
                     range_error("index " + rtrim(idx) + ", count " + to_string(std::get<1>(* arrayv[i]).size()));
@@ -7280,17 +7333,17 @@ namespace ss {
             
             if (ss::is_array(ctr))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (ctr.empty() || is_string(ctr))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double idx = stod(ctr);
                 
             if (!is_int(idx))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (idx < 0 || idx > valuec)
                 range_error(rtrim(idx));
@@ -7330,11 +7383,11 @@ namespace ss {
             if (p == 1) {
                 if (lhs.empty() || is_string(lhs))
                     type_error(4, 0);
-                    //  string => array
+                    //  string != array
                 
                 if (!is_symbol(lhs))
                     type_error(2, 0);
-                    //  double => array
+                    //  double != array
                 
                 int i = io_array(lhs);
                 if (i == -1) {
@@ -7351,7 +7404,7 @@ namespace ss {
                 
                 if (ss::is_array(rhs))
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 if (rhs.empty())
                     null_error();
@@ -7362,7 +7415,7 @@ namespace ss {
                 else if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     int j = io_string(rhs);
                     if (j == -1)
@@ -7402,7 +7455,7 @@ namespace ss {
             
             if (ss::is_array(rhs))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (rhs.empty())
                 null_error();
@@ -7414,7 +7467,7 @@ namespace ss {
                 int i = io_array(rhs);
                 if (i != -1)
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 i = io_string(rhs);
                 if (i == -1)
@@ -7461,7 +7514,7 @@ namespace ss {
                 if (is_string(lhs)) {
                     if (ss::is_array(rhs))
                         type_error(0, 1);
-                        //  array => char
+                        //  array != char
                     
                     if (rhs.empty())
                         null_error();
@@ -7471,7 +7524,7 @@ namespace ss {
                         
                         if (pattern.length() != 1)
                             type_error(4, 1);
-                            //  string => char
+                            //  string != char
                         
                         const string text = decode(lhs);
                         
@@ -7485,13 +7538,13 @@ namespace ss {
                     if (is_symbol(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(0, 1);
-                            //  array => char
+                            //  array != char
                         
                         int i = io_string(rhs);
                         if (i == -1) {
                             if (is_defined(rhs))
                                 type_error(2, 1);
-                                //  double => char
+                                //  double != char
                             
                             undefined_error(rhs);
                         }
@@ -7505,7 +7558,7 @@ namespace ss {
                         
                         if (pattern.length() != 1)
                             type_error(4, 1);
-                            //  string => char
+                            //  string != char
                         
                         std::get<2>(* stringv[i]).second = true;
                         
@@ -7519,7 +7572,7 @@ namespace ss {
                     }
                     
                     type_error(2, 1);
-                    //  double => char
+                    //  double != char
                 }
                 
                 if (is_symbol(lhs)) {
@@ -7544,7 +7597,7 @@ namespace ss {
                         
                         if (ss::is_array(rhs))
                             type_error(0, 1);
-                            //  array => char
+                            //  array != char
                         
                         if (rhs.empty())
                             null_error();
@@ -7554,7 +7607,7 @@ namespace ss {
                             
                             if (pattern.length() != 1)
                                 type_error(4, 1);
-                                //  string => char
+                                //  string != char
                             
                             int j = (int)text.length() - 1;
                             while (j >= 0 && text[j] != pattern[0])
@@ -7566,13 +7619,13 @@ namespace ss {
                         if (is_symbol(rhs)) {
                             if (io_array(rhs) != -1)
                                 type_error(0, 1);
-                                //  array => char
+                                //  array != char
                             
                             int j = io_string(rhs);
                             if (j == -1) {
                                 if (is_defined(rhs))
                                     type_error(2, 1);
-                                    //  double => char
+                                    //  double != char
                                 
                                 undefined_error(rhs);
                             }
@@ -7586,7 +7639,7 @@ namespace ss {
                             
                             if (pattern.length() != 1)
                                 type_error(4, 1);
-                                //  string => char
+                                //  string != char
                             
                             std::get<2>(* stringv[j]).second = true;
                             
@@ -7598,7 +7651,7 @@ namespace ss {
                         }
                         
                         type_error(2, 1);
-                        //  double => char
+                        //  double != char
                     }
                     
                     string pattern = element(rhs);
@@ -7668,11 +7721,11 @@ namespace ss {
                     
                     if (ss::is_array(result))
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     valuev[j] = result;
                     
-                    drop(ctr);
+                    remove_symbol(ctr);
                 }
                 
                 std::get<2>(* arrayv[io_array(lhs)]).second = true;
@@ -7703,13 +7756,13 @@ namespace ss {
                     if (ss::is_array(result)) {
                         delete[] valuev;
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     }
                 }
                 
                 valuev[i] = result;
                 
-                drop(ctr);
+                remove_symbol(ctr);
             }
             
             string result = stringify(valuec, valuev);
@@ -7745,22 +7798,22 @@ namespace ss {
             
             if (n != 1)
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (is_string(rhs))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double d;
             
             if (is_symbol(rhs)) {
                 if (io_array(rhs) != -1)
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (io_string(rhs) != -1)
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 d = get_number(rhs);
             } else
@@ -7768,7 +7821,7 @@ namespace ss {
             
             if (!is_int(d))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (d < 0)
                 range_error(rtrim(d));
@@ -7787,11 +7840,11 @@ namespace ss {
         uov[row_oi = uoc++] = new buo("row", [this](string lhs, string rhs) {
             if (lhs.empty())
                 type_error(4, 7);
-                //  string => table
+                //  string != table
             
             if (rhs.empty())
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             string* v = new string[lhs.length() + 1];
             size_t n = parse(v, lhs);
@@ -7801,28 +7854,28 @@ namespace ss {
                 
                 if (is_string(lhs))
                     type_error(4, 7);
-                    //  string => table
+                    //  string != table
                 
                 if  (!is_symbol(lhs))
                     type_error(2, 7);
-                    //  double => table
+                    //  double != table
                 
                 int i = io_array(lhs);
                 if (i == -1) {
                     if (io_string(lhs) != -1)
                         type_error(4, 7);
-                        //  string => table
+                        //  string != table
                     
                     if (is_defined(lhs))
                         type_error(2, 7);
-                        //  double => table
+                        //  double != table
                     
                     undefined_error(lhs);
                 }
                 
                 if (!is_table(std::get<1>(* arrayv[i])))
                     type_error(0, 7);
-                    //  array => table
+                    //  array != table
                 
                 v = new string[rhs.length() + 1];
                 n = parse(v, rhs);
@@ -7830,7 +7883,7 @@ namespace ss {
                 
                 if (n != 1)
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 size_t c = stoi(std::get<1>(* arrayv[i])[0]);
                 
@@ -7863,14 +7916,14 @@ namespace ss {
                 if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(0, 3);
-                        //  array => int
+                        //  array != int
                     
                     int j = io_string(rhs);
                     if (j == -1) {
                         double idx = get_number(rhs);
                         if (!is_int(idx))
                             type_error(2, 3);
-                            //  double => int
+                            //  double != int
                         
                         if (idx < 0 || idx >= (std::get<1>(* arrayv[i]).size() - 1) / c)
                             range_error("index " + rtrim(idx) + ", rows " + to_string((std::get<1>(* arrayv[i]).size() - 1) / c));
@@ -7918,7 +7971,7 @@ namespace ss {
                 double idx = stod(rhs);
                 if (!is_int(idx))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (idx < 0 || idx >= (std::get<1>(* arrayv[i]).size() - 1) / c)
                     range_error("index " + rtrim(idx) + ", rows " + to_string((std::get<1>(* arrayv[i]).size() - 1) / c));
@@ -7938,14 +7991,14 @@ namespace ss {
             if (!is_table(n, v)) {
                 delete[] v;
                 type_error(0, 7);
-                //  array => table
+                //  array != table
             }
             
             string _v[rhs.length() + 1];
             if (parse(_v, rhs) != 1) {
                 delete[] v;
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             }
             
             size_t c = stoi(v[0]);
@@ -7980,7 +8033,7 @@ namespace ss {
                 if (io_array(rhs) != -1) {
                     delete[] v;
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 }
                 
                 int i = io_string(rhs);
@@ -7989,7 +8042,7 @@ namespace ss {
                     if (!is_int(idx)) {
                         delete[] v;
                         type_error(2, 3);
-                        //  double => int
+                        //  double != int
                     }
                     
                     if (idx < 0 || idx >= (n - 1) / c) {
@@ -8042,7 +8095,7 @@ namespace ss {
             if (!is_int(idx)) {
                 delete[] v;
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             }
             
             if (idx < 0 || idx >= (n - 1) / c) {
@@ -8087,21 +8140,21 @@ namespace ss {
                 
                 if (is_array(rhs))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (rhs.empty() || is_string(rhs))
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 double val;
                 if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(0, 3);
-                        //  array => int
+                        //  array != int
                     
                     if (io_string(rhs) != -1)
                         type_error(4, 3);
-                        //  string => int
+                        //  string != int
                     
                     val = get_number(rhs);
                 } else
@@ -8109,7 +8162,7 @@ namespace ss {
                 
                 if (is_int(val))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (val < 0)
                     range_error(to_string((int)val));
@@ -8127,13 +8180,13 @@ namespace ss {
             if (is_array(rhs)) {
                 delete[] valuev;
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             }
             
             if (rhs.empty() || is_string(rhs)) {
                 delete[] valuev;
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             }
             
             double val;
@@ -8141,13 +8194,13 @@ namespace ss {
                 if (io_array(rhs) != -1) {
                     delete[] valuev;
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 }
                 
                 if (io_string(rhs) != -1) {
                     delete[] valuev;
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 }
                 
                 val = get_number(rhs);
@@ -8157,7 +8210,7 @@ namespace ss {
             if (!is_int(val)) {
                 delete[] valuev;
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             }
             
             if (val < 0) {
@@ -8196,7 +8249,7 @@ namespace ss {
             return nullptr;
         });
         
-        uov[splice_oi = uoc++] = new buo("splice", [this](const string lhs, const string rhs) {
+        uov[splice_oi = uoc++] = new tuo("splice", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("splice");
             return nullptr;
         });
@@ -8205,7 +8258,6 @@ namespace ss {
             unsupported_error("substr");
             return nullptr;
         });
-        //  21
         
         uov[tospliced_oi = uoc++] = new tuo("tospliced", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("tospliced");
@@ -8228,7 +8280,7 @@ namespace ss {
                     
                     if (ss::is_array(rhs))
                         type_error(0, 4);
-                        //  array => string
+                        //  array != string
                     
                     if (is_string(rhs))
                         rhs = decode(rhs);
@@ -8236,7 +8288,7 @@ namespace ss {
                     else if (is_symbol(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(0, 4);
-                            //  array => string
+                            //  array != string
                         
                         int i = io_string(rhs);
                         
@@ -8268,20 +8320,20 @@ namespace ss {
                             
                             if (rhs.empty() || is_string(rhs))
                                 type_error(4, 2);
-                                //  string => double
+                                //  string != double
                             
                             if (ss::is_array(rhs))
                                 type_error(0, 2);
-                                //  array => double
+                                //  array != double
                             
                             if (is_symbol(rhs)) {
                                 if (io_array(rhs) != -1)
                                     type_error(0, 2);
-                                    //  array => double
+                                    //  array != double
                                 
                                 if (io_string(rhs) != -1)
                                     type_error(4, 2);
-                                    //  string => double
+                                    //  string != double
                                 
                                 num += get_number(rhs);
                             } else
@@ -8299,7 +8351,7 @@ namespace ss {
                         
                         if (ss::is_array(rhs))
                             type_error(0, 4);
-                            //  array => string
+                            //  array != string
                         
                         if (rhs.empty())
                             null_error();
@@ -8367,20 +8419,20 @@ namespace ss {
                 
                 if (ss::is_array(rhs))
                     type_error(0, 2);
-                    //  array => double
+                    //  array != double
                 
                 if (rhs.empty() || is_string(rhs))
                     type_error(4, 2);
-                    //  string => double
+                    //  string != double
                 
                 if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(0, 2);
-                        //  array => double
+                        //  array != double
                     
                     if (io_string(rhs) != -1)
                         type_error(4, 2);
-                        //  string => double
+                        //  string != double
                     
                     num += get_number(rhs);
                 } else
@@ -10674,7 +10726,7 @@ namespace ss {
             if (lhs.empty()) {
                 if (rhs.empty())
                     return to_string(1);
-                    //  (NULL) === (NULL)
+                    //  null === null
                 
                 v = new string[rhs.length() + 1];
                 n = parse(v, rhs);
@@ -10683,8 +10735,8 @@ namespace ss {
                 
                 if (n != 1 || is_string(rhs))
                     return to_string(0);
-                    //  (NULL) === (array)
-                    //  (NULL) === (string)
+                    //  null === (array)
+                    //  null === (string)
                 
                 if (is_symbol(rhs)) {
                     int i = io_array(rhs);
@@ -10695,7 +10747,7 @@ namespace ss {
                                 arithmetic::consume(rhs);
                                 
                                 return to_string(0);
-                                //  (NULL) === double
+                                //  null === double
                             }
                             
                             undefined_error(rhs);
@@ -10706,17 +10758,17 @@ namespace ss {
                         std::get<2>(* stringv[i]).second = true;
                         
                         return to_string(rhs.empty());
-                        //  (NULL) === string
+                        //  null === string
                     }
                     
                     std::get<2>(* arrayv[i]).second = true;
                     
                     return to_string(0);
-                    // (NULL) === array
+                    // null === array
                 }
                 
                 return to_string(0);
-                //  (NULL) === (double)
+                //  null === (double)
             }
             
             v = new string[lhs.length() + 1];
@@ -10728,7 +10780,7 @@ namespace ss {
                 if (is_string(lhs)) {
                     if (rhs.empty())
                         return to_string(0);
-                        //  (string) === (NULL)
+                        //  (string) === null
                     
                     v = new string[rhs.length() + 1];
                     n = parse(v, rhs);
@@ -10765,7 +10817,7 @@ namespace ss {
                             
                             if (rhs.empty())
                                 return to_string(0);
-                                //  (string) === (NULL)
+                                //  (string) === null
                             
                             rhs = decode(rhs);
                             
@@ -10795,7 +10847,7 @@ namespace ss {
                             
                             if (n != 1 || rhs.empty() || is_string(rhs))
                                 return to_string(0);
-                                //  double === (NULL)
+                                //  double === null
                                 //  double === (array)
                                 //  double === (string)
                             
@@ -10836,7 +10888,7 @@ namespace ss {
                         if (lhs.empty()) {
                             if (rhs.empty())
                                 return to_string(1);
-                                //  (NULL) === (NULL)
+                                //  null === null
                             
                             v = new string[rhs.length() + 1];
                             n = parse(v, rhs);
@@ -10844,20 +10896,20 @@ namespace ss {
                             
                             if (n != 1 || is_string(rhs))
                                 return to_string(0);
-                                //  (NULL) === (array)
-                                //  (NULL) === (string)
+                                //  null === (array)
+                                //  null === (string)
                             
                             if (is_symbol(rhs)) {
                                 if (io_array(rhs) != -1) {
                                     return to_string(0);
-                                    //  (NULL) === array
+                                    //  null === array
                                 }
                                 
                                 int i = io_string(rhs);
                                 if (i == -1) {
                                     if (is_defined(rhs))
                                         return to_string(0);
-                                        //  (NULL) === double
+                                        //  null === double
                                     
                                     undefined_error(rhs);
                                 }
@@ -10866,18 +10918,18 @@ namespace ss {
                                 std::get<2>(* stringv[i]).second = true;
                                 
                                 return to_string(rhs.empty() ? 1 : 0);
-                                //  (NULL) === string
+                                //  null === string
                             }
                             
                             return to_string(0);
-                            //  (NULL) === (double)
+                            //  null === (double)
                         }
                         
                         lhs = decode(lhs);
                         
                         if (rhs.empty())
                             return to_string(0);
-                            //  string === (NULL)
+                            //  string === null
                         
                         if (is_string(rhs)) {
                             rhs = decode(rhs);
@@ -10907,7 +10959,7 @@ namespace ss {
                             
                             if (rhs.empty())
                                 return to_string(0);
-                                //  string === (NULL)
+                                //  string === null
                             
                             rhs = decode(rhs);
                             
@@ -10923,7 +10975,7 @@ namespace ss {
                     
                     if (rhs.empty())
                         return to_string(0);
-                        //  array === (NULL)
+                        //  array === null
                     
                     v = new string[rhs.length() + 1];
                     n = parse(v, rhs);
@@ -10989,7 +11041,7 @@ namespace ss {
                 
                 if (rhs.empty())
                     return to_string(0);
-                    //  (double) === (NULL)
+                    //  (double) === null
                 
                 double d = stod(lhs);
                 
@@ -11028,7 +11080,7 @@ namespace ss {
                 delete[] v;
                 
                 return to_string(0);
-                //  (array) === (NULL)
+                //  (array) === null
             }
             
             string w[rhs.length() + 1];
@@ -11105,7 +11157,7 @@ namespace ss {
             if (lhs.empty()) {
                 if (rhs.empty())
                     return to_string(0);
-                    //  (NULL) !== (NULL)
+                    //  null !== null
                 
                 v = new string[rhs.length() + 1];
                 n = parse(v, rhs);
@@ -11114,19 +11166,19 @@ namespace ss {
                 
                 if (n != 1 || is_string(rhs))
                     return to_string(1);
-                    //  (NULL) !== (array)
-                    //  (NULL) !== (string)
+                    //  null !== (array)
+                    //  null !== (string)
                 
                 if (is_symbol(rhs)) {
                     if (io_array(rhs) != -1)
                         return to_string(1);
-                        //  (NULL) !== array
+                        //  null !== array
                     
                     int i = io_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             return to_string(1);
-                            //  (NULL) !== double
+                            //  null !== double
                         
                         undefined_error(rhs);
                     }
@@ -11134,11 +11186,11 @@ namespace ss {
                     rhs = std::get<1>(* stringv[i]);
                     
                     return to_string(rhs.empty() ? 0 : 1);
-                    //  (NULL) !== str
+                    //  null !== str
                 }
                 
                 return to_string(1);
-                //  (NULL) !== (double)
+                //  null !== (double)
             }
             
             v = new string[lhs.length() + 1];
@@ -11150,7 +11202,7 @@ namespace ss {
                 if (is_string(lhs)) {
                     if (rhs.empty())
                         return to_string(1);
-                        //  (string) !== (NULL)
+                        //  (string) !== null
                     
                     v = new string[rhs.length() + 1];
                     n = parse(v, rhs);
@@ -11188,7 +11240,7 @@ namespace ss {
                         
                         if (rhs.empty())
                             return to_string(1);
-                            //  (string) !== (NULL)
+                            //  (string) !== null
                         
                         rhs = decode(rhs);
                         
@@ -11213,7 +11265,7 @@ namespace ss {
                             
                             if (n != 1 || rhs.empty() || is_string(rhs))
                                 return to_string(1);
-                                //  double !== (NULL)
+                                //  double !== null
                                 //  double !== (array)
                                 //  double !== (string)
                             
@@ -11246,7 +11298,7 @@ namespace ss {
                         if (lhs.empty()) {
                             if (rhs.empty())
                                 return to_string(0);
-                                //  (NULL) !== (NULL)
+                                //  null !== null
                             
                             v = new string[rhs.length() + 1];
                             n = parse(v, rhs);
@@ -11254,18 +11306,18 @@ namespace ss {
                             
                             if (n != 1 || is_string(rhs))
                                 return to_string(1);
-                                //  (NULL) !== (array)
+                                //  null !== (array)
                             
                             if (is_symbol(rhs)) {
                                 if (io_array(rhs) != -1)
                                     return to_string(1);
-                                    //  (NULL) !== array
+                                    //  null !== array
                                 
                                 int i = io_string(rhs);
                                 if (i == -1) {
                                     if (is_defined(rhs))
                                         return to_string(1);
-                                        //  (NULL) !== double
+                                        //  null !== double
                                     
                                     undefined_error(rhs);
                                 }
@@ -11273,18 +11325,18 @@ namespace ss {
                                 rhs = std::get<1>(* stringv[i]);
                                 
                                 return to_string(rhs.empty() ? 0 : 1);
-                                //  (NULL) !== string
+                                //  null !== string
                             }
                             
                             return to_string(1);
-                            //  (NULL) !== (double)
+                            //  null !== (double)
                         }
                         
                         lhs = decode(lhs);
                         
                         if (rhs.empty())
                             return to_string(1);
-                            //  string !== (NULL)
+                            //  string !== null
                         
                         if (is_string(rhs)) {
                             rhs = decode(rhs);
@@ -11312,7 +11364,7 @@ namespace ss {
                             
                             if (rhs.empty())
                                 return to_string(1);
-                                //  string !== (NULL)
+                                //  string !== null
                             
                             rhs = decode(rhs);
                             
@@ -11326,7 +11378,7 @@ namespace ss {
                     
                     if (rhs.empty())
                         return to_string(1);
-                        //  array !== (NULL)
+                        //  array !== null
                     
                     v = new string[rhs.length() + 1];
                     n = parse(v, rhs);
@@ -11389,7 +11441,7 @@ namespace ss {
                 
                 if (rhs.empty())
                     return to_string(1);
-                    //  double !== (NULL)
+                    //  double !== null
                 
                 double d = stod(lhs);
                 
@@ -11426,7 +11478,7 @@ namespace ss {
             
             if (rhs.empty())
                 return to_string(1);
-                //  (array) !== (NULL)
+                //  (array) !== null
             
             string w[rhs.length() + 1];
             size_t p = parse(w, rhs);
@@ -11502,7 +11554,7 @@ namespace ss {
             if (lhs.empty()) {
                 if (rhs.empty())
                     return to_string(1);
-                    //  (NULL) == (NULL)
+                    //  null == null
                 
                 v = new string[rhs.length() + 1];
                 n = parse(v, rhs);
@@ -11511,7 +11563,7 @@ namespace ss {
                 if (n == 1) {
                     if (is_string(rhs))
                         return to_string(0);
-                        //  (NULL) == (string)
+                        //  null == (string)
                     
                     if (is_symbol(rhs)) {
                         int i = io_array(rhs);
@@ -11520,7 +11572,7 @@ namespace ss {
                             if (i == -1) {
                                 if (is_defined(rhs))
                                     return to_string(0);
-                                    //  (NULL) == double
+                                    //  null == double
                                 
                                 undefined_error(rhs);
                             }
@@ -11528,21 +11580,21 @@ namespace ss {
                             rhs = std::get<1>(* stringv[i]);
                             
                             return to_string(rhs.empty() ? 1 : 0);
-                            //  (NULL) == string
+                            //  null == string
                         }
                         
                         return to_string(std::get<1>(* arrayv[i]).size() == 1
                                          && std::get<1>(* arrayv[i])[0].empty()
                                          ? 1 : 0);
-                        //  (NULL) == array
+                        //  null == array
                     }
                     
                     return to_string(0);
-                    //  (NULL) == (double)
+                    //  null == (double)
                 }
                 
                 return to_string(0);
-                //  (NULL) == (array)
+                //  null == (array)
             }
             
             v = new string[lhs.length() + 1];
@@ -11566,7 +11618,7 @@ namespace ss {
                             if (lhs.empty()) {
                                 if (rhs.empty())
                                     return to_string(1);
-                                    //  (NULL) == (NULL)
+                                    //  null == null
                                 
                                 v = new string[rhs.length() + 1];
                                 n = parse(v, rhs);
@@ -11575,7 +11627,7 @@ namespace ss {
                                 if (n == 1) {
                                     if (is_string(rhs))
                                         return to_string(0);
-                                        //  (NULL) == (string)
+                                        //  null == (string)
                                     
                                     if (is_symbol(rhs)) {
                                         int j = io_array(rhs);
@@ -11584,7 +11636,7 @@ namespace ss {
                                             if (j == -1) {
                                                 if (is_defined(rhs))
                                                     return to_string(0);
-                                                    //  (NULL) == double
+                                                    //  null == double
                                                 
                                                 undefined_error(rhs);
                                             }
@@ -11592,21 +11644,21 @@ namespace ss {
                                             rhs = std::get<1>(* stringv[j]);
                                             
                                             return to_string(rhs.empty() ? 1 : 0);
-                                            //  (NULL) == string
+                                            //  null == string
                                         }
                                         
                                         return to_string(std::get<1>(* arrayv[j]).size() == 1
                                                          && std::get<1>(* arrayv[j])[0].empty()
                                                          ? 1 : 0);
-                                        //  (NULL) == array
+                                        //  null == array
                                     }
                                     
                                     return to_string(0);
-                                    //  (NULL) == (double)
+                                    //  null == (double)
                                 }
                                 
                                 return to_string(0);
-                                //  (NULL) == (array)
+                                //  null == (array)
                             }
                             
                             lhs = decode(lhs);
@@ -11616,7 +11668,7 @@ namespace ss {
                             return to_string(std::get<1>(* arrayv[i]).size() == 1
                                              && std::get<1>(* arrayv[i])[0].empty()
                                              ? 1 : 0);
-                            //  array == (NULL)
+                            //  array == null
                         
                         v = new string[rhs.length() + 1];
                         n = parse(v, rhs);
@@ -11630,7 +11682,7 @@ namespace ss {
                                     
                                     if (lhs.empty())
                                         return to_string(0);
-                                        //  (NULL) == (string)
+                                        //  null == (string)
                                     
                                     lhs = decode(lhs);
                                     rhs = decode(rhs);
@@ -11697,7 +11749,7 @@ namespace ss {
                                 
                                 if (lhs.empty())
                                     return to_string(0);
-                                    //  (NULL) == (double)
+                                    //  null == (double)
                                 
                                 lhs = decode(lhs);
                                 rhs = rtrim(stod(rhs));
@@ -11730,7 +11782,7 @@ namespace ss {
                 
                 if (rhs.empty())
                     return to_string(0);
-                    //  (str) == (NULL)
+                    //  (str) == null
                 
                 v = new string[rhs.length() + 1];
                 n = parse(v, rhs);
@@ -11752,7 +11804,7 @@ namespace ss {
                                 
                                 if (rhs.empty())
                                     return to_string(0);
-                                    //  (string) == (NULL)
+                                    //  (string) == null
                                 
                                 rhs = decode(rhs);
                             }
@@ -11765,7 +11817,7 @@ namespace ss {
                             
                             if (rhs.empty())
                                 return to_string(0);
-                                //  (string) == (NULL)
+                                //  (string) == null
                             
                             rhs = decode(rhs);
                         }
@@ -11783,7 +11835,7 @@ namespace ss {
             if (rhs.empty()) {
                 delete[] v;
                 return to_string(0);
-                //  (array) == (NULL)
+                //  (array) == null
             }
             
             string w[rhs.length() + 1];
@@ -11861,7 +11913,7 @@ namespace ss {
             if (lhs.empty()) {
                 if (rhs.empty())
                     return to_string(0);
-                    //  (NULL) != (NULL)
+                    //  null != null
                 
                 v = new string[rhs.length() + 1];
                 n = parse(v, rhs);
@@ -11870,7 +11922,7 @@ namespace ss {
                 if (n == 1) {
                     if (is_string(rhs))
                         return to_string(1);
-                        //  (NULL) != (str)
+                        //  null != (str)
                     
                     if (is_symbol(rhs)) {
                         int i = io_array(rhs);
@@ -11879,7 +11931,7 @@ namespace ss {
                             if (i == -1) {
                                 if (is_defined(rhs))
                                     return to_string(1);
-                                    //  (NULL) != double
+                                    //  null != double
                                 
                                 undefined_error(rhs);
                             }
@@ -11887,21 +11939,21 @@ namespace ss {
                             rhs = std::get<1>(* stringv[i]);
                             
                             return to_string(rhs.empty() ? 0 : 1);
-                            //  (NULL) != string
+                            //  null != string
                         }
                         
                         return to_string(std::get<1>(* arrayv[i]).size() == 1
                                          && std::get<1>(* arrayv[i])[0].empty()
                                          ? 0 : 1);
-                        //  (NULL) != array
+                        //  null != array
                     }
                     
                     return to_string(1);
-                    //  (NULL) != (double)
+                    //  null != (double)
                 }
                 
                 return to_string(1);
-                //  (NULL) != (array)
+                //  null != (array)
             }
             
             v = new string[lhs.length() + 1];
@@ -11925,7 +11977,7 @@ namespace ss {
                             if (lhs.empty()) {
                                 if (rhs.empty())
                                     return to_string(0);
-                                    //  (NULL) != (NULL)
+                                    //  null != null
                                 
                                 v = new string[rhs.length() + 1];
                                 n = parse(v, rhs);
@@ -11934,7 +11986,7 @@ namespace ss {
                                 if (n == 1) {
                                     if (is_string(rhs))
                                         return to_string(1);
-                                        //  (NULL) != (string)
+                                        //  null != (string)
                                     
                                     if (is_symbol(rhs)) {
                                         int j = io_array(rhs);
@@ -11943,7 +11995,7 @@ namespace ss {
                                             if (j == -1) {
                                                 if (is_defined(rhs))
                                                     return to_string(1);
-                                                    //  (NULL) != double
+                                                    //  null != double
                                                 
                                                 undefined_error(rhs);
                                             }
@@ -11951,21 +12003,21 @@ namespace ss {
                                             rhs = std::get<1>(* stringv[j]);
                                             
                                             return to_string(rhs.empty() ? 0 : 1);
-                                            //  (NULL) != string
+                                            //  null != string
                                         }
                                         
                                         return to_string(std::get<1>(* arrayv[j]).size() == 1
                                                          && std::get<1>(* arrayv[j])[0].empty()
                                                          ? 0 : 1);
-                                        //  (NULL) != array
+                                        //  null != array
                                     }
                                     
                                     return to_string(1);
-                                    //  (NULL) == (double)
+                                    //  null == (double)
                                 }
                                 
                                 return to_string(1);
-                                //  (NULL) != (array)
+                                //  null != (array)
                             }
                             
                             lhs = decode(lhs);
@@ -11975,7 +12027,7 @@ namespace ss {
                             return to_string(std::get<1>(* arrayv[i]).size() == 1
                                              && std::get<1>(* arrayv[i])[0].empty()
                                              ? 0 : 1);
-                            //  array != (NULL)
+                            //  array != null
                         
                         v = new string[rhs.length() + 1];
                         n = parse(v, rhs);
@@ -11989,7 +12041,7 @@ namespace ss {
                                     
                                     if (lhs.empty())
                                         return to_string(1);
-                                        //  (NULL) != (string)
+                                        //  null != (string)
                                     
                                     lhs = decode(lhs);
                                     rhs = decode(rhs);
@@ -12012,7 +12064,7 @@ namespace ss {
                                             
                                             if (lhs.empty())
                                                 return to_string(1);
-                                                //  (NULL) != double
+                                                //  null != double
                                             
                                             lhs = decode(lhs);
                                             rhs = rtrim(get_number(rhs));
@@ -12058,7 +12110,7 @@ namespace ss {
                                 
                                 if (lhs.empty())
                                     return to_string(1);
-                                    //  (NULL) != (double)
+                                    //  null != (double)
                                 
                                 lhs = decode(lhs);
                                 rhs = rtrim(stod(rhs));
@@ -12110,7 +12162,7 @@ namespace ss {
                                 
                                 if (rhs.empty())
                                     return to_string(1);
-                                    //  (string) != (NULL)
+                                    //  (string) != null
                                 
                                 rhs = decode(rhs);
                             }
@@ -12123,7 +12175,7 @@ namespace ss {
                             
                             if (rhs.empty())
                                 return to_string(1);
-                                //  (string) != (NULL)
+                                //  (string) != null
                             
                             rhs = decode(rhs);
                         }
@@ -12141,7 +12193,7 @@ namespace ss {
             if (rhs.empty()) {
                 delete[] v;
                 return to_string(1);
-                //  (array) != (NULL)
+                //  (array) != null
             }
             
             string w[rhs.length() + 1];
@@ -12230,14 +12282,9 @@ namespace ss {
         });
         //  33
         
-        /*
-        for (size_t i = 0; i < uoc; ++i)
-            cout << uov[i]->opcode() << endl;
-         */
-        
         buov = new buo**[7];
         
-        buoc[0] = 20;
+        buoc[0] = 21;
         buov[0] = new buo*[buoc[0]];
         buov[0][0] = (buo *)uov[aggregate_oi];           //  aggregate
         buov[0][1] = (buo *)uov[cell_oi];                //  cell
@@ -12246,19 +12293,20 @@ namespace ss {
         buov[0][4] = (buo *)uov[reserve_oi];             //  ensure
         buov[0][5] = (buo *)uov[fill_oi];                //  fill
         buov[0][6] = (buo *)uov[find_oi];                //  find
-        buov[0][7] = (buo *)uov[filter_oi];              //  filter
-        buov[0][8] = (buo *)uov[format_oi];              //  format
-        buov[0][9] = (buo *)uov[index_of_oi];            //  index
-        buov[0][10] = (buo *)uov[insert_oi];             //  insert
-        buov[0][11] = (buo *)uov[join_oi];               //  join
-        buov[0][12] = (buo *)uov[last_index_of_oi];      //  last_index_of
-        buov[0][13] = (buo *)uov[map_oi];                //  map
-        buov[0][14] = (buo *)uov[splice_oi];             //  remove
-        buov[0][15] = (buo *)uov[resize_oi];             //  resize
-        buov[0][16] = (buo *)uov[row_oi];                //  row
-        buov[0][17] = (buo *)uov[slice_oi];              //  slice
-        buov[0][18] = (buo *)uov[substr_oi];             //  substr
-        buov[0][19] = (buo *)uov[tospliced_oi];          //  tospliced
+        buov[0][7] = (buo *)uov[find_index_oi];          //  find_index
+        buov[0][8] = (buo *)uov[filter_oi];              //  filter
+        buov[0][9] = (buo *)uov[format_oi];              //  format
+        buov[0][10] = (buo *)uov[index_of_oi];           //  index
+        buov[0][11] = (buo *)uov[insert_oi];             //  insert
+        buov[0][12] = (buo *)uov[join_oi];               //  join
+        buov[0][13] = (buo *)uov[last_index_of_oi];      //  last_index_of
+        buov[0][14] = (buo *)uov[map_oi];                //  map
+        buov[0][15] = (buo *)uov[splice_oi];             //  remove
+        buov[0][16] = (buo *)uov[resize_oi];             //  resize
+        buov[0][17] = (buo *)uov[row_oi];                //  row
+        buov[0][18] = (buo *)uov[slice_oi];              //  slice
+        buov[0][19] = (buo *)uov[substr_oi];             //  substr
+        buov[0][20] = (buo *)uov[tospliced_oi];          //  tospliced
                 
         buoc[1] = 1;
         buov[1] = new buo*[buoc[1]];
@@ -12293,14 +12341,18 @@ namespace ss {
         buov[5][2] = (buo *)uov[assignment_oi + 1];     //  =
         //  assignment
         
-        arrayv = new tuple<string, ss::array<string>, pair<bool, bool>>*[1];
-        functionv = new function_t*[1];
-        stringv = new tuple<string, string, pair<bool, bool>>*[1];
+        //  END OPERATORS
         
+        arrayv = new tuple<string, ss::array<string>, pair<bool, bool>>*[1];
         bu_arrayv = new pair<size_t, tuple<string, ss::array<string>*,  pair<bool, bool>>**>*[1];
-        bu_functionv = new pair<size_t, function_t**>*[1];
         bu_numberv = new string[1];
         bu_stringv = new pair<size_t, tuple<string, string, pair<bool, bool>>**>*[1];
+        stringv = new tuple<string, string, pair<bool, bool>>*[1];
+        
+        //  BEGIN FUNCTIONS
+        
+        bu_functionv = new pair<size_t, function_t**>*[1];
+        functionv = new function_t*[1];
         
         set_function(new ss::function("array", [this](const size_t argc, string* argv) {
             if (!argc)
@@ -12309,17 +12361,17 @@ namespace ss {
             if (argc == 1) {
                 if (ss::is_array(argv[0]))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (argv[0].empty() || is_string(argv[0]))
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 double num = stod(argv[0]);
                 
                 if (!is_int(num))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (num < 1)
                     range_error(rtrim(num));
@@ -12334,71 +12386,39 @@ namespace ss {
             return stringify(argc, argv);
         }));
         
-        set_function(new ss::function("poll", [this](const size_t argc, string* argv) {
-            if (argc != 1)
-                expect_error("1 argument(s), got " + to_string(argc));
-            
-            if (ss::is_array(argv[0]))
-                type_error(0, 3);
-                //  array => int
-            
-            if (argv[0].empty() || is_string(argv[0]))
-                type_error(4, 3);
-                //  string => int
-            
-            double num = stod(argv[0]);
-            
-            if (!is_int(num))
-                type_error(2, 3);
-                //  double => int
-            
-            if (num < 0)
-                range_error(rtrim(num));
-            
-            vector<int> val = api::socket_poll((int)num);
-            
-            ostringstream ss;
-            
-            if (val.size()) {
-                for (size_t i = 0; i < val.size() - 1; ++i)
-                    ss << val[i] << pattern();
-                
-                ss << val[val.size() - 1];
-            }
-            
-            return ss.str();
-        }));
-        
         set_function(new ss::function("client", [this](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + to_string(argc));
             
             if (ss::is_array(argv[0]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[0].empty())
                 null_error();
             
             if (!is_string(argv[0]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
             string str = decode(argv[0]);
             
+            if (str.empty())
+                undefined_error(empty());
+            
             if (ss::is_array(argv[1]))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (argv[1].empty() || is_string(argv[1]))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double num = stod(argv[1]);
             
             if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
@@ -12408,39 +12428,93 @@ namespace ss {
             return to_string(fildes);
         }));
         
-        set_function(new ss::function("close", [this](const size_t argc, string* argv) {
+        set_function(new ss::function("closeConnection", [this](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + to_string(argc));
             
             if (ss::is_array(argv[0]))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (argv[0].empty() || is_string(argv[0]))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double num = stod(argv[0]);
             
             if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
             
-            if (num >= 1024) {
-                try {
-                    api::mysql_close((int)num);
-                    
-                } catch (sql::SQLException& e) {
-                    throw exception(e.what());
-                }
+            try {
+                api::mysql_close((int)num);
                 
-            } else
-                api::socket_close((int)num);
+            } catch (sql::SQLException& e) {
+                throw exception(e.what());
+            }
             
             return encode(types[5]);
+        }));
+        
+        set_function(new ss::function("closeFile", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 3);
+                //  array != int
+            
+            if (argv[0].empty() || is_string(argv[0]))
+                type_error(4, 3);
+                //  string != int
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(2, 3);
+                //  double != int
+            
+            size_t i = 0;
+            while (i < filev.size() && filev[i].first != num)
+                ++i;
+            
+            if (i == filev.size())
+                undefined_error(rtrim(num));
+            
+            filev[i].second->close();
+            
+            delete filev[i].second;
+
+            filev.erase(filev.begin() + i);
+            
+            return encode(types[5]);
+        }));
+        
+        set_function(new ss::function("closeSocket", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 3);
+                //  array != int
+            
+            if (argv[0].empty() || is_string(argv[0]))
+                type_error(4, 3);
+                //  string != int
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(2, 3);
+                //  double != int
+            
+            if (num < 0)
+                range_error(rtrim(num));
+            
+            return rtrim(api::socket_close((int)num));
         }));
         
         set_function(new ss::function("connect", [this](const size_t argc, string* argv) {
@@ -12450,14 +12524,14 @@ namespace ss {
             for (size_t i = 0; i < 3; ++i) {
                 if (ss::is_array(argv[i]))
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 if (argv[i].empty())
                     null_error();
                 
                 if (!is_string(argv[i]))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 argv[i] = decode(argv[i]);
             }
@@ -12474,29 +12548,49 @@ namespace ss {
             return to_string(res);
         }));
         
-        set_function(new ss::function("exists", [this](const size_t argc, string* argv) {
-            if (!argc)
-                expect_error("1 argument(s), got 0");
+        set_function(new ss::function("delete", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
             
             if (ss::is_array(argv[0]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[0].empty())
                 null_error();
             
             if (!is_string(argv[0]))
                 type_error(2, 4);
-                //  double => string
-                
+                //  double != string
+            
             argv[0] = decode(argv[0]);
+                
+            return to_string(remove(argv[0].c_str()) != -1);
+        }));
+        
+        set_function(new ss::function("exists", [this](const size_t argc, string* argv) {
+            if (!argc)
+                expect_error("1 argument(s), got 0");
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 4);
+                //  array != string
             
             if (argv[0].empty())
+                null_error();
+            
+            if (!is_string(argv[0]))
+                type_error(2, 4);
+                //  double != string
+                
+            string str = decode(argv[0]);
+            
+            if (str.empty())
                 undefined_error(empty());
             
             ifstream file;
             
-            file.open(argv[0]);
+            file.open(str);
             
             bool exists = !!file;
             
@@ -12505,27 +12599,31 @@ namespace ss {
             return to_string(exists);
         }));
         
-        set_function(new ss::function("input", [](const size_t argc, string* argv) {
-            if (argc)
-                expect_error("0 argument(s), got " + to_string(argc));
+        set_function(new ss::function("file", [this](const  size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
             
-            string str;
-            getline(cin, str);
+            if (ss::is_array(argv[0]))
+                type_error(0, 4);
+                //  array != string
             
-            str = trim(str);
+            if (argv[0].empty())
+                null_error();
             
-            return raw(str);
-        }));
-        
-        set_function(new ss::function("local", [this](const size_t argc, string* argv) {
-            if (argc)
-                expect_error("0 argument(s), got " + to_string(argc));
+            if (!is_string(argv[0]))
+                type_error(2, 4);
+                //  double != string
             
-            time_t now = time(0);
+            argv[0] = decode(argv[0]);
+                
+            ofstream* file = new ofstream(argv[0]);
             
-            char* dt = ctime(&now);
+            if (!file->is_open())
+                return to_string(-1);
             
-            return encode(string(dt));
+            filev.push_back(pair<int, ofstream*>(filec, file));
+            
+            return to_string(filec++);
         }));
         
         set_function(new ss::function("gmt", [this](const size_t argc, string* argv) {
@@ -12540,6 +12638,51 @@ namespace ss {
             return encode(string(dt));
         }));
         
+        set_function(new ss::function("input", [](const size_t argc, string* argv) {
+            if (argc)
+                expect_error("0 argument(s), got " + to_string(argc));
+            
+            string str;
+            getline(cin, str);
+            
+            return raw(str);
+        }));
+        
+        set_function(new ss::function("lap", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(2, 3);
+                //  double != int
+            
+            if (num < 0)
+                range_error(rtrim(num));
+            
+            size_t i = 0;
+            while (i < stopwatchv.size() && stopwatchv[i].first != num)
+                ++i;
+            
+            if (i == stopwatchv.size())
+                return to_string(-1);
+            
+            num = duration<double>(steady_clock::now() - stopwatchv[i].second).count();
+            
+            return rtrim(num);
+        }));
+        
+        set_function(new ss::function("local", [this](const size_t argc, string* argv) {
+            if (argc)
+                expect_error("0 argument(s), got " + to_string(argc));
+            
+            time_t now = time(0);
+            char* dt = ctime(&now);
+            
+            return encode(string(dt));
+        }));
+        
         set_function(new ss::function("listen", [this](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + to_string(argc));
@@ -12547,17 +12690,17 @@ namespace ss {
             for (size_t i = 0; i < 2; ++i) {
                 if (ss::is_array(argv[i]))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (argv[i].empty() || is_string(argv[i]))
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 double num = stod(argv[i]);
                 
                 if (!is_int(num))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (num < 0)
                     range_error(rtrim(num));
@@ -12565,40 +12708,74 @@ namespace ss {
             
             api::socket_listen(stoi(argv[0]), stoi(argv[1]));
             
-            return encode("undefined");
+            return encode(types[5]);
+        }));
+        
+        set_function(new ss::function("poll", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 3);
+                //  array != int
+            
+            if (argv[0].empty() || is_string(argv[0]))
+                type_error(4, 3);
+                //  string != int
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(2, 3);
+                //  double != int
+            
+            if (num < 0)
+                range_error(rtrim(num));
+            
+            vector<int> val = api::socket_poll((int)num);
+            ostringstream ss;
+            
+            if (val.size()) {
+                for (size_t i = 0; i < val.size() - 1; ++i)
+                    ss << val[i] << pattern();
+                
+                ss << val[val.size() - 1];
+            }
+            
+            return ss.str();
         }));
         
         set_function(new ss::function("preparedQuery", [this](size_t argc, string* argv) {
-            if (argc <= 1)
+            if (argc < 2)
                 expect_error("2 argument(s), got " + to_string(argc));
             
             if (ss::is_array(argv[0]))
                 type_error(0, 3);
-                //  double => int
+                //  double != int
             
             if (argv[0].empty() || is_string(argv[0]))
                 type_error(4, 3);
-                //  string => double
+                //  string != double
             
             double num = stod(argv[0]);
             
-            if (num - (int)num)
+            if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
             
             if (ss::is_array(argv[1]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[1].empty())
                 null_error();
             
             if (!is_string(argv[1]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
             string str = decode(argv[1]);
             
@@ -12612,7 +12789,7 @@ namespace ss {
             for (size_t i = 0; i < argc; ++i) {
                 if (ss::is_array(argv[i]))
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 if (argv[i].empty())
                     null_error();
@@ -12633,7 +12810,6 @@ namespace ss {
                 return encode(types[5]);
                 
             size_t ncols = res->getMetaData()->getColumnCount();
-            
             ss::array<string> arr = ss::array<string>(ncols + 1);
             
             arr.push(to_string(ncols));
@@ -12644,7 +12820,6 @@ namespace ss {
             while (res->next()) {
                 for (int i = 0; i < ncols; ++i) {
                     string value = res->getString(i + 1);
-                    
                     arr.push(is_number(value) ? rtrim(stod(value)) : encode(value));
                 }
             }
@@ -12655,36 +12830,36 @@ namespace ss {
         }));
         
         set_function(new ss::function("preparedUpdate", [this](size_t argc, string* argv) {
-            if (argc <= 1)
+            if (argc < 2)
                 expect_error("2 argument(s), got " + to_string(argc));
             
             if (ss::is_array(argv[0]))
                 type_error(0, 3);
-                //  double => int
+                //  double != int
             
             if (argv[0].empty() || is_string(argv[0]))
                 type_error(4, 3);
-                //  string => double
+                //  string != double
             
             double num = stod(argv[0]);
             
-            if (num - (int)num)
+            if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
             
             if (ss::is_array(argv[1]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[1].empty())
                 null_error();
             
             if (!is_string(argv[1]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
             string str = decode(argv[1]);
             
@@ -12698,7 +12873,7 @@ namespace ss {
             for (size_t i = 0; i < argc; ++i) {
                 if (ss::is_array(argv[i]))
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 if (argv[i].empty())
                     null_error();
@@ -12724,34 +12899,33 @@ namespace ss {
             
             if (ss::is_array(argv[0]))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (argv[0].empty() || is_string(argv[0]))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double num = stod(argv[0]);
             
             if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
             
             if (ss::is_array(argv[1]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[1].empty())
                 null_error();
             
             if (!is_string(argv[1]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
             string str = decode(argv[1]);
-            
             sql::ResultSet *res = NULL;
             
             try {
@@ -12765,7 +12939,6 @@ namespace ss {
                 return encode(types[5]);
                 
             size_t ncols = res->getMetaData()->getColumnCount();
-            
             ss::array<string> arr = ss::array<string>(ncols + 1);
             
             arr.push(to_string(ncols));
@@ -12776,7 +12949,6 @@ namespace ss {
             while (res->next()) {
                 for (int i = 0; i < ncols; ++i) {
                     string value = res->getString(i + 1);
-                    
                     arr.push(is_number(value) ? rtrim(stod(value)) : encode(value));
                 }
             }
@@ -12806,91 +12978,103 @@ namespace ss {
             
             if (ss::is_array(argv[0]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[0].empty())
                 null_error();
             
             if (!is_string(argv[0]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
-            argv[0] = decode(argv[0]);
+            string str = decode(argv[0]);
             
-            if (argc > 1) {
+            if (argc >= 2) {
                 if (ss::is_array(argv[1]))
                     type_error(0, 4);
-                    //  array => string
+                    //  array != string
                 
                 if (argv[1].empty())
                     null_error();
                 
                 if (!is_string(argv[1]))
                     type_error(2, 4);
-                    //  double => string
+                    //  double != string
                 
                 argv[1] = decode(argv[1]);
                 
                 string data[1024];
                 
-                int n = ::ss::read(data, argv[0], argv[1]);
+                int n = ss::read(data, str, argv[1]);
                 
                 if (n == -1)
                     return encode(types[5]);
                     //  undefined
                 
-                string val = stringify(n, data);
-                
-                return val;
+                return stringify(n, data);
             }
             
-            return encode(::ss::read(argv[0]));
+            return encode(ss::read(str));
         }));
         
         set_function(new ss::function("recv", [this](const size_t argc, string* argv) {
-            if (argc != 1)
+            if (!argc)
                 expect_error("1 argument(s), got " + to_string(argc));
             
-            if (ss::is_array(argv[0]))
-                type_error(0, 3);
-                //  array => int
+            if (argc >= 3)
+                expect_error("2 argument(s), got " + to_string(argc));
             
-            if (argv[0].empty() || is_string(argv[0]))
-                type_error(4, 3);
-                //  string => int
+            double numv[argc];
             
-            double num = stod(argv[0]);
+            for (size_t i = 0; i < argc; ++i) {
+                if (ss::is_array(argv[i]))
+                    type_error(0, 3);
+                    //  array != int
+                
+                if (argv[i].empty() || is_string(argv[i]))
+                    type_error(4, 3);
+                    //  string != int
+                
+                numv[i] = stod(argv[i]);
+                
+                if (!is_int(numv[i]))
+                    type_error(2, 3);
+                    //  double != int
+                
+                if (numv[i] < 0)
+                    range_error(rtrim(numv[i]));
+            }
             
-            if (!is_int(num))
-                type_error(2, 3);
-                //  double => int
+            if (argc == 1)
+                numv[1] = 0;
             
-            if (num < 0)
-                range_error(rtrim(num));
-            
-            string str = api::socket_recv((int)num);
+            string str = api::socket_recv((int)numv[0], (int)numv[1]);
             
             return str.empty() ? encode(types[5]) : encode(str);
         }));
         
-        set_function(new ss::function("remove", [this](const size_t argc, string* argv) {
-            if (argc != 1)
-                expect_error("1 argument(s), got " + to_string(argc));
+        set_function(new ss::function("rename", [this](const size_t argc, string* argv) {
+            if (argc != 2)
+                expect_error("2 argument(s), got " + to_string(argc));
             
-            if (ss::is_array(argv[0]))
-                type_error(0, 4);
-                //  array => string
-            
-            if (argv[0].empty())
-                null_error();
-            
-            if (!is_string(argv[0]))
-                type_error(2, 4);
-                //  double => string
-            
-            argv[0] = decode(argv[0]);
+            for (size_t i = 0; i < 2; ++i) {
+                if (ss::is_array(argv[i]))
+                    type_error(0, 4);
+                    //  array != string
                 
-            return to_string(remove(argv[0].c_str()) != -1);
+                if (argv[i].empty())
+                    null_error();
+                
+                if (!is_string(argv[i]))
+                    type_error(2, 4);
+                    //  double != string
+                
+                argv[i] = decode(argv[i]);
+            }
+            
+            rename(argv[0].c_str(), argv[1].c_str());
+            
+            return encode(types[5]);
         }));
         
         set_function(new ss::function("send", [this](const size_t argc, string* argv) {
@@ -12899,35 +13083,35 @@ namespace ss {
             
             if (ss::is_array(argv[0]))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (argv[0].empty() || is_string(argv[0]))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double num = stod(argv[0]);
             
             if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
             
             if (ss::is_array(argv[1]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[1].empty())
                 null_error();
             
             if (!is_string(argv[1]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
-            string str = decode(argv[1]);
+            argv[1] = decode(argv[1]);
             
-            num = api::socket_send((int)num, str);
+            num = api::socket_send((int)num, argv[1]);
             
             return rtrim(num);
         }));
@@ -12939,17 +13123,17 @@ namespace ss {
             for (size_t i = 0; i < 2; ++i) {
                 if (ss::is_array(argv[i]))
                     type_error(0, 3);
-                    //  array => int
+                    //  array != int
                 
                 if (argv[i].empty() || is_string(argv[i]))
                     type_error(4, 3);
-                    //  string => int
+                    //  string != int
                 
                 double num = stod(argv[i]);
                 
                 if (!is_int(num))
                     type_error(2, 3);
-                    //  double => int
+                    //  double != int
                 
                 if (num < 0)
                     range_error(rtrim(num));
@@ -12960,42 +13144,124 @@ namespace ss {
             return to_string(fildes);
         }));
         
-        set_function(new ss::function("setSchema", [this](const size_t argc, string* argv) {
-            if (argc != 2)
-                expect_error("2 argument(s), got " + to_string(argc));
+        set_function(new ss::function("setAskBeforeExit", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 3);
+            
+            if (argv[0].empty() || is_string(argv[0]))
+                type_error(0, 3);
             
             double num = stod(argv[0]);
             
             if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
+            
+            set_read_only("askBeforeExit", false);
+            set_number("askBeforeExit", !!num);
+            set_read_only("askBeforeExit", true);
+            
+            return encode(types[5]);
+        }));
+        
+        set_function(new ss::function("setSchema", [this](const size_t argc, string* argv) {
+            if (argc != 2)
+                expect_error("2 argument(s), got " + to_string(argc));
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 3);
+            
+            if (argv[0].empty() || is_string(argv[0]))
+                type_error(0, 3);
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(2, 3);
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
             
             if (ss::is_array(argv[1]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[1].empty())
                 null_error();
             
             if (!is_string(argv[1]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
-            string str = decode(argv[1]);
+            argv[1] = decode(argv[1]);
             
             bool res;
             
             try {
-                res = api::mysql_set_schema((size_t)num, str);
+                res = api::mysql_set_schema((size_t)num, argv[1]);
                 
             } catch (sql::SQLException& e) {
                 throw exception(e.what());
             }
             
             return encode(to_string(res));
+        }));
+        
+        set_function(new ss::function("setTimeout", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 3);
+            
+            if (argv[0].empty() || is_string(argv[0]))
+                type_error(0, 3);
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(2, 3);
+                //  double != int
+            
+            if (num < 0)
+                range_error(rtrim(num));
+            
+            set_read_only("timeout", false);
+            set_number("timeout", num);
+            set_read_only("timeout", true);
+            
+            size_t i = 0;
+            while (i < listenerv.size() && std::get<1>(listenerv[i]) != "timeout")
+                ++i;
+            
+            if (i != listenerv.size())
+                std::get<2>(listenerv[i])(rtrim(num));
+            
+            return encode(types[5]);
+        }));
+        
+        set_function(new ss::function("setTimeoutMessage", [this](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + to_string(argc));
+            
+            if (ss::is_array(argv[0]))
+                type_error(0, 4);
+                //  array != string
+            
+            if (argv[0].empty())
+                null_error();
+            
+            if (!is_string(argv[0]))
+                type_error(2, 4);
+                //  double != string
+        
+            std::get<1>(* stringv[io_string("timeoutMessage")]) = argv[0];
+            
+            return encode(types[5]);
         }));
         
         set_function(new ss::function("start", [this](const size_t argc, string* argv) {
@@ -13017,7 +13283,7 @@ namespace ss {
             
             if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
@@ -13042,38 +13308,38 @@ namespace ss {
             
             if (ss::is_array(argv[0]))
                 type_error(0, 3);
-                //  array => int
+                //  array != int
             
             if (argv[0].empty() || is_string(argv[0]))
                 type_error(4, 3);
-                //  string => int
+                //  string != int
             
             double num = stod(argv[0]);
             
             if (!is_int(num))
                 type_error(2, 3);
-                //  double => int
+                //  double != int
             
             if (num < 0)
                 range_error(rtrim(num));
             
             if (ss::is_array(argv[1]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[1].empty())
                 null_error();
             
             if (!is_string(argv[1]))
                 type_error(2, 4);
-                //  double => string
+                //  double != string
             
-            string str = decode(argv[1]);
+            argv[1] = decode(argv[1]);
             
             int res;
             
             try {
-                res = api::mysql_update((size_t)num, str);
+                res = api::mysql_update((size_t)num, argv[1]);
                 
             } catch (sql::SQLException& e) {
                 throw exception(e.what());
@@ -13086,54 +13352,94 @@ namespace ss {
             if (argc < 2)
                 expect_error("2 argument(s), got " + to_string(argc));
             
+            if (argc >= 4)
+                expect_error("3 argument(s), got " + to_string(argc));
+            
             if (ss::is_array(argv[0]))
                 type_error(0, 4);
-                //  array => string
+                //  array != string
             
             if (argv[0].empty())
                 null_error();
             
-            if (!is_string(argv[0]))
-                type_error(2, 4);
-                //  double => string
-            
-            argv[0] = decode(argv[0]);
-            
-            if (argv[0].empty())
-                undefined_error(empty());
-            
-            string valuev[argv[1].length() + 1];
-            size_t valuec = parse(valuev, argv[1]);
-            
-            if (valuec == 1) {
-                if (argv[1].empty())
-                    null_error();
+            if (is_string(argv[0])) {
+                string str = decode(argv[0]);
                 
-                argv[1] = decode(argv[1]);
+                if (str.empty())
+                    undefined_error(empty());
                 
-                ::ss::write(argv[0], argv[1]);
-            } else {
-                if (argc == 2 || argc > 3)
-                    expect_error("3 argument(s), got " + to_string(argc));
+                string valuev[argv[1].length() + 1];
+                size_t valuec = parse(valuev, argv[1]);
                 
-                if (ss::is_array(argv[2]))
-                    type_error(0, 4);
-                    //  array => string
+                if (valuec == 1) {
+                    if (argv[1].empty())
+                        null_error();
+                    
+                    if (!is_string(argv[1]))
+                        type_error(2, 4);
+                        //  double != string
+                    
+                    argv[1] = decode(argv[1]);
+                    
+                    ss::write(str, argv[1]);
+                } else {
+                    if (argc != 3)
+                        expect_error("3 argument(s), got " + to_string(argc));
+                    
+                    if (ss::is_array(argv[2]))
+                        type_error(0, 4);
+                        //  array != string
+                    
+                    if (argv[2].empty())
+                        null_error();
+                    
+                    if (!is_string(argv[2]))
+                        type_error(2, 4);
+                        //  double != string
+                    
+                    argv[2] = decode(argv[2]);
+                    
+                    ss::write(str, valuec, valuev, argv[2]);
+                }
                 
-                if (argv[2].empty())
-                    null_error();
-                
-                if (!is_string(argv[2]))
-                    type_error(2, 4);
-                    //  double => string
-                
-                argv[2] = decode(argv[2]);
-                
-                ::ss::write(argv[0], valuec, valuev, argv[2]);
+                return encode(types[5]);
             }
+            
+            if (argc != 2)
+                expect_error("2 argument(s), got " + to_string(argc));
+            
+            double num = stod(argv[0]);
+            
+            if (!is_int(num))
+                type_error(4, 3);
+                //  double != int
+            
+            size_t i = 0;
+            while (i < filev.size() && filev[i].first != num)
+                ++i;
+            
+            if (i == filev.size())
+                undefined_error(rtrim(num));
+            
+            if (ss::is_array(argv[1]))
+                type_error(0, 4);
+                //  array != string
+            
+            if (argv[1].empty())
+                null_error();
+            
+            if (!is_string(argv[1]))
+                type_error(2, 4);
+                //  double != string
+            
+            argv[1] = decode(argv[1]);
+            
+            (* filev[i].second) << argv[1];
             
             return encode(types[5]);
         }));
+        
+        //  END FUNCTIONS
     }
 
     int interpreter::io_function(const string symbol) const {
@@ -13182,6 +13488,14 @@ namespace ss {
         }
         
         return j >= 25;
+    }
+
+    void interpreter::kill() {
+        while (stack.size() > 1)
+            stack.pop();
+        
+        if (stack.size())
+            stack.top()->kill();
     }
 
     int interpreter::merge_numbers(int n, string* data) const {
@@ -13393,6 +13707,7 @@ namespace ss {
                 term == uov[conditional_oi]->opcode() ||
                 term == uov[filter_oi]->opcode() ||
                 term == uov[find_oi]->opcode() ||
+                term == uov[find_index_oi]->opcode() ||
                 term == uov[insert_oi]->opcode() ||
                 term == uov[map_oi]->opcode()) {
                 size_t j = ++i;       int p = 0;
@@ -13992,27 +14307,89 @@ namespace ss {
         return n;
     }
 
-    void interpreter::print_stack_trace() {
-        logger_write("  " + current_expression + "\n");
-        logger_write("Stack Trace:\n");
-        
-        string padding = "  ";
-        
-        while (!stack_trace.empty()) {
-            logger_write(padding + stack_trace.pop() + "()\n");
-            padding += "  ";
-        }
-        
-        logger_close();
-    }
-
     void interpreter::reload() {
         restore(buid, false);
-        
         buid = backup();
     }
 
-    void interpreter::restore(const string uuid, bool verbose, size_t symbolc, string* symbolv) {
+    void interpreter::remove_listener(const string symbol) {
+        size_t i = 0;
+        while (i < listenerv.size() &&  std::get<1>(listenerv[i]) != symbol)
+            ++i;
+        
+        if (i == -1)
+            undefined_error(symbol);
+        
+        listenerv.erase(listenerv.begin() + i);
+    }
+
+    void interpreter::remove_symbol(const string symbol) {
+        int i = io_function(symbol);
+        
+        if (i == -1) {
+            i = io_array(symbol);
+            
+            if (i == -1) {
+                i = io_string(symbol);
+                
+                if (i == -1) {
+                    arithmetic::remove_symbol(symbol);
+                    return;
+                }
+                
+                for (size_t j = i; j < stringc - 1; ++j)
+                    swap(stringv[j], stringv[j + 1]);
+                
+                delete stringv[--stringc];
+                
+                arithmetic::remove_symbol(symbol);
+                
+                string_bst->close();
+                
+                string symbolv[stringc];
+                
+                for (size_t j = 0; j < stringc; ++j)
+                    symbolv[j] = std::get<0>(* stringv[j]);
+                
+                string_bst = stringc ? build(symbolv, 0, (int)stringc) : NULL;
+                
+                return;
+            }
+            
+            for (size_t j = i; j < arrayc - 1; ++j)
+                swap(arrayv[j], arrayv[j + 1]);
+            
+            delete arrayv[--arrayc];
+            
+            arithmetic::remove_symbol(symbol);
+            
+            array_bst->close();
+            
+            string symbolv[arrayc];
+            
+            for (size_t j = 0; j < arrayc; ++j)
+                symbolv[j] = std::get<0>(* arrayv[j]);
+            
+            array_bst = arrayc ? build(symbolv, 0, (int)arrayc) : NULL;
+        }
+        
+        for (size_t j = i; j < functionc - 1; ++j)
+            swap(functionv[j], functionv[j + 1]);
+        
+        --functionc;
+        
+        if (function_bst != NULL)
+            function_bst->close();
+        
+        string symbolv[functionc];
+        
+        for (size_t j = 0; j < functionc; ++j)
+            symbolv[j] = functionv[j]->name();
+        
+        function_bst = functionc ? build(symbolv, 0, (int)functionc) : NULL;
+    }
+
+    void interpreter::restore(const string uuid, bool verbose, bool update, size_t symbolc, string* symbolv) {
         //  find backup
         size_t i = 0;
         while (i < backupc && bu_numberv[i] != uuid)
@@ -14035,7 +14412,7 @@ namespace ss {
                 if (verbose)
                     if (!std::get<2>(* arrayv[j]).second)
                         logger_write("Unused variable '" + std::get<0>(* arrayv[j]) + "'\n");
-            } else {
+            } else if (update) {
                 //  find exception
                 size_t l = 0;
                 while (l < symbolc && std::get<0>(* arrayv[j]) != symbolv[l])
@@ -14141,7 +14518,7 @@ namespace ss {
         delete[] _symbolv;
         
         //  restore numbers
-        arithmetic::restore(bu_numberv[i], verbose, symbolc, symbolv);
+        arithmetic::restore(bu_numberv[i], verbose, update, symbolc, symbolv);
         
         //  remove numbers backup
         for (size_t j = i; j < backupc - 1; ++j)
@@ -14159,7 +14536,7 @@ namespace ss {
                 if (verbose)
                     if (!std::get<2>(* stringv[j]).second)
                         logger_write("Unused variable '" + std::get<0>(* stringv[j]) + "'\n");
-            } else {
+            } else if (update) {
                 //  find exception
                 size_t l = 0;
                 while (l < symbolc && std::get<0>(* stringv[j]) != symbolv[l])
@@ -14244,7 +14621,7 @@ namespace ss {
             
             std::get<1>(* arrayv[j]).push(value);
             
-            insert(symbol);
+            add_symbol(symbol);
             
             if (array_bst != NULL)
                 array_bst->close();
@@ -14280,11 +14657,11 @@ namespace ss {
             if (valuev[i].empty())
                 continue;
             
-            if (is_number(valuev[i]))
-                valuev[i] = rtrim(stod(valuev[i]));
-            
-            else if (is_string(valuev[i]))
+            if (is_string(valuev[i]))
                 valuev[i] = encode(decode(valuev[i]));
+            
+            else if (is_number(valuev[i]))
+                valuev[i] = rtrim(stod(valuev[i]));
             else
                 throw error("Unexpected token: " + value);
         }
@@ -14319,7 +14696,7 @@ namespace ss {
                 for (size_t k = 0; k < valuec; ++k)
                     std::get<1>(* arrayv[j])[k] = valuev[k];
                 
-                insert(symbol);
+                add_symbol(symbol);
                 
                 if (array_bst != NULL)
                     array_bst->close();
@@ -14347,7 +14724,7 @@ namespace ss {
             for (size_t i = 0; i < backupc; ++i) {
                 string _buid = bu_numberv[0];
                 
-                restore(_buid, false);
+                restore(_buid, false, false);
                 
                 _set_array();
                 
@@ -14356,7 +14733,7 @@ namespace ss {
                 backup(_buid);
             }
             
-            restore(buid);
+            restore(buid, false, false);
         } else
             _set_array();
     }
@@ -14378,7 +14755,7 @@ namespace ss {
         
         functionv[functionc] = new_function;
         
-        insert(functionv[functionc]->name());
+        add_symbol(functionv[functionc]->name());
         
         size_t i = functionc++;
         
@@ -14398,6 +14775,18 @@ namespace ss {
         function_bst = build(symbolv, 0, (int)functionc);
     }
 
+    void interpreter::set_listener(const string symbol, std::function<void(string)> callback) {
+        assert(is_symbol(symbol));
+        
+        size_t i = 0;
+        while (i < listenerv.size() && std::get<1>(listenerv[i]) != symbol)
+            ++i;
+        
+        assert(i == listenerv.size());
+        
+        listenerv.push_back(tuple<size_t, string, std::function<void(string)>>(0, symbol, callback));
+    }
+
     void interpreter::set_number(const string symbol, const double value, bool global) {
         if (global) {
             string buid = backup();
@@ -14405,15 +14794,15 @@ namespace ss {
             for (size_t i = 0; i < backupc; ++i) {
                 string _buid = bu_numberv[0];
                 
-                restore(_buid, false);
+                restore(_buid, false, false);
                 
                 arithmetic::set_number(symbol, value);
-                arithmetic::disable_write(symbol);
                 
+                set_read_only(symbol, true);
                 backup(_buid);
             }
             
-            restore(buid);
+            restore(buid, false, false);
         } else
             arithmetic::set_number(symbol, value);
     }
@@ -14451,7 +14840,7 @@ namespace ss {
                     --j;
                 }
                 
-                insert(symbol);
+                add_symbol(symbol);
                 
                 if (string_bst != NULL)
                     string_bst->close();
@@ -14476,7 +14865,7 @@ namespace ss {
             for (size_t i = 0; i < backupc; ++i) {
                 string _buid = bu_numberv[0];
                 
-                restore(_buid, false);
+                restore(_buid, false, false);
                 
                 _set_string();
                 
@@ -14485,7 +14874,7 @@ namespace ss {
                 backup(_buid);
             }
             
-            restore(buid);
+            restore(buid, false, false);
         } else
             _set_string();
     }
@@ -14494,35 +14883,30 @@ namespace ss {
         return merge((int)tokens(dst, src), dst);
     }
 
-    void interpreter::type_error(const size_t lhs, const size_t rhs) {
-        if (lhs > 7)
-            range_error(to_string(lhs));
+    void interpreter::stack_push(function_t* function) {
+        assert(!stack.size());
         
-        if (rhs > 7)
-            range_error(to_string(rhs));
-        
-        ss::type_error(types[lhs], types[rhs]);
+        stack.push(function);
     }
 
-    void interpreter::consume(const string symbol) {
-        if (symbol.empty())
-            expect_error("symbol: " + symbol);
+    string interpreter::stack_trace() {
+        ostringstream ss;
         
-        int i = io_function(symbol);
+        ss << "  " << current_expression << endl;
+
+        string padding = "    ";
         
-        if (i == -1) {
-            i = io_array(symbol);
-            
-            if (i == -1) {
-                i = io_string(symbol);
-                
-                if (i == -1)
-                    arithmetic::consume(symbol);
-                else
-                    std::get<2>(* stringv[i]).second = true;
-            } else
-                std::get<2>(* arrayv[i]).second = true;
-        } else
-            functionv[i]->consume();
+        while (!stack.empty()) {
+            ss << padding << stack.pop()->name() << "()\n";
+            padding += "  ";
+        }
+        
+        return ss.str();
+    }
+
+    void interpreter::type_error(const size_t lhs, const size_t rhs) {
+        assert(lhs < 8 && rhs < 8);
+        
+        ss::type_error(types[lhs], types[rhs]);
     }
 }

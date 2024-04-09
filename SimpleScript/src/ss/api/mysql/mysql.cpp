@@ -11,7 +11,7 @@ namespace ss {
     namespace api {
         bst<pair<size_t, int>>* conbst = NULL;
     
-        size_t conc = 1024;
+        size_t conc = 0;
         vector<pair<size_t, sql::Connection*>> conv;
 
         size_t mysql_connect(const string host, const string usr, const string pwd) {

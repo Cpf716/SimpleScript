@@ -28,18 +28,32 @@ namespace ss {
         
         virtual string call(const size_t argc, string* argv) = 0;
         
-        size_t count() const { return this->_count; }
+        size_t count() const {
+            return this->_count;
+        }
         
-        void consume() { ++this->_count; }
+        void consume() {
+            ++this->_count;
+        }
         
-        string name() const { return this->_name; }
+        virtual void exit() = 0;
+        
+        virtual size_t get_level() const = 0;
+        
+        virtual void kill() = 0;
+        
+        string name() const {
+            return this->_name;
+        }
         
         void rename(const string new_name) {
-            if (!is_symbol(new_name))
-                expect_error("symbol: " + new_name);
+            if (new_name.empty())
+                throw error("empty");
             
             this->_name = new_name;
         }
+        
+        virtual void set_level(const size_t level) = 0;
     };
 }
 

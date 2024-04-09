@@ -20,34 +20,34 @@ func main
         throw "null"
     end if
 
-    pattern = ((argv row 2) slice 1, argv cell 2, 0)
+    pat = ((argv row 2) slice 1, argv cell 2, 0)
 
-    if typeOf pattern !== "string"
-        typeExcept(typeOf pattern, "string")
+    if typeOf pat !== "string"
+        typeExcept(typeOf pat, "string")
     end if
 
-    if pattern === null
+    if pat === null
         throw "null"
     end if
 
-    array arr = null, n = -1
+    array arr = null, num = -1
 
-    si = 0, ei = 0
-    while ei <= count text - count pattern
+    beg = 0, end = 0
+    while end <= count text - count pat
         i = 0
-        while i < count pattern && text.(ei + i) === pattern.i
+        while i < count pat && text.(end + i) === pat.i
             i += 1
         end while
         
-        if i === count pattern
-            arr.(n += 1) = (text substr si, ei)
-            si = (ei += i)
+        if i === count pat
+            arr.(num += 1) = (text substr beg, end)
+            beg = (end += i)
         else
-            ei += 1
+            end += 1
         end if
     end while
 
-    arr.(n += 1) = text substr si
+    arr.(num += 1) = text substr beg
 
     return arr
 end func

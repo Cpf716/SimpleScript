@@ -58,10 +58,8 @@ func main
     end while
 
     timestamp -= minutes * 60
-
-    `seconds` = timestamp
     
-    return `seconds`
+    return timestamp
 end func
 
 return main()

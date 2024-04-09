@@ -22,6 +22,6 @@ func main
     end for
 
     return arr
-end fun
+end func
 
 return main()

@@ -1,0 +1,55 @@
+//  Author: Corey Ferguson
+//  Date:   December 19, 2023
+//  File:   getParam.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if (count argv - 1) / first argv !== 3
+        expectExcept("2 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+    end if
+
+    req = ((argv row 1) slice 1, (argv cell 1, 0))
+    
+    if subtypeOf req !== "table"
+        typeExcept(subtypeOf req, "table")
+    end if
+
+    if first req < 2
+        return
+    end if
+    
+    for val in req col 0
+        if subtypeOf val !== "int"
+            return
+        end if
+    end for
+    
+    key = ((argv row 2) slice 1, (argv cell 2, 0))
+    
+    if typeOf key !== "string"
+        typeExcept(typeOf key, "string")
+    end if
+    
+    if key === null
+        throw "null"
+    end if
+    
+    if !count key
+        return
+    end if
+
+    i = 0
+    while i < (count req - 1) / first req && (req cell i, 1) !== key
+        i += 1
+    end while
+    
+    if i === (count req - 1) / first req
+        return
+    end if
+    
+    return (val = (req row i)) slice 2, first val - 1
+end func
+
+return main()

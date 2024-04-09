@@ -4,7 +4,7 @@
 
 #### echo : any
 
-### define : symbol, any
+#### define : symbol, any
 
 #### consume : symbol
 

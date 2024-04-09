@@ -43,9 +43,7 @@ func main
         `day` += 1
     end while
 
-    `day` += 1
-
-    return `day`
+    return `day` + 1
 end func
 
 return main()

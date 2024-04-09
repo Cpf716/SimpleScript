@@ -15,6 +15,8 @@ namespace ss {
         //  MEMBER FIELDS
         
         string expression;
+        
+        bool should_return = false;
     public:
         //  CONSTRUCTORS
         
@@ -25,7 +27,9 @@ namespace ss {
             this->expression = expression;
         }
         
-        void close() { delete this; }
+        void close() {
+            delete this;
+        }
         
         //  MEMBER FUNCTIONS
         
@@ -33,7 +37,7 @@ namespace ss {
             return false;
         }
         
-        bool compare(const string value) const {
+        bool compare(const int value) const {
             return false;
         }
         
@@ -43,17 +47,29 @@ namespace ss {
         }
         
         string execute(interpreter* ssu) {
-            string result = ssu->evaluate(expression);
+            string value = ssu->evaluate(this->expression);
             
-            if (ss::is_array(result))
-                type_error("array", "string");
+            if (ss::is_array(value))
+                throw error("Unexpected token: " + value);
             
-            cout << (result.empty() ? "null" : decode(result));
+            if (this->should_return)
+                return empty();
+            
+            cout << (value.empty() ? "null" : decode(value));
             
             return empty();
         }
         
         void exit() { }
+        
+        size_t get_level() const {
+            unsupported_error("get_level()");
+            return 0;
+        };
+        
+        void kill() {
+            this->should_return = true;
+        }
         
         void set_break() {
             unsupported_error("set_break()");
@@ -61,6 +77,10 @@ namespace ss {
         
         void set_continue() {
             unsupported_error("set_continue()");
+        }
+        
+        void set_level(const size_t level) {
+            unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) { }

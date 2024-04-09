@@ -12,10 +12,10 @@ func main
 
     array arr = (argv row 1) slice 1
 
-    `mean` = mean(arr)
+    x = mean(arr)
 
     for i = 0, i < count arr, i += 1
-        arr.i = (arr.i - `mean`) pow 2
+        arr.i = (arr.i - x) pow 2
     end for
 
     //  sample

@@ -76,7 +76,7 @@ namespace ss {
     
         std::vector<int> socket_poll(const int fildes);
 
-        std::string socket_recv(const int fildes);
+        std::string socket_recv(const int fildes, int timeout = 0);
 
         int socket_send(const int fildes, const std::string mes);
 

@@ -5,7 +5,7 @@
 
 include((dir = "@/datetime/data/") + "months")
 include(dir + "weekdays")
-include("@/datetime/date/weekday")
+include("@/datetime/weekday")
 include("@/search/string/padStart")
 
 func main
@@ -48,8 +48,6 @@ func main
 
     timestamp -= 86400 * day
 
-    day += 1
-
     hours = 0
     while timestamp >= (hours + 1) * 3600
         hours += 1
@@ -63,19 +61,12 @@ func main
     end while
 
     timestamp -= minutes * 60
-
     seconds = timestamp
     
     time = (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
+    dateStr = array(`weekday`, (((keys months()).month) slice 0, 3), day + 1, time, year)
 
-    array dateStr = `weekday`
-    
-    dateStr += (((keys months()).month) slice 0, 3)
-    dateStr += day
-    dateStr += time
-    dateStr += year
-
-    return dateStr join " "
+    return (dateStr join " ") + "\n"
 end func
 
 return main()

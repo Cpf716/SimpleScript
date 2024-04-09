@@ -3,10 +3,10 @@
 //  File:   isDaylightSavings.txt
 //
 
-include((dir = "@/datetime/") + "date/parseDate")
+include((dir = "@/datetime/") + "date/parseDateComponent")
+include(dir + "weekday")
 include((dir += "date/") + "day")
 include(dir + "month")
-include(dir + "weekday")
 include(dir + "year")
 
 
@@ -26,12 +26,12 @@ func main
     
     consume `day`
     
-    if `month` === 1
-        //  February
+    if `month` === 2
+        //  March
     
         secondSunday = 1
         
-        timestamp = parseDate("{}-02-01" format year(timestamp))
+        timestamp = parseDateComponent("{}-03-01" format year(timestamp))
         `weekday` = weekday(timestamp)
         
         n = 0
@@ -54,7 +54,7 @@ func main
         
         firstSunday = 1
         
-        timestamp = parseDate("{}-11-01" format year(timestamp))
+        timestamp = parseDateComponent("{}-11-01" format year(timestamp))
         `weekday` = weekday(timestamp)
         
         while `weekday`

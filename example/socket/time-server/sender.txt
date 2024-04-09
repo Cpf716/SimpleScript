@@ -3,12 +3,10 @@
 //  File:   sender.txt
 //
 
+include("/Library/Application Support/SimpleScript/example/socket/api/express/server.txt", connectServer)
+
 func main
-    timeout = 0
-
-    sfd = server(8080, 1024)
-
-    echo "Server listening on port 8080...\n"
+    sfd = connectServer(1024, true)
 
     array conv = null
 
@@ -16,7 +14,7 @@ func main
     while 1
         if !(conv = poll(sfd))
             if conc
-                askBeforeExit = false
+                setAskBeforeExit(false)
                 conc = 0
                 echo "Disconnected.\t(0)\n"
             end if
@@ -24,7 +22,7 @@ func main
             continue
         end if
         
-        askBeforeExit = true
+        setAskBeforeExit(true)
         
         if conc < count conv
             echo "Connected...\t({})\n" format count conv

@@ -1,0 +1,50 @@
+//  Author: Corey Ferguson
+//  Date:   August 3, 2023
+//  File:   indexOfString.txt
+//
+
+include("@/exception/expectExcept")
+
+func main
+    if nrows(argv) !== 3
+        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    end if
+
+    text = ((argv row 1) slice 1, argv cell 1, 0)
+
+    if typeOf text !== "string"
+        typeExcept(typeOf text, "string")
+    end if
+
+    if text === null
+        throw "null"
+    end if
+
+    pat = ((argv row 2) slice 1, argv cell 2, 0)
+
+    if typeOf pat !== "string"
+        typeExcept(typeOf pat, "string")
+    end if
+
+    if pat === null
+        throw "null"
+    end if
+
+    i = 0
+    while i <= count text - count pat
+        j = 0
+        while j < count pat && text.(i + j) === pat.j
+            j += 1
+        end while
+        
+        if j === count pat
+            break
+        end if
+        
+        i += 1
+    end while
+
+    return i === count text - count pat + 1 ? -1, i
+end func
+
+return main()

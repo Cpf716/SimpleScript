@@ -3,6 +3,7 @@
 //  File:   string.txt
 //
 
+include("@/array/table/stringify")
 include("@/exception/expectExcept")
 
 func main
@@ -13,7 +14,7 @@ func main
     val = (argv row 1) slice 1
 
     if typeOf val === "array"
-        return null
+        throw "Unexpected token: {}" format stringify((val insert 0, count val))
     end if
 
     return "" + val

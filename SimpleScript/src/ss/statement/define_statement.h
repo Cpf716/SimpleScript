@@ -53,7 +53,7 @@ namespace ss {
             return false;
         }
         
-        bool compare(const string value) const {
+        bool compare(const int value) const {
             return false;
         }
         
@@ -70,17 +70,23 @@ namespace ss {
             
             if (ss::is_array(value))
                 ssu->set_array(symbol, value, true);
-            else {
-                if (value.empty() || is_string(value))
-                    ssu->set_string(symbol, value, true);
-                else
-                    ssu->set_number(symbol, stod(value), true);
-            }
+
+            else if (value.empty() || is_string(value))
+                ssu->set_string(symbol, value, true);
+            else
+                ssu->set_number(symbol, stod(value), true);
             
             return empty();
         }
         
         void exit() { }
+        
+        size_t get_level() const {
+            unsupported_error("get_level()");
+            return 0;
+        };
+        
+        void kill() { }
         
         void set_break() {
             unsupported_error("set_break()");
@@ -88,6 +94,10 @@ namespace ss {
         
         void set_continue() {
             unsupported_error("set_continue()");
+        }
+        
+        void set_level(const size_t level) {
+            unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) { }

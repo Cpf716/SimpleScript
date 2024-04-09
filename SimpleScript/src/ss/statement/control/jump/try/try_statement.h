@@ -26,7 +26,7 @@ namespace ss {
         
         bool analyze(interpreter* ssu) const;
         
-        bool compare(const string value) const;
+        bool compare(const int value) const;
         
         string evaluate(interpreter* ssu);
         

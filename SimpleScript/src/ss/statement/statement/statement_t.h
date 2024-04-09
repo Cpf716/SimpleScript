@@ -22,7 +22,7 @@ namespace ss {
         
         virtual bool analyze(interpreter* ssu) const = 0;
         
-        virtual bool compare(const string value) const = 0;
+        virtual bool compare(const int value) const = 0;
         
         virtual string evaluate(interpreter* ssu) = 0;
         
@@ -30,9 +30,15 @@ namespace ss {
         
         virtual void exit() = 0;
         
+        virtual size_t get_level() const = 0;
+        
+        virtual void kill() = 0;
+        
         virtual void set_break() = 0;
         
         virtual void set_continue() = 0;
+        
+        virtual void set_level(const size_t level) = 0;
         
         virtual void set_parent(statement_t* parent) = 0;
         
@@ -41,7 +47,7 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    bool evaluate(const string result);
+    bool evaluate(const string value);
 
     bool is_clause(class statement_t* statement);
 }

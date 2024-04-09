@@ -56,7 +56,7 @@ namespace ss {
 
     std::size_t pow2(const std::size_t num);
 
-    std::string raw(const std::string val);
+    std::string raw(const std::string val, std::string pat = empty());
 
     std::string read(const std::string filename);
 

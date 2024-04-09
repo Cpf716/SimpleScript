@@ -37,6 +37,7 @@ namespace ss {
         size_t fill_oi;
         size_t filter_oi;           //  lambda
         size_t find_oi;             //  lambda
+        size_t find_index_oi;       //  lambda
         size_t format_oi;
         size_t index_of_oi;
         size_t indexer_oi;          //
@@ -71,11 +72,16 @@ namespace ss {
         
         string current_expression;
         
+        size_t filec = 0;
+        vector<pair<int, ofstream*>> filev;
+        
         bst<pair<string, int>>* function_bst = NULL;
         size_t functionc = 0;
         function_t** functionv = NULL;
         
-        ss::stack<string> stack_trace = ss::stack<string>();
+        vector<tuple<size_t, string, std::function<void(string)>>> listenerv;
+        
+        class ss::stack<function_t*> stack = ss::stack<function_t*>();
         
         bst<pair<string, int>>* string_bst = NULL;
         size_t stringc = 0;
@@ -130,8 +136,6 @@ namespace ss {
         
         void consume(const string symbol);
         
-        void drop(const string symbol);
-        
         string evaluate(const string expression);
         
         string get_array(const string symbol, const size_t index);
@@ -140,11 +144,15 @@ namespace ss {
         
         bool is_mutating(const string expression) const;
         
-        void print_stack_trace();
+        void kill();
         
         void reload();
         
-        void restore(const string uuid, bool verbose = true, size_t symbolc = 0, string* symbolv = nullptr);
+        void remove_listener(const string symbol);
+        
+        void remove_symbol(const string symbol);
+        
+        void restore(const string uuid, bool verbose = true, bool update = true, size_t symbolc = 0, string* symbolv = nullptr);
         
         void set_array(const string symbol, const size_t index, const string value);
         
@@ -154,7 +162,13 @@ namespace ss {
         
         void set_number(const string symbol, const double value, bool global = false);
         
+        void set_listener(const string symbol, std::function<void(string)> callback);
+        
         void set_string(const string symbol, const string value, bool global = false);
+        
+        void stack_push(function_t* function);
+        
+        string stack_trace();
     };
 }
 

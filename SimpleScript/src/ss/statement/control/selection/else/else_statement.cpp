@@ -11,8 +11,8 @@ namespace ss {
     //  CONSTRUCTORS
 
     else_statement::else_statement(const size_t statementc, statement_t** statementv) {
-        if (statementc && (statementv[statementc - 1]->compare("catch") ||
-            statementv[statementc - 1]->compare("finally")))
+        if (statementc && (statementv[statementc - 1]->compare(1) ||
+            statementv[statementc - 1]->compare(5)))
             expect_error("expression");
         
         this->statementc = statementc;
@@ -48,8 +48,8 @@ namespace ss {
         return false;
     }
 
-    bool else_statement::compare(const string value) const {
-        return value == "else";
+    bool else_statement::compare(const int value) const {
+        return value == 2;
     }
 
     string else_statement::evaluate(interpreter* ssu) {

@@ -58,13 +58,12 @@ func main
     end while
 
     timestamp -= minutes * 60
-
     seconds = timestamp
     
-    isAfternoon = false
+    afternoon = false
     
     if hours >= 12
-        isAfternoon = true
+        afternoon = true
     
         if hours > 12
             hours -= 12
@@ -73,7 +72,7 @@ func main
     
     time = (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
     
-    return array(time, (isAfternoon ? "PM", "AM")) join " "
+    return array(time, (afternoon ? "PM", "AM")) join " "
 end func
 
 return main()

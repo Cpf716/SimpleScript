@@ -3,29 +3,39 @@
 //  File:   sender.txt
 //
 
+include("@/string")
+
 func main
-    sfd = server(8080, 1)
+    port = 8080
+    sfd = -1
+
+    while 1
+        try
+            sfd = server(port, 1)
+            break
+        catch exc
+            if parse exc === 48
+                port += 1
+            else
+                throw exc
+            end if
+        end try
+    end while
+    
+    echo "Server listening on port {}...\n" format port
 
     array conv = null
 
     while 1
-        askBeforeExit = false
-        
-        echo "Searching...\n"
+        setAskBeforeExit(false)
     
-        i = 0
-        for , i < 30 && !(conv = poll(sfd)), i += 1
+        while !(conv = poll(sfd))
             sleep 1000
-        end for
-        
-        if i === 30
-            echo "Connection to the server timed out.\n"
-            return
-        end if
+        end while
         
         echo "Connected...\n"
         
-        askBeforeExit = true
+        setAskBeforeExit(true)
     
         listen(first conv, 8081)
         
@@ -33,16 +43,16 @@ func main
             echo "> "
         
             req = null
-            while !(req = input())
+            while !(req = string(input() ?? ""))
                 continue
             end while
         
-            if send(first conv, req) <= 0
+            if req === "exit" || send(first conv, req) <= 0
                 break
             end if
         end while
 
-        close(first conv)
+        closeSocket(first conv)
         
         echo "Disconnected.\n"
     end while

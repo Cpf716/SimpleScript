@@ -10,22 +10,22 @@ func main
         expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
     end if
 
-    text = (argv row 1) slice 1
+    str = (argv row 1) slice 1
 
-    if typeOf text !== "string"
-        typeExcept(typeOf text, "string")
+    if typeOf str !== "string"
+        typeExcept(typeOf str, "string")
     end if
 
-    if text === null
+    if str === null
         throw "null"
     end if
 
-    e = count text
-    while e > 0 && isSpace text.(e - 1)
-        e -= 1
+    end = count str
+    while end > 0 && isSpace str.(end - 1)
+        end -= 1
     end while
 
-    return text slice 0, e
+    return str slice 0, end
 end func
 
 return main()
