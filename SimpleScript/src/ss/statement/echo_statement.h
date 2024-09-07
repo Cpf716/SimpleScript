@@ -33,29 +33,44 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const {
+        bool analyze(command_processor* cp) const {
             return false;
         }
         
-        bool compare(const int value) const {
+        bool compare(const statement_type value) const {
             return false;
         }
         
-        string evaluate(interpreter* ssu) {
+        string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
             return empty();
         }
         
-        string execute(interpreter* ssu) {
-            string value = ssu->evaluate(this->expression);
+        string execute(command_processor* cp) {
+#if DEBUG_LEVEL
+            assert(cp != NULL);
+#endif
+            string result = cp->evaluate(this->expression);
             
-            if (ss::is_array(value))
-                throw error("Unexpected token: " + value);
+            string valuev[result.length() + 1];
+            size_t valuec = parse(valuev, result);
+            
+            if (valuec != 1) {
+                ostringstream ss;
+                
+                size_t i;
+                for (i = 0; i < valuec - 1; ++i)
+                    ss << valuev[i] << escape(get_sep());
+                
+                ss << valuev[i];
+                
+                throw error("Unexpected token: " + ss.str());
+            }
             
             if (this->should_return)
                 return empty();
             
-            cout << (value.empty() ? "null" : decode(value));
+            cout << (result.empty() ? "null" : escape(decode_raw(result)));
             
             return empty();
         }
@@ -84,6 +99,8 @@ namespace ss {
         }
         
         void set_parent(statement_t* parent) { }
+        
+        void set_pause(const bool pause) { }
         
         void set_return(const string result) {
             unsupported_error("set_return()");

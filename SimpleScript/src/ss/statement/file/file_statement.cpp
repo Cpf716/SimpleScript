@@ -11,6 +11,9 @@ namespace ss {
     //  CONSTRUCTORS
 
     file_statement::file_statement(function_t* parent, const size_t statementc, statement_t** statementv) {
+#if DEBUG_LEVEL
+        assert(parent != NULL);
+#endif
         this->parent = parent;
         
         if (statementc && is_clause(statementv[statementc - 1]))
@@ -33,40 +36,51 @@ namespace ss {
 
     //  MEMBER FUNCTIONS
 
-    bool file_statement::analyze(interpreter* ssu) const {
+    bool file_statement::analyze(command_processor* cp) const {
+#if DEBUG_LEVEL
+        assert(cp != NULL);
+#endif
         if (!this->statementc)
             return false;
         
         size_t i = 0;
-        while (i < this->statementc - 1 && !this->statementv[i]->analyze(ssu))
+        while (i < this->statementc - 1 && !this->statementv[i]->analyze(cp))
             ++i;
         
         if (i != this->statementc - 1)
             logger_write("Unreachable code\n");
         
-        this->statementv[statementc - 1]->analyze(ssu);
+        this->statementv[statementc - 1]->analyze(cp);
         
         return false;
     }
 
-    bool file_statement::compare(const int value) const {
+    bool file_statement::compare(const statement_type value) const {
         unsupported_error("compare()");
         return false;
     }
 
-    string file_statement::evaluate(interpreter* ssu) {
+    string file_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
         return empty();
     }
 
-    string file_statement::execute(interpreter* ssu) {
-        analyze(ssu);
+    string file_statement::execute(command_processor* cp) {
+#if DEBUG_LEVEL
+        assert(cp != NULL);
+#endif
+        analyze(cp);
         
-        this->result = encode("undefined");
+        this->result = encode(to_string(undefined_t));
+        this->should_pause = false;
         this->should_return = false;
         
         for (size_t i = 0; i < statementc; ++i) {
-            this->statementv[i]->execute(ssu);
+            while (this->should_pause);
+            
+            this->statementv[i]->execute(cp);
+            
+//            while (this->should_pause);
             
             if (this->should_return)
                 break;
@@ -105,6 +119,13 @@ namespace ss {
 
     void file_statement::set_parent(statement_t* parent) {
         unsupported_error("set_parent()");
+    }
+
+    void file_statement::set_pause(const bool pause) {
+        this->should_pause = pause;
+        
+        for (size_t i = 0; i < this->statementc; ++i)
+            this->statementv[i]->set_pause(pause);
     }
 
     void file_statement::set_return(const string result) {

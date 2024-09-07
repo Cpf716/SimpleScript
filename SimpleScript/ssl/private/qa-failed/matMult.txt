@@ -2,7 +2,7 @@
 
 include("@/math/multMat")
 
-consume array;  consume close
+suppress array;  suppress close
 
 if nrows(argv) !== 1
     throw "Expected 0 argument(s), got {}" format (nrows(argv) - 1)
@@ -11,10 +11,10 @@ end if
 echo "Matrix Multplication\n\n"
 
 func printMat(c)
-    for i = 0, i < (count c - 1) / first c, i += 1
+    for i = 0; i < (count c - 1) / first c; i += 1
         echo "\t"
     
-        for j = 0, j < first c, j += 1
+        for j = 0; j < first c; j += 1
             echo "{}\t\t" format (c cell i, j)
         end for
         

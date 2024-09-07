@@ -7,18 +7,18 @@ include((dir = "@/exception/") + "expectExcept")
 include(dir + "rangeExcept")
 include("@/string")
 
-func main
-    if nrows(argv) !== 3
-        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
     
-    num = ((argv row 1) slice 1, (argv cell 1, 0))
+    num = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if typeOf num !== "number"
-        typeExcept(typeOf num, "number")
+        typeExcept(typeOf num, "double")
     end if
     
-    len = ((argv row 2) slice 1, (argv cell 2, 0))
+    len = ((argv row 1) slice 1, (argv cell 1, 0))
     
     if subtypeOf len !== "int"
         typeExcept(subtypeOf len, "int")
@@ -38,7 +38,7 @@ func main
         x = num - floor(num)
         
         i = 0
-        for , x - floor(x), i += 1
+        for ; x - floor(x); i += 1
             x *= 10
         end for
         
@@ -48,7 +48,7 @@ func main
             arr += padStr fill 0
         end if
         
-        //  x * 10 pow (-1 * i)
+        //  x * 10^^(-1 * i)
     else
         arr += "."
         

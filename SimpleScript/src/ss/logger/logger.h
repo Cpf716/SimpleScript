@@ -8,6 +8,7 @@
 #ifndef logger_h
 #define logger_h
 
+#include "file_system_exception.h"
 #include <ctime>
 #include <fstream>
 #include <iostream>
@@ -19,7 +20,9 @@ namespace ss {
 
     void logger_close();
 
-    void logger_write(const std::string str);
+    void logger_open(const std::string filename);
+
+    void logger_write(const std::string message);
 }
 
 #endif /* logger_h */

@@ -7,21 +7,28 @@ include((dir = "@/math/stat/") + "deviation")
 include(dir + "mean")
 include("@/string")
 
-func main
-    if (count argv - 1) / first argv !== 3
-        expectExcept("2 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+func main()
+    if (count argv - 1) / first argv === 0
+        expectExcept("1 argument(s), got 0")
     end if
     
-    array arr = ((argv row 1) slice 1, (argv cell 1, 0))
-    
-    num = ((argv row 2) slice 1, (argv cell 2, 0))
-    
-    if typeOf num !== "number"
-        typeExcept(typeOf num, "number")
+    if (count argv - 1) / first argv >= 3
+        expectExcept("1 argument(s), got {}" format (count argv - 1) / first argv)
     end if
     
-    if num < 0
-        rangeExcept(string(num))
+    array arr = ((argv row 0) slice 1, (argv cell 0, 0))
+    array num = 1
+    
+    if (count argv - 1) / first argv === 2
+        num = ((argv row 1) slice 1, (argv cell 1, 0))
+        
+        if typeOf num !== "number"
+            typeExcept(typeOf num, "double")
+        end if
+        
+        if num < 0
+            rangeExcept(string(num))
+        end if
     end if
     
     x = mean(arr)

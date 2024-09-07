@@ -3,16 +3,16 @@
 //  File:   meridianTime.txt
 //
 
-include((dir = "@/datetime/") + "data/months")
+include((dir = "@/datetime/") + "constants/months")
 include(dir + "date/isLeapYear")
 include("@/search/string/padStart")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("Expected 1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("Expected 1 argument(s), got {}" format nrows(argv))
     end if
 
-    timestamp = (argv row 1) slice 1
+    timestamp = (argv row 0) slice 1
 
     if subtypeOf timestamp !== "int"
         typeExcept(subtypeOf timestamp, "int")
@@ -72,7 +72,7 @@ func main
     
     time = (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
     
-    return array(time, (afternoon ? "PM", "AM")) join " "
+    return array(time, (afternoon ? "PM" : "AM")) join " "
 end func
 
 return main()

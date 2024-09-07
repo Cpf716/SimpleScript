@@ -1,12 +1,48 @@
 //  Author: Corey Ferguson
-//  Date:   November 20, 2023
-//  File:   main.txt
+//  Date:   June 13, 2024
+//  File:   await.txt
 //
 
-array str = "--------------- SimpleScript ---------------\n"
+//  ./SimpleScript /Users/coreyferguson/SimpleScript/SimpleScript/ssl/public/main.txt /Users/coreyferguson/Desktop/main.txt
 
-str += "  cli\t\t\tcommand line interface\n"
-str += "  <filename> <args>\tSimpleScript file\n"
-str += "  --------------------------------------------\n"
+include("@/await")
+include("@/search/string/tokens")
+include("@/string")
 
-return str join ""
+func `main`()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+    
+    array args = (argv row 0) slice 1
+    
+    if first args === null
+        throw "null"
+    end if
+    
+    echo "run: "
+    
+    array ans = input()
+    
+    ans = string(ans == null ? "" : ans)
+    
+    array arr = tokens(ans)
+    
+    if arr == null
+        return await(args)
+    end if
+    
+    for idx = 0; idx < count arr; idx += 1
+        if (args.idx).(count arr.idx - 1) === "\"
+            args += (arr.idx substr 0, count arr.idx - 1) + " " + arr.(idx + 1)
+            idx += 1
+        else
+            num = parse arr.idx
+            args += (num === nan ? arr.idx : num)
+        end if
+    end for
+    
+    return await(args)
+end func
+
+return `main`()

@@ -5,12 +5,12 @@
 
 include("@/array/table/splice/spliceCol")
 
-func main
-    if (count argv - 1) / first argv !== 2
-        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+func main()
+    if (count argv - 1) / first argv !== 1
+        expectExcept("1 argument(s), got {}" format (count argv - 1) / first argv)
     end if
     
-    arr = (argv row 1) slice 1
+    arr = (argv row 0) slice 1
     
     return spliceCol(arr, 0)
 end func

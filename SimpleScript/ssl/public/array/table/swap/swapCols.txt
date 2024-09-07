@@ -3,21 +3,20 @@
 //  File:   swapCols.txt
 //
 
-include("@/exception/expectExcept")
 include("@/exception/rangeExcept")
 
-func main
-    if (count argv - 1) / first argv !== 4
-        expectExcept("3 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+func main()
+    if (count argv - 1) / first argv !== 3
+        expectExcept("3 argument(s), got {}" format (count argv - 1) / first argv)
     end if
 
-    arr = ((argv row 1) slice 1, argv cell 1, 0)
+    arr = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf arr !== "array"
         typeExcept(typeOf arr, "array")
     end if
 
-    a = ((argv row 2) slice 1, argv cell 2, 0)
+    a = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if subtypeOf a !== "int"
         typeExcept(subtypeOf a, "int")
@@ -27,7 +26,7 @@ func main
         rangeExcept("idx {}, ncols {}" format array(a, first arr))
     end if
 
-    b = ((argv row 3) slice 1, argv cell 3, 0)
+    b = ((argv row 2) slice 1, (argv cell 2, 0))
 
     if subtypeOf b !== "int"
         typeExcept(subtypeOf b, "int")
@@ -37,7 +36,7 @@ func main
         rangeExcept("idx {}, ncols {}" format array(b, first arr))
     end if
 
-    for i = 0, i < (count arr - 1) / first arr, i += 1
+    for i = 0; i < (count arr - 1) / first arr; i += 1
         tmp = arr.(i * first arr + a + 1)
         
         arr.(i * first arr + a + 1) = arr.(i * first arr + b + 1)

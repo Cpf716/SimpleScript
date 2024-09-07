@@ -26,20 +26,20 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const {
+        bool analyze(command_processor* cp) const {
             return true;
         }
         
-        bool compare(const int value) const {
-            return value == 4;
+        bool compare(const statement_type value) const {
+            return value == exit_t;
         }
         
-        string evaluate(interpreter* ssu) {
+        string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
             return empty();
         }
         
-        string execute(interpreter* ssu) {
+        string execute(command_processor* cp) {
             this->exit();
             return empty();
         }
@@ -70,6 +70,8 @@ namespace ss {
         void set_parent(statement_t* parent) {
             this->parent = parent;
         }
+        
+        void set_pause(const bool pause) { }
         
         void set_return(const string result) {
             unsupported_error("set_return()");

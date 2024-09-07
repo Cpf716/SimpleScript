@@ -3,28 +3,28 @@
 //  File:   parseTime.txt
 //
 
-include((dir = "@/datetime/") + "data/months")
+include((dir = "@/datetime/") + "constants/months")
 include(dir + "date/isLeapYear")
 include((dir = "@/search/string/") + "split")
 include(dir + "startsWith")
 include(dir + "tokens")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
     
-    dateStr = (argv row 1) slice 1
+    `dateStr` = (argv row 0) slice 1
     
-    if typeOf dateStr !== "string"
-        typeExcept(typeOf dateStr, "string")
+    if typeOf `dateStr` !== "string"
+        typeExcept(typeOf `dateStr`, "string")
     end if
     
-    if dateStr === null
+    if `dateStr` === null
         throw "null"
     end if
     
-    array arr = tokens(dateStr)
+    array arr = tokens(`dateStr`)
     
     if count arr !== 5
         return
@@ -32,10 +32,10 @@ func main
     
     arr splice 0
     
-    date = arr tospliced 2
+    date = arr toSpliced 2
     
     //  swap year to first
-    for i = count date - 1, i > 0, i -= 1
+    for i = count date - 1; i > 0; i -= 1
         tmp = date.i
         
         date.i = date.(i - 1)
@@ -43,8 +43,8 @@ func main
     end for
     
     //  sanitize
-    for i = 0, i < count first date, i += 1
-        if !isDigit (first date).i
+    for i = 0; i < count first date; i += 1
+        if !isDigits (first date).i
             return
         end if
     end for
@@ -62,8 +62,8 @@ func main
     end if
     
     //  sanitize
-    for i = 0, i < count last date, i += 1
-        if !isDigit (last date).i
+    for i = 0; i < count last date; i += 1
+        if !isDigits (last date).i
             return
         end if
     end for
@@ -81,13 +81,13 @@ func main
     end if
     
     //  sanitize
-    for i = 0, i < 3, i += 1
+    for i = 0; i < 3; i += 1
         if count time.i !== 2
             return
         end if
         
-        for j = 0, j < 2, j += 1
-            if !isDigit (time.i).j
+        for j = 0; j < 2; j += 1
+            if !isDigits (time.i).j
                 return
             end if
         end for
@@ -101,11 +101,11 @@ func main
     
     seconds = 0
 
-    for i = 1970, i < first date, i += 1
+    for i = 1970; i < first date; i += 1
         seconds += (365 + isLeapYear(i)) * 86400
     end for
 
-    for i = 0, i < date.1, i += 1
+    for i = 0; i < date.1; i += 1
         seconds += months().(i * 2 + 1) * 86400
     end for
 

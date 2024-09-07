@@ -4,17 +4,16 @@
 //
 
 include("@/array/table/stringify")
-include("@/exception/expectExcept")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    val = (argv row 1) slice 1
+    val = (argv row 0) slice 1
 
     if typeOf val === "array"
-        throw "Unexpected token: {}" format stringify((val insert 0, count val))
+        throw "Unexpected token: {}" format stringify(((toArray val) insert 0, count val))
     end if
 
     return "" + val

@@ -1,0 +1,10 @@
+//  Author: Corey Ferguson
+//  Date:   May 11, 2024
+//  File:   worker_1.txt
+//
+
+func main()
+    return
+end func
+
+main()

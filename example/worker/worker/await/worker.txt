@@ -1,0 +1,14 @@
+//  Author: Corey Ferguson
+//  Date:   June 12, 2024
+//  File:   worker.txt
+//
+
+func main()
+    sw = start()
+
+    sleep rand() % 3_000
+    
+    return stop(sw)
+end func
+
+return main()

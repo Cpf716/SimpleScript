@@ -14,14 +14,14 @@ namespace ss {
     class function_statement: public control_statement, function_t {
         //  MEMBER FIELDS
         
+        command_processor* cp = NULL;
+        
         size_t expressionc;
         string* expressionv = NULL;
         
         size_t optionalc = 0;
         
         string result;
-        
-        interpreter* ssu = NULL;
         
         //  MEMBER FUNCTIONS
         
@@ -35,15 +35,15 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const;
+        bool analyze(command_processor* cp) const;
         
         string call(const size_t argc, string* argv);
         
-        bool compare(const int value) const;
+        bool compare(const statement_type value) const;
         
-        string evaluate(interpreter* ssu);
+        string evaluate(command_processor* cp);
         
-        string execute(interpreter* ssu);
+        string execute(command_processor* cp);
         
         void exit();
         
@@ -56,6 +56,8 @@ namespace ss {
         void set_continue();
         
         void set_level(const size_t level);
+        
+        void set_pause(const bool pause);
         
         void set_return(const string result);
     };

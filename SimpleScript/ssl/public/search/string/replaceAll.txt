@@ -5,12 +5,12 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if nrows(argv) !== 4
-        expectExcept("3 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 3
+        expectExcept("3 argument(s), got {}" format nrows(argv))
     end if
 
-    text = ((argv row 1) slice 1, argv cell 1, 0)
+    text = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf text !== "string"
         typeExcept(typeOf text, "string")
@@ -20,7 +20,7 @@ func main
         throw "null"
     end if
 
-    pat = ((argv row 2) slice 1, argv cell 2, 0)
+    pat = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if typeOf pat !== "string"
         typeExcept(typeOf pat, "string")
@@ -30,7 +30,7 @@ func main
         throw "null"
     end if
 
-    newPat = ((argv row 3) slice 1, argv cell 3, 0)
+    newPat = ((argv row 2) slice 1, (argv cell 2, 0))
 
     if typeOf newPat !== "string"
         typeExcept(typeOf newPat, "string")
@@ -40,7 +40,7 @@ func main
         throw "null"
     end if
 
-    for i = 0, i <= count text - count pat,
+    for i = 0; i <= count text - count pat;
         j = 0
         while j < count pat && text.(i + j) === pat.j
             j += 1
@@ -48,7 +48,9 @@ func main
         
         if j === count pat
             text = (text slice 0, i) + newPat + (text substr i + count pat)
-            i += (count newPat ? count newPat, 1)
+            i += (count newPat ? count newPat : 1)
+        else
+            i += 1
         end if
     end for
 

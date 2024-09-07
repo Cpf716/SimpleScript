@@ -40,10 +40,19 @@ namespace ss {
             for (size_t i = 0; i < this->statementc; ++i)
                 this->statementv[i]->set_parent(this);
         }
+        
+        void set_pause(const bool pause) {
+            this->should_pause = pause;
+            
+            for (size_t i = 0; i < this->statementc; ++i)
+                this->statementv[i]->set_pause(pause);
+        }
     protected:
         //  MEMBER FIELDS
         
         statement_t* parent = NULL;
+        
+        bool should_pause;
         
         bool should_return;
         

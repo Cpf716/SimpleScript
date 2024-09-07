@@ -1,0 +1,82 @@
+//  Author: Corey Ferguson
+//  Date:   June 9, 2024
+//  File:   ERRNOs.txt
+//
+
+include("@/exception/expectExcept")
+
+func main()
+    if nrows(argv) !== 0
+        expectExcept("0 argument(s), got {}" format nrows(argv))
+    end if
+    
+    data."1" = "EPERM"
+    data."2" = "ENOENT"
+    data."3" = "ESRCH"
+    data."4" = "EINTR"
+    data."5" = "EIO"
+    data."6" = "ENXIO"
+    data."7" = "EBADF"
+    data."8" = "ENOEXEC"
+    data."9" = "EBADF"
+    data."10" = "ECHILD"
+    data."11" = "EAGAIN"
+    data."12" = "ENOMEM"
+    data."13" = "EACCES"
+    data."14" = "EFAULT"
+    data."15" = "ENOTBLK"
+    data."16" = "EBUSY"
+    data."17" = "EEXIST"
+    data."18" = "EXDEV"
+    data."19" = "ENODEV"
+    data."20" = "ENOTDIR"
+    data."21" = "EISDIR"
+    data."22" = "EINVAL"
+    data."23" = "ENFILE"
+    data."24" = "EMFILE"
+    data."25" = "ENOTTY"
+    data."26" = "ETXTBSY"
+    data."27" = "EFBIG"
+    data."28" = "ENOSPC"
+    data."29" = "ESPIPE"
+    data."30" = "EROFS"
+    data."31" = "EMLINK"
+    data."32" = "EPIPE"
+    data."35" = "EWOULDBLOCK"
+    data."36" = "EINPROGRESS"
+    data."37" = "EALREADY"
+    data."38" = "ENOTSOCK"
+    data."39" = "EDESTADDRREQ"
+    data."40" = "EMSGSIZE"
+    data."41" = "EPROTOTYPE"
+    data."42" = "ENOPROTOOPT"
+    data."43" = "EPROTONOSUPPORT"
+    data."44" = "ESOCKTNOSUPPORT"
+    data."45" = "EOPNOTSUPP"
+    data."46" = "EPFNOSUPPORT"
+    data."47" = "EAFNOSUPPORT"
+    data."48" = "EADDRINUSE"
+    data."49" = "EADDRNOTAVAIL"
+    data."50" = "ENETDOWN"
+    data."51" = "ENETUNREACH"
+    data."52" = "ENETRESET"
+    data."53" = "ECONNABORTED"
+    data."54" = "ECONNRESET"
+    data."55" = "ENOBUFS"
+    data."56" = "EISCONN"
+    data."57" = "ENOTCONN"
+    data."58" = "ESHUTDOWN"
+    data."59" = "ETOOMANYREFS"
+    data."60" = "ETIMEDOUT"
+    data."61" = "ECONNREFUSED"
+    data."62" = "ELOOP"
+    data."63" = "ENAMETOOLONG"
+    data."64" = "EHOSTDOWN"
+    data."65" = "EHOSTUNREACH"
+    data."66" = "ENOTEMPTY"
+    data."67" = "EPROCLIM"
+    
+    return data
+end func
+
+return main()

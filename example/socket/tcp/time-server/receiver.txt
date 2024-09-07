@@ -1,0 +1,80 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   receiver.txt
+//
+
+include((dir = "/Library/Application Support/SimpleScript/example/socket/") + "tcp/util/client.txt")
+include(dir + "config.txt")
+include((dir = "@/datetime/") + "parseTime")
+include(dir + "isoString")
+
+//  config()
+
+PORT = 8080
+
+//  FUNCTIONS
+
+func main()
+    if nrows(argv) >= 2
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+
+    array port = PORT
+
+    if nrows(argv) === 1
+        port = (argv row 0) slice 1
+        
+        if subtypeOf toArray port !== "int"
+            typeExcept(subtypeOf toArray port)
+        end if
+        
+        if port < 0
+            rangeExcept(string(port))
+        end if
+    end if
+
+    while 1
+        sfd = client(port)
+        
+        if sfd === -1
+            continue
+        end if
+
+        while 1
+            req = null
+            
+            try
+                req = recv(sfd, 30)
+                
+            catch errno
+                if ERRNOs().errno === "EBADF"
+                    break
+                end if
+                
+                throw ERRNOs().errno
+            end try
+            
+            if !req
+                break
+            end if
+            
+            array arr = split(req, "\n")
+            
+            for str in arr
+                if count str
+                    echo "{}\n" format isoString(parseTime(str))
+                end if
+            end for
+        end while
+        
+        try
+            closeTcp(sfd)
+        catch errno
+            throw ERRNOs().errno
+        end try
+        
+        echo "\n"
+    end while
+end func
+
+main()

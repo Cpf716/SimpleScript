@@ -10,24 +10,30 @@
 
 #include "assert_statement.h"
 #include "break_statement.h"
+#include "case_statement.h"
 #include "catch_statement.h"
-#include "consume_statement.h"
 #include "continue_statement.h"
+#include "default_statement.h"
 #include "define_statement.h"
 #include "do_while_statement.h"
 #include "echo_statement.h"
 #include "else_statement.h"
 #include "else_if_statement.h"
 #include "exit_statement.h"
+#include "file_system_initializer.h"
 #include "file_statement.h"
 #include "finally_statement.h"
 #include "for_statement.h"
 #include "function_statement.h"
 #include "if_statement.h"
+#include "mysql_initializer.h"
 #include "node.h"
 #include "return_statement.h"
 #include "sleep_statement.h"
+#include "socket_initializer.h"
 #include "statement.h"
+#include "suppress_statement.h"
+#include "switch_statement.h"
 #include "throw_statement.h"
 #include "try_statement.h"
 #include "while_statement.h"
@@ -35,21 +41,33 @@
 using namespace ss;
 
 namespace ss {
+    enum module_t { filesystem_t, mysql_t, socket_t };
+
     class file: public function_t {
+        bool is_file_system = false;
+        
+        bool is_mysql = false;
+        
+        bool is_socket = false;
+        
         //  MEMBER FIELDS
         
-        string filename;
+        command_processor* cp = NULL;
         
-        size_t functionc = 0;
-        pair<file*, bool>** functionv = NULL;
+        size_t filec = 0;
+        pair<file*, bool>** filev = NULL;
+        
+        string filename;
         
         size_t level = 0;
         
         function_t* parent = NULL;
         
-        interpreter* ssu = NULL;
+        bool should_pause;
         
         file_statement* target = NULL;
+        
+        vector<pair<string, string>> valuev;
         
         //  MEMBER FUNCTIONS
         
@@ -59,7 +77,7 @@ namespace ss {
     public:
         //  CONSTRUCTORS
         
-        file(const string filename, node<string>* parent, interpreter* ssu);
+        file(const string filename, node<string>* parent, command_processor* cp);
         
         void close();
         
@@ -73,12 +91,12 @@ namespace ss {
         
         void kill();
         
+        void set_cp(command_processor* cp);
+        
         void set_level(const size_t level);
+        
+        void set_pause(const bool pause);
     };
-
-    //  NON-MEMBER FUNCTIONS
-
-    string base_dir();
 }
 
 #endif /* file_h */

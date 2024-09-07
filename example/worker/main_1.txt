@@ -1,0 +1,23 @@
+//  Author: Corey Ferguson
+//  Date:   May 11, 2024
+//  File:   main.txt
+//
+
+n = 0
+sw = start()
+
+func onMessage(workerId, message)
+    echo "Worker {} returned in {} s.\n" format array(workerId + 1, lap(sw))
+    n += 1
+end func
+
+p = 0
+for ; p < 10; p += 1
+    worker("/Library/Application Support/SimpleScript/example/worker/worker_1.txt")
+end for
+
+while n < p
+    continue
+end while
+
+return ""

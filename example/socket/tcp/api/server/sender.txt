@@ -1,0 +1,472 @@
+//  Author: Corey Ferguson
+//  Date:   September 24, 2023
+//  File:   sender.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
+include((dir = "@/datetime/") + "date/date")
+include(dir + "isoString")
+include(dir + "parseDate")
+include(dir + "parseTime")
+include((dir = "@/search/") + "array/table/getParam")
+include((dir += "string/") + "parseBody")
+include(dir + "replace")
+include("mysql")
+
+//  FIELDS
+
+fd = -1
+
+//  FUNCTIONS
+
+func `closeConnection`(con)
+    try
+        closeConnection(con)
+        
+        loggerWrite("Disconnected from musicLibrary.")
+    catch exc
+        loggerThrow(exc)
+    end try
+end func
+
+func `connect`()
+    try
+        const con = connect("tcp://localhost:3306", "root", "root")
+        
+        setSchema(con, "musicLibrary")
+        
+        loggerWrite("Connected to musicLibrary...")
+        
+        return con
+    catch exc
+        loggerThrow(exc)
+        throw exc
+    end try
+end func
+
+func `query`(sql)
+    array res = null
+
+    try
+        const con = `connect`()
+        
+        loggerWrite("SQL:\t{}" format sql)
+
+        try
+            res = query(con, sql)
+        catch exc
+            loggerThrow(exc)
+
+            res = array("error", exc)
+        end try
+        
+        `closeConnection`(con)
+    catch exc
+        loggerThrow(exc)
+    
+        res = array(2, "error", exc)
+    end try
+    
+    return stringify(res)
+end func
+
+func loggerThrow(str)
+    write(fd, "ERROR:\t{}\n" format str)
+end func
+
+func loggerWrite(str)
+    write(fd, str + "\n")
+end func
+
+func onExit(_)
+    echo "\n"
+    echo "Are you sure? (y/N) "
+
+    const ans = (input() ?? "")
+
+    return toLower ans === "y"
+end func
+
+func setErrorRes(message)
+    loggerThrow(string(message))
+    
+    res = "error,{}" format message
+end func
+
+func main()
+    if nrows(argv)
+        expectExcept("0 arugment(s), got {}" format nrows(argv))
+    end if
+
+    if exists("/tmp/server.log")
+        today = date(parseDate(local()))
+        
+        if exists("/tmp/server.{}.log" format today)
+            num = 1
+            while exists("/tmp/server.{} ({}).log" format array(today, num))
+                num += 1
+            end while
+            
+            move("/tmp/server.log", "/tmp/server.{} ({}).log" format array(today, num))
+        else
+            move("/tmp/server.log", "/tmp/server.{}.log" format today)
+        end if
+    end if
+    
+    fd = file("/tmp/server.log")
+    sfd = server(1024)
+
+    while 1
+        array cfds = null
+        
+        suppress cfds
+        
+        while !(cfds = poll(sfd))
+            continue
+        end while
+        
+        cfd = first cfds
+        
+        array req = null
+        
+        try
+            req = recv(cfd, 1)
+        catch errno
+            if ERRNOs().errno === "ECONNREFUSED"
+                closeTcp(cfd)
+                continue
+            end if
+            
+            throw ERRNOs().errno
+        end try
+        
+        if !req
+            try
+                closeTcp(cfd)
+            catch errno
+                throw ERRNOs().errno
+            end try
+            
+            continue
+        end if
+        
+        loggerWrite(replace(isoString(parseTime(gmt())), "T", " "))
+        loggerWrite("URL:\t{}" format first req)
+        
+        req = parseBody(first req), res = null
+        
+        if count req === 1
+            setErrorRes(400)
+        else
+            url = getParam(req, "url")
+            
+            if startsWith(url, "/api/")
+                switch url substr 5
+                    case "addAlbum"
+                        artistId = getParam(req, "artistId")
+                        albumYear = getParam(req, "albumYear")
+                        albumName = getParam(req, "albumName")
+                        
+                        if array(artistId, albumYear, albumName) contains undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "insert into albums(artistId, albumYear, albumName) values(?, ?, ?)"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, artistId, albumYear, albumName)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "addArtist"
+                        artistName = getParam(req, "artistName")
+                        
+                        if artistName === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "insert into artists(artistName) values(?)"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, artistName)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "addSong"
+                        albumId = getParam(req, "albumId")
+                        position = getParam(req, "position")
+                        songTitle = getParam(req, "songTitle")
+                        
+                        if array(albumId, position, songTitle) contains undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, albumId, albumId, position, songTitle)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "clearPlays"
+                        songId = getParam(req, "songId")
+                        
+                        if songId === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "update songs set plays = 0 where songId = ?"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, songId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "findAlbums"
+                        pattern = getParam(req, "pattern")
+                        
+                        if pattern === undefined
+                            setErrorRes(400)
+                        end if
+                        
+                        try
+                            con = `connect`()
+                            sql = "select artists.artistId, artists.artistName, albums.albumId, albums.albumYear, albums.albumName, albums.createdDate, albums.modifiedDate from albums join artists on albums.artistId = artists.artistId where artists.artistId = ? or artists.artistName like ? or albums.albumId = ? or albums.albumYear = ? or albums.albumName like ? order by artists.artistName, albums.albumYear, albums.albumName asc"
+                        
+                            loggerWrite("SQL:\t{}" format sql)
+                            
+                            array _res = null
+                        
+                            try
+                                _res = preparedQuery(con, sql, pattern, "%" + pattern + "%", pattern, pattern, "%" + pattern + "%")
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                            
+                            res = stringify(_res)
+                            
+                            `closeConnection`(con)
+                        catch exc
+                            setErrorRes(exc)
+                        end try
+                    case "findArtists"
+                        pattern = getParam(req, "pattern")
+                        
+                        if pattern === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "select artistId, artistName, createdDate, modifiedDate from artists where artists.artistId = ? or artists.artistName like ? order by artistName asc"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                                
+                                array _res = null
+                            
+                                try
+                                    _res = preparedQuery(con, sql, pattern, "%" + pattern + "%")
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                res = stringify(_res)
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "findSongs"
+                        pattern = getParam(req, "pattern")
+                        
+                        if pattern === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "select artists.artistId, artists.artistName, albums.albumId, albums.albumYear, albums.albumName, songs.songId, songs.position, songs.songTitle, songs.plays, songs.createdDate, songs.modifiedDate from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId where artists.artistId = ? or artists.artistName like ? or albums.albumId = ? or albums.albumYear = ? or albums.albumName like ? or songs.songId = ? or songs.songTitle like ? order by artists.artistName, albums.albumYear, albums.albumName, songs.position asc"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                                
+                                array _res = null
+                            
+                                try
+                                    _res = preparedQuery(con, sql, pattern, "%" + pattern + "%", pattern, pattern, "%" + pattern + "%", pattern, "%" + pattern + "%")
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                res = stringify(_res)
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "getAlbums"
+                        res = `query`("select * from albums order by albumName, albumYear asc")
+                        
+                    case "getArtists"
+                        res = `query`("select * from artists order by artistName asc")
+                        
+                    case "getLibrary"
+                        res = `query`("select artistName, albumYear, albumName, songTitle, plays, songs.createdDate, songs.modifiedDate from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId order by artistName, albumYear, albumName, position asc")
+                        
+                    case "getSongs"
+                        res = `query`("select * from songs order by songTitle asc")
+                        
+                    case "playSong"
+                        songId = getParam(req, "songId")
+                            
+                        if songId === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "select plays from songs where songId = ?"
+                                
+                                num = last preparedQuery(con, sql, songId)
+                                
+                                sql = "update songs set plays = ? + 1 where songId = ?"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                                
+                                try
+                                    res = "" + preparedUpdate(con, sql, num, songId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "removeAlbum"
+                        albumId = getParam(req, "albumId")
+                        
+                        if albumId === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "delete from albums where albumId = ?"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, albumId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                               `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "removeArtist"
+                        artistId = getParam(req, "artistId")
+                        
+                        if artistId === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "delete from artists where artistId = ?"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, artistId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    case "removeSong"
+                        songId = getParam(req, "songId")
+                        
+                        if songId === undefined
+                            setErrorRes(400)
+                        else
+                            try
+                                con = `connect`()
+                                sql = "delete from songs where songId = ?"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, songId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                `closeConnection`(con)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                    default
+                        setErrorRes(404)
+                end switch
+            else
+                setErrorRes(400)
+            end if
+        end if
+        
+        try
+            send(cfd, res)
+        catch errno
+            loggerThrow(ERRNOs().errno)
+        end try
+        
+        try
+            closeTcp(cfd)
+        catch errno
+            throw ERRNOs().errno
+        end try
+    end while
+end func
+
+main()

@@ -1,0 +1,47 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   sender.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/data/socket/file-transfer/unit_3_test_data.csv", "")
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
+
+config()
+
+//  FUNCTIONS
+
+func onExit(_)
+    echo "Are you sure? (y/N) "
+
+    const ans = (input() ?? "")
+
+    return toLower ans === "y"
+end func
+
+func main()
+    sfd = server(1024)
+
+    array cfdv = null
+    
+    while 1
+        while !(cfdv = poll(sfd))
+            continue
+        end while
+        
+        for cfd in cfdv
+            try
+                send(cfd, unit_3_test_data)
+            catch errno
+                echo ERRNOs().errno + "\n"
+            end try
+            
+            try
+                closeTcp(cfd)
+            catch errno
+                throw ERRNOs().errno
+            end try
+        end for
+    end while
+end func
+
+main()

@@ -1,0 +1,61 @@
+//  Author: Corey Ferguson
+//  Date:   May 4, 2024
+//  File:   sender.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/data/socket/file-transfer/unit_3_test_data.csv", "")
+include("/Users/coreyferguson/SimpleScript/example/socket/config.txt")
+include("@/socket/constants/ERRNOs")
+include("socket")
+
+config()
+
+assert typeOf PORT !== undefined
+
+//  FIELDS
+
+sfd = -1, port = PORT
+
+//  FUNCTIONS
+
+func onExit(_)
+    echo "Are you sure? (y/N) "
+    
+    const ans = (input() ?? "")
+    
+    return toLower ans === "y"
+end func
+
+func main()
+    while true
+        try
+            sfd = udpServer(port)
+                    
+            echo "Server listening on port {}...\n" format port
+            
+            break
+        catch errno
+            if ERRNOs().errno === "EADDRINUSE"
+                port += 1
+            else
+                throw ERRNOs().errno
+            end if
+        end try
+    end while
+    
+    while true
+        try
+            recvFrom(sfd)
+        catch errno
+            throw ERRNOs().errno
+        end try
+        
+        try
+            sendTo(sfd, unit_3_test_data)
+        catch errno
+            throw ERRNOs().errno
+        end try
+    end while
+end func
+
+main()

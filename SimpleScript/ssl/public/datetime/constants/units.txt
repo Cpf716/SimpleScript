@@ -1,0 +1,21 @@
+//  Author: Corey Ferguson
+//  Date:   December 15, 2023
+//  File:   units.txt
+//
+
+func main()
+    if nrows(argv)
+        expectExcept("0 argument(s), got {}" format nrows(argv))
+    end if
+
+    arr."minute" = 60
+    arr."hour" = 3600
+    arr."day" = 86400
+    arr."week" = 604800
+    arr."month" = 2592000
+    arr."year" = 31536000
+    
+    return arr
+end func
+
+return main()

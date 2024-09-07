@@ -21,7 +21,7 @@ namespace ss {
         //  CONSTRUCTORS
         
         return_statement(string expression) {
-            this->expression = rtrim(expression).empty() ? encode("undefined") : expression;
+            this->expression = expression.empty() ? encode(to_string(undefined_t)) : expression;
         }
         
         void close() {
@@ -30,21 +30,21 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const {
+        bool analyze(command_processor* cp) const {
             return true;
         }
         
-        bool compare(const int value) const {
-            return value == 6;
+        bool compare(const statement_type value) const {
+            return value == return_t;
         }
         
-        string evaluate(interpreter* ssu) {
+        string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
             return empty();
         }
         
-        string execute(interpreter* ssu) {
-            this->set_return(ssu->evaluate(expression));
+        string execute(command_processor* cp) {
+            this->set_return(cp->evaluate(expression));
             return empty();
         }
         
@@ -72,6 +72,8 @@ namespace ss {
         void set_parent(statement_t* parent) {
             this->parent = parent;
         }
+        
+        void set_pause(const bool pause) { }
         
         void set_return(const string result) {
             this->parent->set_return(result);

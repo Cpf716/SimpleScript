@@ -49,32 +49,39 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const {
+        bool analyze(command_processor* cp) const {
             return false;
         }
         
-        bool compare(const int value) const {
+        bool compare(const statement_type value) const {
             return false;
         }
         
-        string evaluate(interpreter* ssu) {
+        string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
             return empty();
         }
         
-        string execute(interpreter* ssu) {
-            if (ssu->is_defined(this->symbol))
+        string execute(command_processor* cp) {
+#if DEBUG_LEVEL
+            assert(cp != NULL);
+#endif
+            if (cp->is_defined(this->symbol))
                 defined_error(this->symbol);
             
-            string value = ssu->evaluate(this->expression);
+            string value = cp->evaluate(this->expression);
             
-            if (ss::is_array(value))
-                ssu->set_array(symbol, value, true);
+            cp->apply([this, &cp, value](const bool is_save) {
+                if (ss::is_array(value))
+                    cp->set_array(symbol, value);
 
-            else if (value.empty() || is_string(value))
-                ssu->set_string(symbol, value, true);
-            else
-                ssu->set_number(symbol, stod(value), true);
+                else if (value.empty() || is_string(value))
+                    cp->set_string(symbol, value);
+                else
+                    cp->set_number(symbol, stod(value));
+                
+                cp->set_read_only(symbol, true);
+            });
             
             return empty();
         }
@@ -101,6 +108,8 @@ namespace ss {
         }
         
         void set_parent(statement_t* parent) { }
+        
+        void set_pause(const bool pause) { }
         
         void set_return(const string result) {
             unsupported_error("set_return()");

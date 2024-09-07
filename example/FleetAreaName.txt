@@ -6,21 +6,21 @@
 include("@/search/string/padStart")
 include("@/string")
 
-define PATTERN ","
+define SEP ","
 
 //  FUNCTIONS
 
-func main
+func main()
     echo "Filename:\t"
 
     filename = string(string(input()) ?? "")
 
-    arr = read(filename, PATTERN)
+    arr = readFile(filename, SEP)
 
     assert arr
 
-    for i = 0, i < (count arr - 1) / first arr, i += 1
-        for j = 0, j < (arr cell i, 0), j += 1
+    for i = 0; i < (count arr - 1) / first arr; i += 1
+        for j = 0; j < (arr cell i, 0); j += 1
             echo "{}\t\t" format (arr cell i, j + 1)
         end for
 
@@ -34,7 +34,7 @@ func main
     fan = (arr row 0) indexOf "fleetAreaName"
     sn = (arr row 0) indexOf "storeNumber"
 
-    for i = 1, i < (count arr - 1) / first arr, i += 1
+    for i = 1; i < (count arr - 1) / first arr; i += 1
         stmt = "UPDATE store_org.stores SET fleetAreaName = '{}' WHERE storeNumber = '{}';"
         
         arr = array((arr cell i, fan), (arr cell i, sn))

@@ -5,17 +5,17 @@
 
 include("@/array/table/nrows")
 
-if nrows(argv) !== 3
-    throw "Expected 3 argument(s), got {}" format (nrows(argv) - 1)
+if nrows(argv) !== 2
+    throw "Expected 2 argument(s), got {}" format nrows(argv)
 end if
 
-firstType = ((argv row 1) slice 1, argv cell 1, 0)
+firstType = ((argv row 0) slice 1, (argv cell 0, 0))
 
 if typeOf firstType !== "string"
     typeExcept(typeOf firstType, "string")
 end if
 
-secondType = ((argv row 2) slice 1, argv cell 2, 0)
+secondType = ((argv row 1) slice 1, (argv cell 1, 0))
 
 if typeOf secondType !== "string"
     typeExcept(typeOf secondType, "string")

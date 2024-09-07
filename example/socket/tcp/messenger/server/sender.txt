@@ -1,0 +1,65 @@
+//  Author: Corey Ferguson
+//  Date:   September 21, 2023
+//  File:   sender.txt
+//
+
+
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
+
+connected = false
+
+func onExit(_)
+    if connected
+        echo "Are you sure? (y/N)\n"
+        echo "Press return, then answer..."
+        
+        if toLower (input() ?? "") === "y"
+            connected = false
+        
+            return true
+        end if
+        
+        return false
+    end if
+    
+    return true
+end func
+
+func main()
+    sfd = server(1)
+
+    array cfdv = null
+
+    while 1
+        while !(cfdv = poll(sfd))
+            sleep 1_000
+        end while
+        
+        echo "Connected...\n"
+        
+        connected = true
+    
+        listen(first cfdv, 8081)
+        
+        while 1
+            echo "> "
+        
+            req = null
+            while connected && !(req = string(input() ?? ""))
+                continue
+            end while
+        
+            if req === "exit" || send(first cfdv, req) <= 0
+                break
+            end if
+        end while
+
+        closeTcp(first cfdv)
+        
+        connected = false
+        
+        echo "Disconnected.\n"
+    end while
+end func
+
+main()

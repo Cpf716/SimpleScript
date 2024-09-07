@@ -35,37 +35,40 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const {
+        bool analyze(command_processor* cp) const {
             return true;
         }
         
-        bool compare(const int value) const {
+        bool compare(const statement_type value) const {
             return false;
         }
         
-        string evaluate(interpreter* ssu) {
+        string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
             return empty();
         }
         
-        string execute(interpreter* ssu) {
-            string message = ssu->evaluate(this->expression);
+        string execute(command_processor* cp) {
+#if DEBUG_LEVEL
+        assert(cp != NULL);
+#endif
+            string message = cp->evaluate(this->expression);
             
             if (should_return)
                 return empty();
             
             if (ss::is_array(message))
-                type_error("array", "string");
+                type_error(array_t, string_t);
             
             if (message.empty())
                 null_error();
             
             if (!is_string(message))
-                type_error("double", "string");
+                type_error(double_t, string_t);
             
             this->set_level(0);
             
-            throw exception(decode(message));
+            throw exception(decode_raw(message));
             return empty();
         }
         
@@ -95,6 +98,8 @@ namespace ss {
         void set_parent(statement_t* parent) {
             this->parent = parent;
         }
+        
+        void set_pause(const bool pause) { }
         
         void set_return(const string result) {
             unsupported_error("set_return()");

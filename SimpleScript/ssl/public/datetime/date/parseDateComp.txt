@@ -1,0 +1,90 @@
+//  Author: Corey Ferguson
+//  Date:   August 24, 2023
+//  File:   parseDateComp.txt
+//
+
+include((dir = "@/datetime/") + "date/isLeapYear")
+include(dir + "constants/months")
+include("@/search/string/split")
+
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+    
+    date = (argv row 0) slice 1
+    
+    if typeOf date !== "string"
+        typeExcept(typeOf date, "string")
+    end if
+    
+    if date === null
+        return
+    end if
+    
+    array arr = split(date, "-")
+    
+    if count arr !== 3
+        return
+    end if
+    
+    for i = 0; i < count first arr; i += 1
+        if !isDigits (first arr).i
+            return
+        end if
+    end for
+    
+    arr.0 = parse first arr
+    
+    if first arr < 1970
+        return
+    end if
+    
+    for i = 1; i < 3; i += 1
+        if count arr.i !== 2
+            return
+        end if
+        
+        for j = 0; j < 2; j += 1
+            if !isDigits (arr.i).j
+                return
+            end if
+        end for
+        
+        arr.i = parse arr.i
+        
+        if arr.i < 1
+            return
+        end if
+    end for
+    
+    if arr.1 > 12
+        return
+    end if
+    
+    arr.1 -= 1
+
+    if last arr > (values months()).(arr.1) + (arr.1 === 1 && isLeapYear(first arr))
+        return
+    end if
+    
+    seconds = 0
+
+    for i = 1970; i < first arr; i += 1
+        seconds += (365 + isLeapYear(i)) * 86400
+    end for
+
+    for i = 0; i < arr.1; i += 1
+        seconds += months().(i * 2 + 1) * 86400
+    end for
+
+    if arr.1 > 1 && isLeapYear(first arr)
+        seconds += 86400
+    end if
+    
+    seconds += (last arr - 1) * 86400
+
+    return seconds
+end func
+
+return main()

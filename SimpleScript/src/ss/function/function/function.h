@@ -19,8 +19,12 @@ namespace ss {
         //  CONSTRUCTORS
         
         function(const string name, const std::function<string(size_t, string *)> function) {
+#if DEBUG_LEVEL
+            assert(name.length());
+#endif
             this->rename(name);
             this->_function = function;
+            this->consume();
         }
         
         void close() {
@@ -45,6 +49,8 @@ namespace ss {
         void set_level(const size_t level) {
             unsupported_error("set_level()");
         }
+        
+        void set_pause(const bool pause) { }
     };
 }
 

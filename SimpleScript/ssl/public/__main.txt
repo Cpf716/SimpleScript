@@ -1,0 +1,16 @@
+//  Author: Corey Ferguson
+//  Date:   November 20, 2023
+//  File:   main.txt
+//
+
+func main()
+    array str = "-------------- SimpleScript ------------\n"
+    
+    str += "  Options:\n"
+    str += "  <filename> <...argv>\n"
+    str += "  ----------------------------------------\n"
+
+    return str join ""
+end func
+
+return main()

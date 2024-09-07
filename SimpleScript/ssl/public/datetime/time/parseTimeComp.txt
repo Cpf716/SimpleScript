@@ -1,0 +1,64 @@
+//  Author: Corey Ferguson
+//  Date:   August 24, 2023
+//  File:   parseTimeComp.txt
+//
+
+include((dir = "@/datetime/") + "date/isLeapYear")
+include(dir + "constants/months")
+include("@/search/string/split")
+
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+    
+    time = (argv row 0) slice 1
+    
+    if typeOf time !== "string"
+        typeExcept(typeOf time, "string")
+    end if
+    
+    if time === null
+        return
+    end if
+    
+    array arr = split(time, ":")
+    
+    if count arr !== 2 && count arr !== 3
+        return
+    end if
+    
+    for i = 0; i < count arr; i += 1
+        if count arr.i !== 2
+            return
+        end if
+    
+        for j = 0; j < 2; j += 1
+            if !isDigits (arr.i).j
+                return
+            end if
+        end for
+        
+        arr.i = parse arr.i
+    end for
+    
+    if first arr >= 24
+        return
+    end if
+    
+    for i = 1; i < count arr; i += 1
+        if arr.i >= 60
+            return
+        end if
+    end for
+    
+    seconds = first arr * 3600 + arr.1 * 60
+    
+    if count arr === 3
+        seconds += last arr
+    end if
+    
+    return seconds
+end func
+
+return main()

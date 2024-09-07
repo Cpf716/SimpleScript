@@ -7,16 +7,16 @@ include("@/array/table/parseTable")
 include((dir = "@/search/string/") + "split")
 include(dir + "trim")
 
-if typeOf PATTERN === "undefined"
-    define PATTERN ","
+if typeOf SEP === undefined
+    define SEP ","
 end if
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
     
-    req = (argv row 1) slice 1
+    req = (argv row 0) slice 1
     
     if typeOf req !== "string"
         typeExcept(typeOf req, "string")
@@ -28,11 +28,11 @@ func main
 
     array body = split(req, "?")
     
-    if count body > 2
+    if count body >= 3
         return 1
     end if
     
-    array params = (count body === 1 ? null, last body)
+    array params = (count body === 1 ? null : last body)
     
     body = array(2, "url", first body)
     ncols = 1
@@ -44,12 +44,12 @@ func main
             array pair = split(param, "=")
             array val = ""
             
-            if count pair !== 2 || first pair === "url"
+            if count pair !== 2
                 return 1
             end if
             
             if count last pair
-                val = parseTable(last pair, PATTERN) slice 2
+                val = parseTable(last pair, SEP) slice 2
             end if
             
             if count val > ncols
@@ -61,10 +61,10 @@ func main
         end for
         
         //  normalize
-        for i = 0, i <= count params, i += 1
+        for i = 0; i <= count params; i += 1
             j = body.(i * (ncols + 2))
             
-            for k = 0, k <= ncols - j, k += 1
+            for k = 0; k <= ncols - j; k += 1
                 body insert i * (ncols + 2) + j + k + 1, null
             end for
         end for

@@ -29,13 +29,13 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const;
+        bool analyze(command_processor* cp) const;
         
-        bool compare(const int value) const;
+        bool compare(const statement_type value) const;
         
-        string evaluate(interpreter* ssu);
+        string evaluate(command_processor* cp);
         
-        string execute(interpreter* ssu);
+        string execute(command_processor* cp);
         
         void set_break();
         

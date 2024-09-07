@@ -47,13 +47,15 @@ namespace ss {
         }
         
         void rename(const string new_name) {
-            if (new_name.empty())
-                throw error("empty");
-            
+#if DEBUG_LEVEL
+            assert(new_name.length());
+#endif
             this->_name = new_name;
         }
         
         virtual void set_level(const size_t level) = 0;
+        
+        virtual void set_pause(const bool pause) = 0;
     };
 }
 

@@ -6,7 +6,7 @@
 
 #### define : symbol, any
 
-#### consume : symbol
+#### suppress : symbol
 
 #### sleep : int
 
@@ -18,9 +18,11 @@
 
 #### continue
 
-#### throw : string
+#### exit
 
 #### return : any
+
+#### throw : string
 
 ## Control Statements
 

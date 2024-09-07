@@ -5,19 +5,19 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if (count argv - 1) / first argv !== 2
-        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+func main()
+    if (count argv - 1) / first argv !== 1
+        expectExcept("1 argument(s), got {}" format (count argv - 1) / first argv)
     end if
 
-    arr = (argv row 1) slice 1
+    array arr = (argv row 0) slice 1
 
     if subtypeOf arr !== "table"
         typeExcept(subtypeOf arr, "table")
     end if
 
-    for i = 0, i < floor((count arr - 1) / first arr / 2), i += 1
-        for j = 0, j < first arr, j += 1
+    for i = 0; i < floor((count arr - 1) / first arr / 2); i += 1
+        for j = 0; j < first arr; j += 1
             tmp = (arr cell i, j)
             
             arr.(i * first arr + j + 1) = arr.(count arr - (i + 1) * first arr + j)

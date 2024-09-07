@@ -8,18 +8,18 @@ include("@/sort/sort")
 arr = array(12, 11, 13, 5, 6, 14)
 arr = sort(arr)
 
-func `build`(arr, beg = 0, end = count arr)
+func `build`(beg = 0, end = count arr)
     len = floor((end - beg) / 2)
     
     echo "{}\n" format arr.(beg + len)
     
     if len !== 0
-        `build`(arr, beg, beg + len)
+        `build`(beg, beg + len)
     end if
     
     if beg + len !== end - 1
-        `build`(arr, beg + len + 1, end)
+        `build`(beg + len + 1, end)
     end if
 end func
 
-`build`(arr)
+`build`()

@@ -33,7 +33,10 @@ namespace ss {
 
     //  MEMBER FUNCTIONS
 
-    bool while_statement::analyze(interpreter* ssu) const {
+    bool while_statement::analyze(command_processor* cp) const {
+#if DEBUG_LEVEL
+        assert(cp != NULL);
+#endif
         if (!this->statementc) {
             logger_write("'while' statement has empty body\n");
             
@@ -41,55 +44,70 @@ namespace ss {
         }
         
         size_t i = 0;
-        while (i < this->statementc - 1 && !this->statementv[i]->analyze(ssu))
+        while (i < this->statementc - 1 && !this->statementv[i]->analyze(cp))
             ++i;
         
         if (i != this->statementc - 1)
             logger_write("Unreachable code\n");
                 
-        if (this->statementv[i]->analyze(ssu) &&
-            (this->statementv[i]->compare(0) ||
-             this->statementv[i]->compare(6)))
+        if (this->statementv[i]->analyze(cp) &&
+            (this->statementv[i]->compare(break_t) ||
+             this->statementv[i]->compare(exit_t) ||
+             this->statementv[i]->compare(return_t)))
             logger_write("'while' statement will execute at most once\n");
         
         return false;
     }
 
-    string while_statement::evaluate(interpreter* ssu) {
+    string while_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
         return empty();
     }
 
-    string while_statement::execute(interpreter* ssu) {
+    string while_statement::execute(command_processor* cp) {
+#if DEBUG_LEVEL
+        assert(cp != NULL);
+#endif
+        this->should_pause = false;
         this->should_return = false;
         
         while (1) {
-            string buid = ssu->backup();
+            while (this->should_pause);
             
-            if (!ss::evaluate(ssu->evaluate(this->expression))) {
-                ssu->restore(buid);
+            size_t state = cp->get_state();
+            
+            if (!ss::evaluate(cp->evaluate(this->expression))) {
+                cp->set_state(state);
                 break;
             }
             
             this->should_continue = false;
             
             for (size_t i = 0; i < this->statementc; ++i) {
-                this->statementv[i]->execute(ssu);
+                while (this->should_pause);
+                
+                this->statementv[i]->execute(cp);
+                
+//                while (this->should_pause);
                 
                 if (this->should_return || this->should_continue)
                     break;
             }
             
-            ssu->restore(buid);
+//            while (this->should_pause);
             
-            if (this->should_return)
+            if (this->should_return) {
+                cp->set_state(state);
                 break;
+            }
+            
+            cp->set_state(state);
         }
         
         return empty();
     }
 
-    bool while_statement::compare(const int value) const {
+    bool while_statement::compare(const statement_type value) const {
         return false;
     }
 

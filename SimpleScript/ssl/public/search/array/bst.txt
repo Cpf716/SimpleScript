@@ -2,17 +2,16 @@
 //  Date:   August 8, 2023
 //  File:   bst.txt
 
-include("@/exception/expectExcept")
 include("@/exception/rangeExcept")
 
-func main
-    if nrows(argv) !== 5
-        expectExcept("4 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 4
+        expectExcept("4 argument(s), got {}" format nrows(argv))
     end if
 
-    array arr = ((argv row 1) slice 1, argv cell 1, 0)
+    array arr = ((argv row 0) slice 1, (argv cell 0, 0))
 
-    beg = ((argv row 2) slice 1, argv cell 2, 0)
+    beg = ((argv row 1) slice 1, (argv cell 1, 0))
     
     if subtypeOf beg !== "int"
         typeExcept(subtypeOf beg, "int")
@@ -22,7 +21,7 @@ func main
         rangeExcept("beg {}, count {}" format array(beg, count arr))
     end if
     
-    end = ((argv row 3) slice 1, argv cell 3, 0)
+    end = ((argv row 2) slice 1, (argv cell 2, 0))
     
     if subtypeOf end !== "int"
         typeExcept(subtypeOf end, "int")
@@ -32,7 +31,7 @@ func main
         rangeExcept("beg {}, end {}, count {}" format array(beg, end, count arr))
     end if
 
-    val = ((argv row 4) slice 1, argv cell 4, 0)
+    val = ((argv row 3) slice 1, (argv cell 3, 0))
     
     assert typeOf val !== "array"
 
@@ -48,10 +47,10 @@ func main
         end if
         
         if arr.(beg + len) > val
-            return `bst`(arr, beg, beg + len, val)
+            return `bst`(arr, val, beg, beg + len)
         end if
         
-        `bst`(arr, beg + len + 1, end, val)
+        `bst`(arr, val, beg + len + 1, end)
     end func
     
     return `bst`(arr, val)

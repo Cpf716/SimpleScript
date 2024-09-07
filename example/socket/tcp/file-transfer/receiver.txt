@@ -1,0 +1,119 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   receiver.txt
+//
+
+include((dir = "/Library/Application Support/SimpleScript/example/socket/") + "config.txt")
+include(dir + "tcp/util/client.txt")
+include("@/array/table/parseTable")
+
+config()
+
+//  FUNCTIONS
+
+func main()
+    if nrows(argv) >= 2
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+
+    array port = PORT
+
+    if nrows(argv) === 1
+        port = (argv row 0) slice 1
+        
+        if subtypeOf toArray port !== "int"
+            typeExcept(subtypeOf toArray port)
+        end if
+        
+        if port < 0
+            rangeExcept(string(port))
+        end if
+    end if
+    
+    echo "\n"
+    
+    while 1
+        sfd = client(port)
+        
+        if sfd === -1
+            continue
+        end if
+
+        array req = null
+        
+        try
+            req = recv(sfd, 30)
+        catch errno
+            if ERRNOs().errno === "EBADF"
+                echo "Connection to the server timed out.\n\n"
+                echo "Press return to continue..."
+                
+                input()
+                
+                echo "\n"
+                
+                try
+                    closeTcp(sfd)
+                catch errno
+                    throw ERRNOs().errno
+                end try
+                
+                continue
+            end if
+            
+            throw ERRNOs().errno
+        end try
+        
+        try
+            closeTcp(sfd)
+        catch errno
+            throw ERRNOs().errno
+        end try
+        
+        if !req
+            echo "Connection to the server timed out.\n\n"
+            echo "Press return  to continue..."
+            
+            input()
+            
+            echo "\n"
+            
+            continue
+        end if
+        
+        req = parseTable(req)
+
+        for i = 0; i < (count req - 1) / first req; i += 1
+            for j = 1; j <= (req cell i, 0); j += 1
+                echo "{}\t" format (req cell i, j)
+            end for
+            
+            echo "\n"
+        end for
+        
+        echo "\n"
+        echo "Export? (Y/n):\t"
+        
+        ans = string(input() ?? "")
+        
+        if toUpper ans === "Y"
+            filename = "/Users/{}/Downloads/Export" format USER
+            ext = ".csv"
+        
+            if exists(filename + ext)
+                i = 1
+                while exists((filename + " ({})" format i) + ext)
+                    i += 1
+                end while
+                
+                write((filename + " ({})" format i) + ext, req, SEP)
+            else
+                write(filename + ext, req, SEP)
+            end if
+        end if
+        
+        return ""
+    end while
+end func
+
+return main()

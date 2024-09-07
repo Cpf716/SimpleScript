@@ -5,18 +5,18 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if nrows(argv) !== 3
-        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
 
-    a = ((argv row 1) slice 1, argv cell 0, 0)
+    a = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if subtypeOf a !== "int"
         typeExcept(subtypeOf a, "int")
     end if
 
-    b = ((argv row 2) slice 1, argv cell 1, 0)
+    b = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if subtypeOf b !== "int"
         typeExcept(subtypeOf b, "int")

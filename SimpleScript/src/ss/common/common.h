@@ -9,88 +9,54 @@
 #define common_h
 
 #include "array.h"
-#include <cassert>
-#include "error.h"
-#include "logger.h"
-#include <random>
+#include "file_system.h"
 
 namespace ss {
+    //  NON-MEMBER FIELDS
+
+    enum data_t { array_t, char_t, double_t, int_t, string_t, dictionary_t, table_t, undefined_t };
 
     //  NON-MEMBER FUNCTIONS
 
-    std::string decode(const std::string str);
-
-    std::string empty();
-
-    std::string encode(const std::string str);
-
-    std::string filename(const std::string filepath);
+    std::string escape(const std::string src);
 
     bool is_array(const std::string val);
 
     bool is_dictionary(ss::array<std::string> arr);
 
-    bool is_dictionary(const std::size_t len, const std::string* arr);
-
-    bool is_int(const double num);
-
-    bool is_number(const std::string val);
-
-    bool is_pow(const std::size_t a, const std::size_t b);
+    bool is_dictionary(const size_t len, const std::string* arr);
 
     bool is_string(const std::string val);
 
     bool is_symbol(const std::string val);
 
-    bool is_table(const std::size_t len, std::string* arr);
+    bool is_table(const size_t len, std::string* arr);
 
     bool is_table(ss::array<std::string> arr);
 
-    std::string ltrim(const std::string str);
+    std::string* resize(const size_t len, const size_t newlen, std::string* arr);
 
-    std::size_t merge(std::size_t len, std::string* arr, const std::string pat);
+    std::string stringify(ss::array<std::string> arr, size_t beg = 0);
 
-    std::string pattern();
+    std::string stringify(ss::array<std::string> arr, size_t beg, size_t end);
 
-    std::size_t parse(std::string* dst, const std::string src, std::string pat = pattern());
+    std::string stringify(const size_t len, std::string* arr);    
 
-    std::size_t pow2(const std::size_t num);
+    size_t tokenize(std::string* dst, const std::string src, const std::string pat);
 
-    std::string raw(const std::string val, std::string pat = empty());
+    std::string tolower(std::string str);
 
-    std::string read(const std::string filename);
+    std::string to_string(const data_t data_type);
 
-    int read(std::string* dst, const std::string src, const std::string pat);
+    std::string toupper(std::string str);
 
-    std::string* resize(const std::size_t len, const std::size_t newlen, std::string* arr);
+    std::string trim_end(const std::string str);
 
-    std::string rtrim(const double num);
+    std::string trim_start(const std::string str);
 
-    std::string rtrim(const std::string str);
+    void type_error(const data_t lhs, const data_t rhs);
 
-    std::size_t split(std::string* dst, const std::string src, const std::string pat);
-
-    std::string stringify(ss::array<std::string> arr, std::size_t beg = 0);
-
-    std::string stringify(ss::array<std::string> arr, std::size_t beg, std::size_t end);
-
-    std::string stringify(const std::size_t len, std::string* arr);
-
-    std::size_t tokens(std::string* dst, const std::string src);
-
-    std::size_t tokenize(std::string* dst, const std::string src, const std::string pat);
-
-    std::string tolower(const std::string str);
-
-    std::string toupper(const std::string str);
-
-    std::string trim(const std::string str);
-
-    std::string uuid();
-
-    void write(const std::string filename, const std::string str);
-
-    void write(const std::string filename, const std::size_t len, std::string* arr, const std::string pat);
+    size_t write(const std::string filename, const size_t len, std::string* arr, const std::string sep);
 }
 
 #endif /* commoon_h */

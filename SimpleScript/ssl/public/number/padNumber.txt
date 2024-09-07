@@ -5,25 +5,25 @@
 
 include("@/number/digits")
 
-func main
-    if nrows(argv) < 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if !nrows(argv)
+        expectExcept("1 argument(s), got 0")
     end if
     
-    if nrows(argv) >= 4
-        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    if nrows(argv) >= 3
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
 
-    num = ((argv row 1) slice 1, argv cell 1, 0)
+    num = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf num !== "number"
-        typeExcept(typeOf num, "number")
+        typeExcept(typeOf num, "double")
     end if
 
     padStr = ","
 
-    if nrows(argv) === 3
-        padStr = ((argv row 2) slice 1, argv cell 2, 0)
+    if nrows(argv) === 2
+        padStr = ((argv row 1) slice 1, (argv cell 1, 0))
         
         if subtypeOf padStr !== "char"
             typeExcept(subtypeOf padStr, "char")
@@ -32,12 +32,12 @@ func main
 
     array arr = digits(num)
 
-    for (i = 0, n = ceil(count arr / 3) - 1), i < n, i += 1
+    for i = 0, n = ceil(count arr / 3) - 1; i < n; i += 1
         arr += padStr
         
         j = count arr - (i + 1) * 3 - i - 1
         
-        for k = count arr - 1, k > j, k -= 1
+        for k = count arr - 1; k > j; k -= 1
             tmp = arr.k
             
             arr.k = arr.(k - 1)

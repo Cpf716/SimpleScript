@@ -15,7 +15,7 @@ namespace ss {
     class array {
         //  MEMBER FIELDS
         
-        std::size_t _capacity, _size = 0;
+        size_t _capacity, _size = 0;
         T* _data = NULL;
     public:
         //  CONSTRUCTORS
@@ -25,7 +25,7 @@ namespace ss {
             this->_data = new T[capacity()];
             this->_size = data.size();
             
-            for (std::size_t i = 0; i < size(); ++i)
+            for (size_t i = 0; i < size(); ++i)
                 this->_data[i] = data._data[i];
         }
         
@@ -33,7 +33,7 @@ namespace ss {
             _data = new T[this->_capacity = 1];
         }
         
-        array(const std::size_t capacity) {
+        array(const size_t capacity) {
             this->_data = new T[this->_capacity = capacity];
         }
         
@@ -43,7 +43,7 @@ namespace ss {
         
         //  OPERATORS
         
-        T& operator[](const std::size_t index) {
+        T& operator[](const size_t index) {
             if (index >= this->size())
                 throw std::out_of_range(std::to_string(index));
             
@@ -52,7 +52,7 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        std::size_t capacity() const {
+        size_t capacity() const {
             return this->_capacity;
         };
         
@@ -63,13 +63,13 @@ namespace ss {
             this->_size = 0;
         }
         
-        void ensure_capacity(const std::size_t new_capacity) {
+        void ensure_capacity(const size_t new_capacity) {
             if (this->capacity() >= new_capacity)
                 return;
             
             T* tmp = new T[this->_capacity = new_capacity];
             
-            for (std::size_t i = 0; i < this->size(); ++i)
+            for (size_t i = 0; i < this->size(); ++i)
                 tmp[i] = this->_data[i];
             
             delete[] this->_data;
@@ -84,7 +84,7 @@ namespace ss {
             return i == this->size() ? -1 : i;
         }
         
-        void insert(const std::size_t index, const T item) {
+        void insert(const size_t index, const T item) {
             if (index > this->size())
                 throw std::out_of_range(std::to_string(index));
             
@@ -93,7 +93,7 @@ namespace ss {
             
             this->_data[this->_size] = item;
             
-            for (std::size_t i = this->_size++; i > index; --i)
+            for (size_t i = this->_size++; i > index; --i)
                 std::swap(this->_data[i], this->_data[i - 1]);
         }
         
@@ -116,13 +116,13 @@ namespace ss {
             if (index >= this->size())
                 throw std::out_of_range(std::to_string(index));
             
-            for (std::size_t i = index; i < this->size() - 1; ++i)
+            for (size_t i = index; i < this->size() - 1; ++i)
                 std::swap(this->_data[i], this->_data[i + 1]);
             
             --this->_size;
         }
         
-        void resize(const std::size_t new_size) {
+        void resize(const size_t new_size) {
             this->ensure_capacity(new_size);
             
             while (this->size() < new_size)
@@ -135,7 +135,7 @@ namespace ss {
         void shrink_to_fit() {
             T* tmp = new T[this->size()];
             
-            for (std::size_t i = 0; i < this->size(); ++i)
+            for (size_t i = 0; i < this->size(); ++i)
                 tmp[i] = this->_data[i];
             
             delete[] this->_data;
@@ -144,7 +144,9 @@ namespace ss {
             this->_capacity = this->size();
         }
         
-        std::size_t size() const { return this->_size; };
+        size_t size() const {
+            return this->_size;
+        };
     };
 }
 

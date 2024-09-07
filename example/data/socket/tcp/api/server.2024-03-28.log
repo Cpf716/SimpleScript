@@ -1,0 +1,205 @@
+2024-05-22 20:28:31
+URL:    /api/getLibrary
+Connected to musicLibrary...
+SQL:    select artistName, albumYear, albumName, songTitle, plays from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId order by artistName, albumYear, albumName, position asc
+Disconnected from musicLibrary.
+2024-05-22 20:28:32
+URL:    /api/getArtists
+Connected to musicLibrary...
+SQL:    select * from artists order by artistName asc
+Disconnected from musicLibrary.
+2024-05-22 20:28:35
+URL:    /api/getAlbums
+Connected to musicLibrary...
+SQL:    select * from albums order by albumName, albumYear asc
+Disconnected from musicLibrary.
+2024-05-22 20:28:37
+URL:    /api/getSongs
+Connected to musicLibrary...
+SQL:    select * from songs order by songTitle asc
+Disconnected from musicLibrary.
+2024-05-22 20:28:46
+URL:    /api/addArtist?artistName=Black Tiger Sex Machine
+Connected to musicLibrary...
+SQL:    insert into artists(artistName) values(?)
+Disconnected from musicLibrary.
+2024-05-22 20:28:48
+URL:    /api/getArtists
+Connected to musicLibrary...
+SQL:    select * from artists order by artistName asc
+Disconnected from musicLibrary.
+2024-05-22 20:29:05
+URL:    /api/addAlbum?artistId=1&albumYear=2023&albumName=Portals
+Connected to musicLibrary...
+SQL:    insert into albums(artistId, albumYear, albumName) values(?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:29:09
+URL:    /api/getAlbums
+Connected to musicLibrary...
+SQL:    select * from albums order by albumName, albumYear asc
+Disconnected from musicLibrary.
+2024-05-22 20:29:20
+URL:    /api/addSong?albumId=1&position=1&songTitle=Sword in Stone
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:29:25
+URL:    /api/getSongs
+Connected to musicLibrary...
+SQL:    select * from songs order by songTitle asc
+Disconnected from musicLibrary.
+2024-05-22 20:29:37
+URL:    /api/addSong?albumId=1&position=2&songTitle=Skull Machine
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:29:46
+URL:    /api/addSong?albumId=1&position=6&songTitle=Mindstate
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:29:56
+URL:    /api/addSong?albumId=1&position=10&songTitle=Die a God
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:30:05
+URL:    /api/getSongs
+Connected to musicLibrary...
+SQL:    select * from songs order by songTitle asc
+Disconnected from musicLibrary.
+2024-05-22 20:30:13
+URL:    /api/playSong?songId=1
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:30:17
+URL:    /api/getSongs
+Connected to musicLibrary...
+SQL:    select * from songs order by songTitle asc
+Disconnected from musicLibrary.
+2024-05-22 20:30:26
+URL:    /api/playSong?songId=2
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:30:29
+URL:    /api/playSong?songId=3
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:30:31
+URL:    /api/playSong?songId=4
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:30:34
+URL:    /api/getSongs
+Connected to musicLibrary...
+SQL:    select * from songs order by songTitle asc
+Disconnected from musicLibrary.
+2024-05-22 20:30:36
+URL:    /api/getLibrary
+Connected to musicLibrary...
+SQL:    select artistName, albumYear, albumName, songTitle, plays from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId order by artistName, albumYear, albumName, position asc
+Disconnected from musicLibrary.
+2024-05-22 20:31:05
+URL:    /api/addSong?albumId=1&position=3&songTitle=Howling
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:31:24
+URL:    /api/addSong?albumId=1&position=4&songTitle=Amaterasu
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:31:35
+URL:    /api/addSong?albumId=1&position=5&songTitle=Bounce
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:31:45
+URL:    /api/addSong?albumId=1&position=7&songTitle=Synthetic
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:31:57
+URL:    /api/addSong?albumId=1&position=8&songTitle=Eclipse
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:32:06
+URL:    /api/addSong?albumId=1&position=9&songTitle=Brainwashed
+Connected to musicLibrary...
+SQL:    insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)
+Disconnected from musicLibrary.
+2024-05-22 20:32:10
+URL:    /api/getSongs
+Connected to musicLibrary...
+SQL:    select * from songs order by songTitle asc
+Disconnected from musicLibrary.
+2024-05-22 20:32:18
+URL:    /api/getLibrary
+Connected to musicLibrary...
+SQL:    select artistName, albumYear, albumName, songTitle, plays from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId order by artistName, albumYear, albumName, position asc
+Disconnected from musicLibrary.
+2024-05-22 20:32:35
+URL:    /api/playSong?songId=1
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:38
+URL:    /api/playSong?songId=2
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:41
+URL:    /api/playSong?songId=3
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:43
+URL:    /api/playSong?songId=4
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:45
+URL:    /api/playSong?songId=5
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:48
+URL:    /api/playSong?songId=6
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:50
+URL:    /api/playSong?songId=7
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:52
+URL:    /api/playSong?songId=8
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:55
+URL:    /api/playSong?songId=9
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:32:59
+URL:    /api/playSong?songId=10
+Connected to musicLibrary...
+SQL:    update songs set plays = ? + 1 where songId = ?
+Disconnected from musicLibrary.
+2024-05-22 20:33:01
+URL:    /api/getSongs
+Connected to musicLibrary...
+SQL:    select * from songs order by songTitle asc
+Disconnected from musicLibrary.
+2024-05-22 20:33:07
+URL:    /api/getLibrary
+Connected to musicLibrary...
+SQL:    select artistName, albumYear, albumName, songTitle, plays from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId order by artistName, albumYear, albumName, position asc
+Disconnected from musicLibrary.

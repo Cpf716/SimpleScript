@@ -1,0 +1,64 @@
+//  Author: Corey Ferguson
+//  Date:   March 27, 2024
+//  File:   server.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/socket/config.txt")
+include("@/exception/rangeExcept")
+include("@/string")
+include("@/socket/constants/ERRNOs")
+include("socket")
+
+config()
+
+func main()
+    if !nrows(argv)
+        expectExcept("1 argument(s), got 0")
+    end if
+    
+    if nrows(argv) >= 3
+        expectExcept("2 argument(s), got {}" format nrows(argv))
+    end if
+    
+    backlog = ((argv row 0) slice 1, (argv cell 0, 0))
+    
+    if subtypeOf backlog !== "int"
+        typeExcept(subtypeOf backlog, "int")
+    end if
+    
+    if backlog < 0
+        rangeExcept(string(backlog))
+    end if
+    
+    array verbose = true
+    
+    if nrows(argv) === 2
+        verbose = ((argv row 1) slice 1, (argv cell 1, 0))
+        
+        if typeOf toArray verbose !== "number"
+            typeExcept(typeOf toArray verbose, "number")
+        end if
+    end if
+    
+    port = PORT
+    
+    while 1
+        try
+            sfd = tcpServer(port, backlog)
+                
+            if verbose
+                echo "Server listening on port {}...\n" format port
+            end if
+            
+            return sfd
+        catch errno
+            if ERRNOs().errno === "EADDRINUSE"
+                port += 1
+            else
+                throw ERRNOs().errno
+            end if
+        end try
+    end while
+end func
+
+return main()

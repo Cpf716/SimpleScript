@@ -11,45 +11,17 @@ namespace ss {
     //  CONSTRUCTORS
 
     for_statement::for_statement(const string specifier, const size_t statementc, statement_t** statementv) {
-        string tokenv[specifier.length() * 2 + 1];
-        size_t tokenc = tokens(tokenv, specifier);
+        string tokenv[specifier.length() + 1];
+        size_t tokenc = tokenize(tokenv, specifier, ";");
         
-        size_t e = 0, s = e;   int p = 0;
-        for (; e < tokenc; ++e) {
-            if (tokenv[e] == "(")
-                ++p;
-            else if (tokenv[e] == ")")
-                --p;
-            else if (!p && tokenv[e] == ",") {
-                for (size_t i = e; i > s + 1; --i) {
-                    tokenv[s] += " " + tokenv[s + 1];
-                    
-                    for (size_t j = s + 1; j < tokenc - 1; ++j)
-                        swap(tokenv[j], tokenv[j + 1]);
-                    
-                    --e;
-                    --tokenc;
-                }
-                
-                s = e + 1;
-            }
-        }
-        
-        for (size_t i = e; i > s + 1; --i) {
-            tokenv[s] += " " + tokenv[s + 1];
-            
-            for (size_t j = s + 1; j < tokenc - 1; ++j)
-                swap(tokenv[j], tokenv[j + 1]);
-            
-            --tokenc;
-        }
+        tokenc = merge(tokenc, tokenv, ";");
         
         //  for-in
         if (tokenc == 1) {
             tokenc = tokens(tokenv, tokenv[0]);
             
-            if (tokenc < 3 || !is_symbol(tokenv[0]) || tolower(tokenv[1]) != "in")
-                expect_error("',' in 'for' statement specifier");
+            if (tokenc < 3 || !is_symbol(tokenv[0]) || tokenv[1] != "in")
+                expect_error("';' in 'for' statement specifier");
             
             this->expressionv = new string[expressionc = 2];
             this->expressionv[0] = tokenv[0];
@@ -58,9 +30,9 @@ namespace ss {
             for (size_t i = 3; i < tokenc; ++i)
                 this->expressionv[1] += " " + tokenv[i];
         } else {
-            //  for ,,
+            //  for ;;
             for (size_t i = 0, n = (size_t)floor(tokenc / 2) + 1; i < n; ++i) {
-                if (tokenv[i * 2] == ",") {
+                if (tokenv[i * 2] == ";") {
                     tokenv[tokenc] = empty();
                     
                     for (size_t j = tokenc; j > i * 2; --j)
@@ -70,14 +42,14 @@ namespace ss {
                 }
             }
             
-            if (tokenv[tokenc - 1] == ",")
+            if (tokenv[tokenc - 1] == ";")
                 tokenv[tokenc++] = empty();
             
             if (tokenc < 5)
-                expect_error("',' in 'for' statement specifier");
+                expect_error("';' in 'for' statement specifier");
             
             if (tokenc > 5)
-                expect_error("';' after expression");
+                expect_error("expression");
             
             this->expressionv = new string[this->expressionc = 3];
             
@@ -108,131 +80,122 @@ namespace ss {
 
     //  MEMBER FUNCTIONS
 
-    bool for_statement::analyze(interpreter* ssu) const {
+    bool for_statement::analyze(command_processor* cp) const {
+#if DEBUG_LEVEL
+        assert(cp != NULL);
+#endif
         if (!this->statementc) {
             logger_write("'for' statement has empty body\n");
             return false;
         }
         
         size_t i = 0;
-        while (i < this->statementc - 1 && !this->statementv[i]->analyze(ssu))
+        while (i < this->statementc - 1 && !this->statementv[i]->analyze(cp))
             ++i;
         
         if (i != this->statementc - 1)
             logger_write("Unreachable code\n");
                 
-        if (this->statementv[i]->analyze(ssu) &&
-            (this->statementv[i]->compare(0) ||
-             this->statementv[i]->compare(6)))
+        if (this->statementv[i]->analyze(cp) &&
+            (this->statementv[i]->compare(break_t) ||
+             this->statementv[i]->compare(exit_t) ||
+             this->statementv[i]->compare(return_t)))
             logger_write("'for' statement will execute at most once\n");
         
         return false;
     }
 
-    bool for_statement::compare(const int value) const {
+    bool for_statement::compare(const statement_type value) const {
         return false;
     }
 
-    string for_statement::evaluate(interpreter* ssu) {
+    string for_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
         return empty();
     }
 
-    string for_statement::execute(interpreter* ssu) {
+    string for_statement::execute(command_processor* cp) {
+#if DEBUG_LEVEL
+        assert(cp != NULL);
+#endif
+        this->should_pause = false;
         this->should_return = false;
         
-        string buid = ssu->backup();
+        size_t state = cp->get_state();
         size_t valuec = 0;
         
         if (this->expressionc == 2) {
-            if (ssu->is_defined(this->expressionv[0]))
-                ssu->remove_symbol(this->expressionv[0]);
+            if (cp->is_defined(this->expressionv[0]))
+                cp->remove_symbol(this->expressionv[0]);
             
-            string value = ssu->evaluate(this->expressionv[1]);
+            string result = cp->evaluate(this->expressionv[1]);
             
-            this->valuev = new string[value.length() + 1];
+            this->valuev = new string[result.length() + 1];
             
-            valuec = parse(this->valuev, value);
-        } else {
-            string tokenv[this->expressionv[0].length() + 1];
-            size_t tokenc = tokens(tokenv, this->expressionv[0]);
-            
-            size_t i = 0;
-            while (i < tokenc && tokenv[i] == "(")
-                ++i;
-            
-            if (i < tokenc && tolower(tokenv[i]) == "const")
-                ++i;
-            
-            if (i < tokenc && tolower(tokenv[i]) == "array")
-                ++i;
-            
-            if (i < tokenc - 1 && is_symbol(tokenv[i]) && tokenv[i + 1] == "=" && ssu->is_defined(tokenv[i])) {
-                this->valuev = new string[valuec = 1];
-                this->valuev[0] = tokenv[i];
-                
-                ssu->remove_symbol(this->valuev[0]);
-            }
-            
+            valuec = parse(this->valuev, result);
+        } else
             //  available to every iteration
-            ssu->evaluate(this->expressionv[0]);
-        }
+            cp->evaluate(this->expressionv[0]);
         
         size_t index = 0;
         while (1) {
-            string _buid = ssu->backup();
+            while (this->should_pause);
+            
+            size_t _state = cp->get_state();
             
             if (this->expressionc == 2) {
                 if (index == valuec) {
-                    ssu->restore(_buid, true, true, 1, this->expressionv);
+                    cp->set_state(_state);
                     break;
                 }
                 
                 if (valuev[index].empty() || is_string(this->valuev[index]))
-                    ssu->set_string(this->expressionv[0], this->valuev[index]);
+                    cp->set_string(this->expressionv[0], this->valuev[index]);
                 else
-                    ssu->set_number(this->expressionv[0], stod(valuev[index]));
+                    cp->set_number(this->expressionv[0], stod(valuev[index]));
                 
                 ++index;
                 
-            } else if (!this->expressionv[1].empty() && !ss::evaluate(ssu->evaluate(this->expressionv[1]))) {
+            } else if (!this->expressionv[1].empty() && !ss::evaluate(cp->evaluate(this->expressionv[1]))) {
                 //  available for one iteration
-                ssu->restore(_buid);
-                
+                cp->set_state(_state);
                 break;
             }
             
             this->should_continue = false;
             
             for (size_t j = 0; j < this->statementc; ++j) {
-                this->statementv[j]->execute(ssu);
+                while (this->should_pause);
+                
+                this->statementv[j]->execute(cp);
+                
+//                while (this->should_pause);
                 
                 if (this->should_return || this->should_continue)
                     break;
             }
             
+//            while (this->should_pause);
+            
             if (this->should_return) {
                 if (this->expressionc == 2)
-                    ssu->restore(_buid, true, true, 1, this->expressionv);
-                else
-                    ssu->restore(_buid);
+                    cp->remove_symbol(this->expressionv[0]);
+                
+                cp->set_state(_state);
                 
                 break;
             }
             
             if (this->expressionc == 2)
-                ssu->restore(_buid, true, true, 1, this->expressionv);
-            else {
+                cp->remove_symbol(this->expressionv[0]);
+            else
                 //  available once
-                ssu->evaluate(this->expressionv[2]);
-                ssu->restore(_buid);
-            }
+                cp->evaluate(this->expressionv[2]);
+            
+            cp->set_state(_state);
         }
         
-        if (this->expressionc == 2 || !valuec)
-            ssu->restore(buid);
-        else
-            ssu->restore(buid, true, true, 1, valuev);
+        cp->set_state(state);
         
         if (valuev != NULL) {
             delete[] valuev;

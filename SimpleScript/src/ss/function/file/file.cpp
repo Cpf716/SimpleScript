@@ -10,54 +10,41 @@
 namespace ss {
     //  CONSTRUCTORS
 
-    file::file(const string filename, node<string>* parent, interpreter* ssu) {
+    file::file(const string filename, node<string>* parent, command_processor* cp) {
+#if DEBUG_LEVEL
+        assert(filename.length());
+        assert(parent != NULL);
+        assert(cp != NULL);
+#endif
         ifstream file;
+        
         file.open(filename);
         
         if (!file.is_open())
-            throw error("No such file: " + filename);
+            throw file_system_exception(strerror(errno));
     
-        this->rename(::filename(filename));
+        this->rename(basename(filename));
         
         size_t n = 0;
         string* src = new string[1];
         
-        //  line breaks take supreme precedence
         string line;
         while (getline(file, line)) {
             string tokenv[line.length() + 1];
-            size_t tokenc = tokenize(tokenv, line, "//");
+            size_t tokenc = parse(tokenv, line, "//");
             
-            tokenc = merge(tokenc, tokenv, empty());
-            
-            if (tokenc == 0)
+            if (tokenc == 1 && tokenv[0].empty())
                 continue;
-            
-            size_t i = 0;
-            while (i < tokenc && tokenv[i] != "//")
-                ++i;
-            
-            if (i == 0)
-                continue;
-            
-            while (tokenc > i)
-                --tokenc;
-            
-            line = trim(tokenv[0]);
-            
-            for (size_t i = 1; i < tokenc; ++i)
-                line += trim(tokenv[i]);
             
             if (is_pow(n, 2))
                 src = resize(n, n * 2, src);
             
-            src[n++] = line;
+            src[n++] = tokenv[0];
         }
         
-        //  block comments are third
         size_t i = 0;
         while (i < n) {
-            string* tokenv = new string[pow2(src[i].length() + 1)];
+            string* tokenv = new string[pow_2(src[i].length() + 1)];
             size_t tokenc = tokenize(tokenv, src[i], "/*");
             
             tokenc = merge(tokenc, tokenv, empty());
@@ -174,11 +161,17 @@ namespace ss {
         if (i != n)
             throw error("Unexpected token: */");
         
-        //  semicolons are fourth
         i = 0;
         while (i < n) {
             string tokenv[src[i].length() + 1];
-            size_t tokenc = parse(tokenv, src[i], ";");
+            size_t tokenc = tokens(tokenv, src[i]);
+            
+            if (!tokenc || tokenv[0] == "for") {
+                ++i;
+                continue;
+            }
+            
+            tokenc = parse(tokenv, src[i], ";");
              
             size_t j = 0;
             while (j < tokenc) {
@@ -191,12 +184,7 @@ namespace ss {
                     ++j;
             }
             
-            if (!j) {
-                for (size_t k = i; k < n - 1; ++k)
-                    swap(src[k], src[k + 1]);
-                
-                --n;
-            } else {
+            if (j) {
                 src[i] = tokenv[0];
                 
                 for (size_t j = 1; j < tokenc; ++j) {
@@ -212,51 +200,39 @@ namespace ss {
                 }
                 
                 i += tokenc;
+            } else {
+                for (size_t k = i; k < n - 1; ++k)
+                    swap(src[k], src[k + 1]);
+                
+                --n;
             }
         }
         
         ::node<string>* node = new ::node<string>(filename, parent);
         
-        ss::array<string> arr;
+        ss::array<string> filev;
+        ss::array<module_t> modulev;
         
-        string buid = ssu->backup();
+        size_t state = cp->get_state();
         
-        ssu->reload();
+        cp->set_state();
         
-        this->functionv = new pair<class file*, bool>*[1];
+        this->filev = new pair<class file*, bool>*[1];
         
         for (i = 0; i < n; ++i) {
             string tokenv[src[i].length() + 1];
             size_t tokenc = tokens(tokenv, src[i]);
             
             if (tokenv[0] == "include") {
-                if (tokenc == 1)
+                if (tokenc == 1 || tokenv[1] != "(")
+                    expect_error("'(' in 'function' call");
+                
+                if (tokenv[tokenc - 1] != ")")
                     expect_error("expression");
                 
-                string value = ltrim(src[i].substr(7));
+                tokenc = tokens(tokenv, trim_start(src[i].substr(7)));
                 
-                if (value[0] != '(') {
-                    cout << value << endl;
-                    
-                    expect_error("1 argument(s), got 0");
-                }
-                
-                size_t j = 1, k = 1;
-                for (; j < value.length(); ++j) {
-                    if (value[j] == '(')
-                        ++k;
-                    else if (value[j] == ')')
-                        --k;
-                    
-                    if (!k)
-                        break;
-                }
-                
-                if (k || j != value.length() - 1)
-                    expect_error("expression");
-                
-                tokenc = tokens(tokenv, value);
-                
+                size_t j;
                 for (j = 0; j < tokenc - 1; ++j)
                     swap(tokenv[j], tokenv[j + 1]);
                 
@@ -270,7 +246,7 @@ namespace ss {
                     else if (tokenv[e] == ")")
                         --j;
                     else if (!j && tokenv[e] == ",") {
-                        for (k = e; k > s + 1; --k) {
+                        for (size_t k = e; k > s + 1; --k) {
                             tokenv[s] += " " + tokenv[s + 1];
                             
                             for (size_t l = s + 1; l < tokenc - 1; ++l)
@@ -287,12 +263,13 @@ namespace ss {
                 for (j = e; j > s + 1; --j) {
                     tokenv[s] += " " + tokenv[s + 1];
                     
-                    for (k = s + 1; k < tokenc - 1; ++k)
+                    for (size_t k = s + 1; k < tokenc - 1; ++k)
                         swap(tokenv[k], tokenv[k + 1]);
                     
                     --tokenc;
                 }
                 
+                size_t k;
                 for (j = 0, k = (size_t)floor(tokenc / 2) + 1; j < k; ++j)
                     if (tokenv[j * 2] == ",")
                         throw error("Underflow");
@@ -310,100 +287,222 @@ namespace ss {
                 if (!tokenc)
                     expect_error("1 argument(s), got 0");
                 
-                if (tokenc > 2)
-                    expect_error("2 argument(s), got " + to_string(tokenc));
+                if (tokenc >= 3)
+                    expect_error("2 argument(s), got " + std::to_string(tokenc));
                 
-                tokenv[0] = ssu->evaluate(tokenv[0]);
+                tokenv[0] = cp->evaluate(tokenv[0]);
                 
                 if (ss::is_array(tokenv[0]))
-                    type_error("array", "string");
+                    type_error(array_t, string_t);
                 
                 if (tokenv[0].empty())
                     null_error();
                 
                 if (!is_string(tokenv[0]))
-                    type_error("double", "string");
+                    type_error(double_t, string_t);
                 
                 tokenv[0] = decode(tokenv[0]);
                 
-                if (tokenc == 1)
-                    tokenv[tokenc++] = ::filename(tokenv[0]);
+                if (tokenv[0].empty())
+                    undefined_error(encode(empty()));
                 
-                else if (!is_symbol(tokenv[1]))
-                    expect_error("symbol in 'include' statement specificer");
-
-                j = 0;
-                while (j < this->functionc && this->functionv[j]->first->name() != tokenv[1])
-                    ++j;
-                
-                if (j != this->functionc) {
-                    if (arr.index_of(tokenv[1]) == -1) {
-                        logger_write("'" + tokenv[1] + "' is defined\n");
-
-                        arr.push(tokenv[1]);
+                if (tokenv[0] == "fileSystem") {
+                    if (tokenc == 2)
+                        expect_error("1 argument(s), got 2");
+                    
+                    if (this->is_file_system) {
+                        if (modulev.index_of(filesystem_t) == -1) {
+                            modulev.push(filesystem_t);
+                         
+                            logger_write("'fileSystem' is defined\n");
+                        }
+                    } else {
+                        init_file_system();
+                        
+                        this->is_file_system = true;
                     }
-
+                    
                     continue;
                 }
                 
-                //  tree ensures file cannot include itself
-                ::node<string>* _parent = parent;
-                
-                while (_parent != NULL) {
-                    if (_parent->data() == node->data())
-                        throw error(_parent->data());
+                if (tokenv[0] == "mysql") {
+                    if (tokenc == 2)
+                        expect_error("1 argument(s), got 2");
                     
-                    _parent = _parent->parent();
+                    if (this->is_mysql) {
+                        if (modulev.index_of(mysql_t) == -1) {
+                            modulev.push(mysql_t);
+                         
+                            logger_write("'mysql' is defined\n");
+                        }
+                    } else {
+                        init_mysql();
+                        
+                        this->is_mysql = true;
+                    }
+                    
+                    continue;
                 }
+                
+                if (tokenv[0] == "socket") {
+                    if (tokenc == 2)
+                        expect_error("1 argument(s), got 2");
                     
-                if (is_pow(this->functionc, 2)) {
-                    pair<::file*, bool>** tmp = new pair<::file*, bool>*[this->functionc * 2];
-                    for (size_t k = 0; k < this->functionc; ++k)
-                        tmp[k] = this->functionv[k];
+                    if (this->is_socket) {
+                        if (modulev.index_of(socket_t) == -1) {
+                            modulev.push(socket_t);
+                         
+                            logger_write("'socket' is defined\n");
+                        }
+                    } else {
+                        init_socket();
+                        
+                        this->is_socket = true;
+                    }
                     
-                    delete[] this->functionv;
-                    this->functionv = tmp;
+                    continue;
                 }
                 
-                if (tokenv[0].length() > 1 && tokenv[0][0] == '@' && tokenv[0][1] == '/')
-                    tokenv[0] = base_dir() + tokenv[0].substr(2) + ".txt";
+                if (tokenv[0].length() > 1 && tokenv[0][0] == '@' && tokenv[0][1] == '/') {
+                    string tmp = get_base_dir() + tokenv[0].substr(2);
+                    
+                    if (tokenv[0][tokenv[0].length() - 1] != '/')
+                        tmp += ".txt";
+                    
+                    tokenv[0] = tmp;
+                }
                 
-                string _buid = ssu->backup();
+                vector<string> dst;
                 
-                ssu->reload();
+                read_dirs(dst, tokenv[0]);
                 
-                ::file* file = new ::file(tokenv[0], node, ssu);
+                if (!dst.size())
+                    throw error("No such file: " + tokenv[0]);
                 
-                file->parent = this;
-                file->rename(tokenv[1]);
+                if (tokenc == 2) {
+                    if (dst.size() != 1)
+                        logger_write(dst[0] + " is a directory\n");
+                    
+                    tokenv[1] = cp->evaluate(tokenv[1]);
+                    
+                    if (ss::is_array(tokenv[1]))
+                        type_error(array_t, string_t);
+                    
+                    if (tokenv[1].empty())
+                        null_error();
+                    
+                    if (!is_string(tokenv[1]))
+                        type_error(double_t, string_t);
+                    
+                    tokenv[1] = decode(tokenv[1]);
+                    
+                    string basename = ::basename(dst[0]);
+                    
+                    if (tokenv[1].length()) {
+                        string valuev[1024];
+                        size_t valuec = read(valuev, dst[0], tokenv[1]);
+                        
+                        this->valuev.push_back(pair<string, string>(basename, stringify(valuec, valuev)));
+                    } else
+                        this->valuev.push_back(pair<string, string>(basename, encode_raw(read(dst[0]))));
+                    
+                    continue;
+                }
                 
-                this->functionv[this->functionc] = new pair<::file*, bool>(file, true);
-                
-                ssu->restore(_buid);
-                
-                size_t functionc = this->functionc++;
-                for (j = 0; j < this->functionv[functionc]->first->functionc; ++j) {
+                for (j = 0; j < dst.size(); ++j) {
+                    string basename = ::basename(dst[j]);
+                    
                     size_t k = 0;
-                    while (k < this->functionc && this->functionv[functionc]->first->functionv[j]->first->name() != this->functionv[k]->first->name())
+                    while (k < this->filec && this->filev[k]->first->name() != basename)
                         ++k;
                     
-                    if (k == this->functionc) {
-                        if (is_pow(this->functionc, 2)) {
-                            pair<::file*, bool>** tmp = new pair<::file*, bool>*[this->functionc * 2];
-                            for (size_t l = 0; l < this->functionc; ++l)
-                                tmp[l] = this->functionv[l];
-                            
-                            delete[] this->functionv;
-                            this->functionv = tmp;
+                    if (k != this->filec) {
+                        if (filev.index_of(basename) == -1) {
+                            logger_write("'" + basename + "' is defined\n");
+
+                            filev.push(basename);
                         }
+
+                        continue;
+                    }
+                    
+                    //  tree ensures file cannot include itself
+                    ::node<string>* _parent = parent;
+                    
+                    while (_parent != NULL) {
+                        if (_parent->data() == node->data())
+                            throw error("Recursive import: " + _parent->data());
                         
-                        this->functionv[this->functionc] = new pair<::file*, bool>(this->functionv[functionc]->first->functionv[j]->first, false);
-                        this->functionv[this->functionc]->first->consume();
+                        _parent = _parent->parent();
+                    }
+                    
+                    if (is_pow(this->filec, 2)) {
+                        pair<::file*, bool>** tmp = new pair<::file*, bool>*[this->filec * 2];
                         
-                        ++this->functionc;
-                    } else
-                        //  different instance than functionv[k]->first
-                        this->functionv[functionc]->first->functionv[j]->first->consume();
+                        for (size_t k = 0; k < this->filec; ++k)
+                            tmp[k] = this->filev[k];
+                        
+                        delete[] this->filev;
+                        
+                        this->filev = tmp;
+                    }
+                    
+                    size_t _state = cp->get_state();
+                    
+                    cp->set_state();
+                    
+                    ::file* _file = new ::file(dst[j], node, cp);
+                    
+                    _file->parent = this;
+                    
+                    this->filev[this->filec] = new pair<::file*, bool>(_file, true);
+                    
+                    if (this->filev[this->filec]->first->is_file_system && !this->is_file_system) {
+                        init_file_system();
+                        
+                        this->is_file_system = true;
+                    }
+                    
+                    if (this->filev[this->filec]->first->is_mysql && !this->is_mysql) {
+                        init_mysql();
+                        
+                        this->is_mysql = true;
+                    }
+                    
+                    if (this->filev[this->filec]->first->is_socket && !this->is_socket) {
+                        init_socket();
+                        
+                        this->is_socket = true;
+                    }
+                    
+                    cp->set_state(_state);
+                    
+                    size_t filec = this->filec++;
+                    for (size_t k = 0; k < this->filev[filec]->first->filec; ++k) {
+                        size_t l = 0;
+                        while (l < this->filec && this->filev[filec]->first->filev[k]->first->name() != this->filev[l]->first->name())
+                            ++l;
+                        
+                        if (l == this->filec) {
+                            if (is_pow(this->filec, 2)) {
+                                pair<::file*, bool>** tmp = new pair<::file*, bool>*[this->filec * 2];
+                                for (size_t m = 0; m < this->filec; ++m)
+                                    tmp[m] = this->filev[m];
+                                
+                                delete[] this->filev;
+                                
+                                this->filev = tmp;
+                            }
+                            
+                            this->filev[this->filec] = new pair<::file*, bool>(this->filev[filec]->first->filev[k]->first, false);
+                            this->filev[this->filec]->first->consume();
+                            
+                            ++this->filec;
+                        } else
+                            //  different instance than filev[k]->first
+                            this->filev[filec]->first->filev[k]->first->consume();
+                    }
+                    
                 }
                 
                 continue;
@@ -412,7 +511,7 @@ namespace ss {
             break;
         }
         
-        ssu->restore(buid);
+        cp->set_state(state);
         
         for (; i > 0; --i) {
             for (size_t j = i - 1; j < n - 1; ++j)
@@ -422,11 +521,12 @@ namespace ss {
         }
         
         if (!n) {
-            if (!this->functionc)
+            if (!this->filec && !this->is_file_system &&
+                !this->is_mysql && !this->is_socket)
                 logger_write("'file' statement has empty body\n");
             
             else
-                //  configuration file
+                //  config. file
                 this->consume();
         }
         
@@ -436,16 +536,21 @@ namespace ss {
         delete[] src;
         
         this->filename = filename;
-        this->ssu = ssu;
+        this->set_cp(cp);
         this->target = new file_statement(this, statementc, statementv);
     }
 
     void file::close() {
-        for (size_t i = 0; i < this->functionc; ++i)
-            if (this->functionv[i]->second)
-                this->functionv[i]->first->close();
+        for (size_t i = 0; i < this->filec; ++i) {
+            if (this->filev[i]->second)
+                this->filev[i]->first->close();
+            
+            delete this->filev[i];
+        }
         
-        delete[] this->functionv;
+        delete[] this->filev;
+        
+        this->target->close();
     }
 
     //  MEMBER FUNCTIONS
@@ -461,7 +566,44 @@ namespace ss {
                 expect_error("expression");
             }
             
-            if (tokenv[0] == "catch") {
+            if (tokenv[0] == "case") {
+                delete[] tokenv;
+                
+                size_t k;   int p = 1;
+                for (k = i + 1; k < end; ++k) {
+                    tokenv = new string[src[k].length() + 1];
+                    tokenc = tokens(tokenv, src[k]);
+                    
+                    if (tokenv[0] == "switch") {
+                        delete[] tokenv;
+                        ++p;
+                    } else {
+                        if (tokenc > 1 && tokenv[0] == "end" && tokenv[1] == "switch") {
+                            delete[] tokenv;
+                            
+                            --p;
+                            
+                            if (!p)
+                                break;
+                        } else if (p == 1) {
+                            if (tokenv[0] == "case" || tokenv[0] == "default") {
+                                delete[] tokenv;
+                                break;
+                            }
+                            
+                            delete[] tokenv;
+                        } else
+                            delete[] tokenv;
+                    }
+                }
+                
+                statement_t** _dst = new statement_t*[k - i - 1];
+                size_t _s = build(_dst, src, i + 1, k);
+                
+                dst[s++] = new case_statement(trim_start(src[i].substr(4)), _s, _dst);
+                
+                i = k;
+            } else if (tokenv[0] == "catch") {
                 delete[] tokenv;
                 
                 if (tokenc > 2)
@@ -503,7 +645,45 @@ namespace ss {
                 statement_t** _dst = new statement_t*[k - i - 1];
                 size_t _s = build(_dst, src, i + 1, k);
                 
-                dst[s++] = new catch_statement(ltrim(src[i].substr(5)), _s, _dst);
+                dst[s++] = new catch_statement(trim_start(src[i].substr(5)), _s, _dst);
+                i = k;
+            } else if (tokenv[0] == "default") {
+                delete[] tokenv;
+                
+                if (tokenc > 1)
+                    expect_error("';' after expression");
+                
+                size_t k;   int p = 1;
+                for (k = i + 1; k < end; ++k) {
+                    if (tokenv[0] == "switch")
+                        ++p;
+                    else {
+                        tokenv = new string[src[k].length() + 1];
+                        tokenc = tokens(tokenv, src[k]);
+                        
+                        if (tokenc > 1 && tokenv[0] == "end" && tokenv[1] == "switch") {
+                            delete[] tokenv;
+                            
+                            --p;
+                            
+                            if (!p)
+                                break;
+                        } else if (p == 1) {
+                            if (tokenv[0] == "case" || tokenv[0] == "default") {
+                                delete[] tokenv;
+                                expect_error("'end switch'");
+                            }
+                            
+                            delete[] tokenv;
+                        } else
+                            delete[] tokenv;
+                    }
+                }
+                
+                statement_t** _dst = new statement_t*[k - i - 1];
+                size_t _s = build(_dst, src, i + 1, k);
+                
+                dst[s++] = new default_statement(_s, _dst);
                 i = k;
             } else if (tokenc > 1 && tokenv[0] == "do" && tokenv[1] == "while") {
                 delete[] tokenv;
@@ -555,7 +735,7 @@ namespace ss {
                 statement_t** _dst = new statement_t*[k - i - 1];
                 size_t _s = build(_dst, src, i + 1, k);
                 
-                dst[s++] = new do_while_statement(ltrim(src[i].substr(j)), _s, _dst);
+                dst[s++] = new do_while_statement(trim_start(src[i].substr(j)), _s, _dst);
                 i = k + 1;
             } else if (tokenc > 1 && tokenv[0] == "else" && tokenv[1] == "if") {
                 delete[] tokenv;
@@ -603,7 +783,7 @@ namespace ss {
                 statement_t** _dst = new statement_t*[k - i - 1];
                 size_t _s = build(_dst, src, i + 1, k);
                 
-                dst[s++] = new else_if_statement(ltrim(src[i].substr(j)), _s, _dst);
+                dst[s++] = new else_if_statement(trim_start(src[i].substr(j)), _s, _dst);
                 i = k;
             } else if (tokenv[0] == "else") {
                 delete[] tokenv;
@@ -713,7 +893,7 @@ namespace ss {
                 statement_t** _dst = new statement_t*[k - i - 1];
                 size_t _s = build(_dst, src, i + 1, k);
                 
-                dst[s++] = new for_statement(ltrim(src[i].substr(3)), _s, _dst);
+                dst[s++] = new for_statement(trim_start(src[i].substr(3)), _s, _dst);
                 
                 i = k + 1;
             } else if (tokenv[0] == "func") {
@@ -747,7 +927,7 @@ namespace ss {
                 statement_t** _dst = new statement_t*[k - i - 1];
                 size_t _s = build(_dst, src, i + 1, k);
                 
-                dst[s++] = new function_statement(ltrim(src[i].substr(4)), _s, _dst);
+                dst[s++] = new function_statement(trim_start(src[i].substr(4)), _s, _dst);
                 i = k + 1;
             } else if (tokenv[0] == "if") {
                 delete[] tokenv;
@@ -780,7 +960,41 @@ namespace ss {
                 statement_t** _dst = new statement_t*[k - i - 1];
                 size_t _s = build(_dst, src, i + 1, k);
                 
-                dst[s++] = new if_statement(ltrim(src[i].substr(2)), _s, _dst);
+                dst[s++] = new if_statement(trim_start(src[i].substr(2)), _s, _dst);
+                
+                i = k + 1;
+            } else if (tokenv[0] == "switch") {
+                delete[] tokenv;
+                
+                size_t k;   int p = 1;
+                for (k = i + 1; k < end; ++k) {
+                    tokenv = new string[src[k].length() + 1];
+                    tokenc = tokens(tokenv, src[k]);
+                    
+                    if (tokenv[0] == "switch") {
+                        delete[] tokenv;
+                        ++p;
+                    } else if (tokenc >= 2 && tokenv[0] == "end" && tokenv[1] == "switch") {
+                        delete[] tokenv;
+                        
+                        if (tokenc > 2)
+                            expect_error("';' after expression");
+                        
+                        --p;
+                        
+                        if (!p)
+                            break;
+                    } else
+                        delete[] tokenv;
+                }
+                
+                if (k == end)
+                    expect_error("'end switch'");
+                
+                statement_t** _dst = new statement_t*[k - i - 1];
+                size_t _s = build(_dst, src, i + 1, k);
+                
+                dst[s++] = new switch_statement(trim_start(src[i].substr(6)), _s, _dst);
                 
                 i = k + 1;
             } else if (tokenv[0] == "try") {
@@ -858,39 +1072,39 @@ namespace ss {
                 statement_t** _dst = new statement_t*[k - i - 1];
                 size_t _s = build(_dst, src, i + 1, k);
                 
-                dst[s++] = new while_statement(ltrim(src[i].substr(5)), _s, _dst);
+                dst[s++] = new while_statement(trim_start(src[i].substr(5)), _s, _dst);
                 i = k + 1;
             } else {
                 if (tokenv[0] == "assert") {
                     delete[] tokenv;
-                    dst[s] = new assert_statement(ltrim(src[i].substr(6)));
+                    dst[s] = new assert_statement(trim_start(src[i].substr(6)));
                 } else if (src[i] == "break") {
                     delete[] tokenv;
                     dst[s] = new break_statement();
-                } else if (tokenv[0] == "consume") {
+                } else if (tokenv[0] == "suppress") {
                     delete[] tokenv;
-                    dst[s] = new consume_statement(ltrim(src[i].substr(8)));
+                    dst[s] = new suppress_statement(trim_start(src[i].substr(8)));
                 } else if (src[i] == "continue") {
                     delete[] tokenv;
                     dst[s] = new continue_statement();
                 } else if (tokenv[0] == "define") {
                     delete[] tokenv;
-                    dst[s] = new define_statement(ltrim(src[i].substr(6)));
+                    dst[s] = new define_statement(trim_start(src[i].substr(6)));
                 } else if (tokenv[0] == "echo") {
                     delete[] tokenv;
-                    dst[s] = new echo_statement(ltrim(src[i].substr(4)));
+                    dst[s] = new echo_statement(trim_start(src[i].substr(4)));
                 } else if (src[i] == "exit") {
                     delete[] tokenv;
                     dst[s] = new exit_statement();
                 } else if (tokenv[0] == "return") {
                     delete[] tokenv;
-                    dst[s] = new return_statement(ltrim(src[i].substr(6)));
+                    dst[s] = new return_statement(trim_start(src[i].substr(6)));
                 } else if (tokenv[0] == "sleep") {
                     delete[] tokenv;
-                    dst[s] = new sleep_statement(ltrim(src[i].substr(5)));
+                    dst[s] = new sleep_statement(trim_start(src[i].substr(5)));
                 } else if (tokenv[0] == "throw") {
                     delete[] tokenv;
-                    dst[s] = new throw_statement(ltrim(src[i].substr(5)));
+                    dst[s] = new throw_statement(trim_start(src[i].substr(5)));
                 } else {
                     delete[] tokenv;
                     dst[s] = new statement(src[i]);
@@ -905,29 +1119,51 @@ namespace ss {
     }
 
     string file::call(const size_t argc, string* argv) {
-        string buid = this->ssu->backup();
+        size_t state = this->cp->get_state();
         
-        this->ssu->reload();
+        this->cp->set_state();
         
-        string _buid = this->ssu->backup();
+        size_t _state = this->cp->get_state();
         
-        this->ssu->set_function(this);
+        for (size_t i = 0; i < this->valuev.size(); ++i) {
+            if (ss::is_array(this->valuev[i].second))
+                this->cp->set_array(this->valuev[i].first, this->valuev[i].second);
+                
+            else if (this->valuev[i].second.empty() || is_string(this->valuev[i].second))
+                this->cp->set_string(this->valuev[i].first, this->valuev[i].second);
+            else
+                this->cp->set_number(this->valuev[i].first, stod(this->valuev[i].second));
+        }
         
-        for (size_t i = 0; i < this->functionc; ++i)
-            this->ssu->set_function(this->functionv[i]->first);
+        if (this->is_file_system)
+            set_file_system(cp);
+        
+        if (this->is_mysql)
+            set_mysql(cp);
+        
+        if (this->is_socket)
+            set_socket(cp);
+
+        this->cp->set_function(this);
+        
+        for (size_t i = 0; i < this->filec; ++i)
+            this->cp->set_function(this->filev[i]->first);
         
         ss::array<string> arr = this->marshall(argc, argv);
         
-        this->ssu->set_array("argv", stringify(arr));
-        this->ssu->evaluate("shrink argv");
-        this->ssu->consume("argv");
+        this->cp->set_array("argv", stringify(arr));
+        this->cp->evaluate("shrink argv");
+        this->cp->consume("argv");
         
-        string result = this->target->execute(this->ssu);
+        this->should_pause = false;
+        
+        string result = this->target->execute(this->cp);
+        
+//        while (this->should_pause);
         
         this->consume();
-        
-        this->ssu->restore(_buid);
-        this->ssu->restore(buid);
+        this->cp->set_state(_state);
+        this->cp->set_state(state);
         
         return result;
     }
@@ -946,15 +1182,15 @@ namespace ss {
     void file::kill() {
         this->target->kill();
         
-        for (size_t i = 0; i < this->functionc; ++i)
-            if (this->functionv[i]->second)
-                this->functionv[i]->first->kill();
+        for (size_t i = 0; i < this->filec; ++i)
+            if (this->filev[i]->second)
+                this->filev[i]->first->kill();
     }
 
     ss::array<string> file::marshall(const size_t argc, string* argv) const {
         ss::array<string> data = ss::array<string>(argc * 2 + 1);
         
-        size_t j = 1;
+        size_t j = 0;
         for (size_t i = 0; i < argc; ++i) {
             string valuev[argv[i].length() + 1];
             size_t valuec = parse(valuev, argv[i]);
@@ -962,7 +1198,7 @@ namespace ss {
             if (valuec > j)
                 j = valuec;
             
-            data.push(to_string(valuec));
+            data.push(std::to_string(valuec));
             
             for (size_t k = 0; k < valuec; ++k)
                 data.push(valuev[k]);
@@ -975,14 +1211,13 @@ namespace ss {
                 data.insert(i * (j + 1) + k + l + 1, empty());
         }
         
-        data.insert(0, to_string(j + 1));
-        data.insert(1, to_string(1));
-        data.insert(2, encode(this->filename));
-        
-        for (size_t k = 1; k < j; ++k)
-            data.insert(k + 2, empty());
+        data.insert(0, std::to_string(j + 1));
         
         return data;
+    }
+
+    void file::set_cp(command_processor* cp) {
+        this->cp = cp;
     }
 
     void file::set_level(const size_t level) {
@@ -992,9 +1227,13 @@ namespace ss {
             this->parent->set_level(this->get_level());
     }
 
-    //  NON-MEMBER FUNCTIONS
-
-    string base_dir() {
-        return "/Library/Application Support/SimpleScript/ssl/";
+    void file::set_pause(const bool pause) {
+        this->should_pause = pause;
+        
+        this->target->set_pause(pause);
+        
+        for (size_t i = 0; i < this->filec; ++i)
+            if (this->filev[i]->second)
+                this->filev[i]->first->set_pause(pause);
     }
 }

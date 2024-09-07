@@ -30,35 +30,38 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        bool analyze(interpreter* ssu) const {
+        bool analyze(command_processor* cp) const {
             return false;
         }
         
-        bool compare(const int value) const {
+        bool compare(const statement_type value) const {
             return false;
         }
         
-        string evaluate(interpreter* ssu) {
+        string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
             return empty();
         }
         
-        string execute(interpreter* ssu) {
-            string val = ssu->evaluate(this->expression);
+        string execute(command_processor* cp) {
+#if DEBUG_LEVEL
+            assert(cp != NULL);
+#endif
+            string val = cp->evaluate(this->expression);
             
             if (ss::is_array(val))
-                type_error("array", "int");
+                type_error(array_t, int_t);
             
             if (is_string(val))
-                type_error("string", "int");
+                type_error(string_t, int_t);
             
             double num = stod(val);
             
             if (!is_int(num))
-                type_error("double", "int");
+                type_error(int_t, double_t);
             
             if (num < 0)
-                range_error(rtrim(num));
+                range_error(std::to_string((int)num));
             
             this_thread::sleep_for(milliseconds((long)num));
             
@@ -87,6 +90,8 @@ namespace ss {
         }
         
         void set_parent(statement_t* parent) { }
+        
+        void set_pause(const bool pause) { }
         
         void set_return(const string result) {
             unsupported_error("set_return()");
