@@ -30,8 +30,8 @@ func main()
     if nrows(argv) === 2
         pat = ((argv row 1) slice 1, (argv cell 1, 0))
         
-        if typeOf toArray pat !== "string"
-            typeExcept(typeOf toArray pat, "string")
+        if typeOf array(...pat) !== "string"
+            typeExcept(typeOf array(...pat), "string")
         end if
     end if
 

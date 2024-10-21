@@ -82,7 +82,7 @@ namespace ss {
                 break;
         }
         
-        return empty();
+        return null();
     }
 
     void catch_statement::set_break() {

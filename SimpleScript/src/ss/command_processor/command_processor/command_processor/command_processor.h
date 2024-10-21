@@ -15,6 +15,7 @@
 #include "tuo.h"
 #include "uuo.h"
 #include <algorithm>    //  tolower, toupper
+#include <filesystem>
 
 using namespace std::chrono;
 
@@ -75,6 +76,7 @@ namespace ss {
         //  MEMBER FIELDS
             
         size_t additive_pos;
+        size_t additive_assignment_pos;
         size_t aggregate_pos;        //  lambda
         size_t arithmetic_pos;
         size_t assignment_pos;
@@ -85,6 +87,7 @@ namespace ss {
         size_t const_pos;
         size_t contains_pos;
         size_t reserve_pos;
+        size_t direct_assignment_pos;
         size_t equality_pos;
         size_t fill_pos;
         size_t filter_pos;           //  lambda
@@ -98,7 +101,7 @@ namespace ss {
         size_t last_index_of_pos;
         size_t logical_pos;
         size_t map_pos;              //  lambda
-        size_t coalescing_pos;
+        size_t nullish_coalescing_pos;
         size_t resize_pos;
         size_t row_pos;
         size_t relational_pos;

@@ -5,7 +5,7 @@
 
 include("@/exception/expectExcept")
 
-func onMessage(_, message)
+func onMessage(message)
     _message = message
 
     sync = false

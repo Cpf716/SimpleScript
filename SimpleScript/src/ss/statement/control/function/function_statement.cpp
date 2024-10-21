@@ -300,14 +300,14 @@ namespace ss {
 
     string function_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string function_statement::execute(command_processor* cp) {
         this->cp = cp;
         this->cp->set_function(this);
         
-        return empty();
+        return null();
     }
 
     void function_statement::exit() {

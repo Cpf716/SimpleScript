@@ -65,7 +65,7 @@ namespace ss {
 
     string do_while_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string do_while_statement::execute(command_processor* cp) {
@@ -103,7 +103,7 @@ namespace ss {
             cp->set_state(state);
         }
         
-        return empty();
+        return null();
     }
 
     void do_while_statement::set_break() {

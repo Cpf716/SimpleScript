@@ -16,7 +16,7 @@ func main()
         j = i + 1
         while j < count arr
             if arr.i === arr.j
-                arr splice j
+                arr splice j, 1
             else
                 j += 1
             end if

@@ -5,7 +5,6 @@
 
 include("/Library/Application Support/SimpleScript/example/socket/config.txt")
 include("@/exception/rangeExcept")
-include("@/string")
 include("@/socket/constants/ERRNOs")
 include("socket")
 
@@ -35,8 +34,8 @@ func main()
     if nrows(argv) === 2
         verbose = ((argv row 1) slice 1, (argv cell 1, 0))
         
-        if typeOf toArray verbose !== "number"
-            typeExcept(typeOf toArray verbose, "number")
+        if typeOf array(...verbose) !== "number"
+            typeExcept(typeOf array(...verbose), "number")
         end if
     end if
     

@@ -5,7 +5,6 @@
 
 include((dir = "@/exception/") + "expectExcept")
 include(dir + "rangeExcept")
-include("@/string")
 
 func main()
     if nrows(argv) !== 2

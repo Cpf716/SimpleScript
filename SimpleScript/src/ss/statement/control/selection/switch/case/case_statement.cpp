@@ -88,7 +88,7 @@ namespace ss {
                 break;
         }
         
-        return empty();
+        return null();
     }
 
     void case_statement::set_break() {

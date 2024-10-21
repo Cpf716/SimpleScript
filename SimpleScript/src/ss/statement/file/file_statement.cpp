@@ -62,7 +62,7 @@ namespace ss {
 
     string file_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string file_statement::execute(command_processor* cp) {

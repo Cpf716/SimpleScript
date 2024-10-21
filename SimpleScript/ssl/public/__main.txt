@@ -4,13 +4,13 @@
 //
 
 func main()
-    array str = "-------------- SimpleScript ------------\n"
+    array str = "  -------------- SimpleScript ------------\n"
     
     str += "  Options:\n"
     str += "  <filename> <...argv>\n"
     str += "  ----------------------------------------\n"
 
-    return str join ""
+    echo str join ""
 end func
 
-return main()
+main()

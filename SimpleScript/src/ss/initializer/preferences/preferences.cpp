@@ -478,10 +478,6 @@ namespace ss {
         return result;
     }
 
-    std::string empty() {
-        return std::string();
-    }
-
     std::string encode(const std::string str) {
         size_t n = str.length();
         
@@ -953,6 +949,10 @@ namespace ss {
         return len;
     }
 
+    std::string null() {
+        return std::string();
+    }
+
     size_t parse(std::string* dst, const std::string src, std::string sep) {
 #if DEBUG_LEVEL
         assert(dst != NULL);
@@ -1000,7 +1000,7 @@ namespace ss {
             return val;
         
         if (is_number(val))
-            return trim_end(parse_number(val));
+            return encode(parse_number(val));
         
         return encode_raw(val);
     }
@@ -1013,7 +1013,7 @@ namespace ss {
             return val;
         
         if (is_number(val))
-            return trim_end(parse_number(val));
+            return encode(parse_number(val));
         
         std::string str = val;
         
@@ -1093,7 +1093,7 @@ namespace ss {
         for (size_t i = 0; i < p; ++i) {
             int j = stoi(dst[i * m]);
             for (size_t k = 0; k < m - j - 1; ++k) {
-                dst[n] = empty();
+                dst[n] = null();
                 
                 for (size_t l = n; l > i * m + j + k + 1; --l)
                     std::swap(dst[l], dst[l - 1]);
@@ -1204,7 +1204,7 @@ namespace ss {
             i += tokenc;
         }
         
-        n = merge(n, dst, empty());
+        n = merge(n, dst, null());
         
         int p = 0;
         for (i = 0; i < n; ++i) {
@@ -1249,7 +1249,7 @@ namespace ss {
         return str.substr(s, e - s);
     }
 
-    std::string trim_end(const double num) {
+    std::string encode(const double num) {
         std::string str = std::to_string(num);
         
         size_t n = str.length();

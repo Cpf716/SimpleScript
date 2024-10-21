@@ -4,37 +4,37 @@
 
 ### Unary Operators
 
-| Opcode     | Parameters            | Return Value                                                            |
-| ---------- | --------------------- | ----------------------------------------------------------------------- |
-| abs        | num                   | absolute value of `num` (double)                                        |
-| cbrt       | num                   | cube root of `num` (double)                                             |
-| ceil       | num                   | ceiling of `num` (int)                                                  |
-| floor      | num                   | floor of `num` (int)                                                    |
-| log        | num                   | natural log of `num` (double)                                           |
-| sqrt       | num                   | square root of `num` (double)                                           |
-| !          | val                   | negation of `val` (int)                                                 |
-| count      | val (array \| string) | number of elements or characters in `val` (int)                         |
-| first      | arr                   | first element in `arr` (number \| string)                               |
-| inverse    | tab                   | `tab` with its rows and columns swapped (table)                         |
-| isAlpha    | str                   | 1 if `str` is comprised only of [A-Z][a-z], otherwise 0 (string)        |
-| isAlnum    | str                   | 1 if `str` is comprised only of [0-9][A-Z][a-z], otherwise 0 (string)   |
-| isDigits   | str                   | 1 if `str` is comprised only of [0-9], otherwise 0 (string)             |
-| isLower    | str                   | 1 if `str` is comprised only of lowercase letters, otherwise 0 (string) |
-| isSpace    | str                   | 1 if `str` is comprised only of spaces, otherwise 0 (string)            |
-| isUpper    | str                   | 1 if `str` is comprised only of uppercase letters, otherwise 0 (string) |
-| keys       | dict                  | `dict`'s keys (array \| string)                                         |
-| last       | arr                   | last element in `arr` (number \| string)                                |
-| parse      | str                   | number parsed from `str`, otherwise `nan` (number)                      |
-| shrink     | arr                   | previous `sizeOf arr` (int)                                             |
-| sizeOf     | arr                   | capacity of `arr` (int)                                                 |
-| subtypeOf  | val                   | subtype of `val` (string)                                               |
-| toArray    | val (array \| string) | copy of `arr` or `val`'s character array (array \| string)              |
-| toChar     | int                   | character representation of `int` (char)                                |
-| toCharCode | char                  | integer representation of `char` (int)                                  |
-| toLower    | str                   | `str` converted to lowercase (string)                                   |
-| toUpper    | str                   | `str` converted to uppercase (string)                                   |
-| typeOf     | val                   | base type of `val` (string)                                             |
-| values     | dict                  | `dict`'s values (array \| string)                                       |
+| Opcode      | Parameters            | Return Value                                                            |
+| ----------- | --------------------- | ----------------------------------------------------------------------- |
+| abs         | num                   | absolute value of `num` (double)                                        |
+| cbrt        | num                   | cube root of `num` (double)                                             |
+| ceil        | num                   | ceiling of `num` (int)                                                  |
+| floor       | num                   | floor of `num` (int)                                                    |
+| log         | num                   | natural log of `num` (double)                                           |
+| sqrt        | num                   | square root of `num` (double)                                           |
+| !           | val                   | negation of `val` (int)                                                 |
+| count       | val (array \| string) | number of elements or characters in `val` (int)                         |
+| first       | arr                   | first element in `arr` (number \| string)                               |
+| inverse     | tab                   | `tab` with its rows and columns swapped (table)                         |
+| isAlpha     | str                   | 1 if `str` is comprised only of [A-Z][a-z], otherwise 0 (string)        |
+| isAlnum     | str                   | 1 if `str` is comprised only of [0-9][A-Z][a-z], otherwise 0 (string)   |
+| isDigits    | str                   | 1 if `str` is comprised only of [0-9], otherwise 0 (string)             |
+| isLower     | str                   | 1 if `str` is comprised only of lowercase letters, otherwise 0 (string) |
+| isSpace     | str                   | 1 if `str` is comprised only of spaces, otherwise 0 (string)            |
+| isUpper     | str                   | 1 if `str` is comprised only of uppercase letters, otherwise 0 (string) |
+| keys        | dict                  | `dict`'s keys (array \| string)                                         |
+| last        | arr                   | last element in `arr` (number \| string)                                |
+| parse       | str                   | number parsed from `str`, otherwise `nan` (number)                      |
+| shrink      | arr                   | previous `sizeOf arr` (int)                                             |
+| sizeOf      | arr                   | capacity of `arr` (int)                                                 |
+| subtypeOf   | val                   | subtype of `val` (string)                                               |
+| toCharArray | str (string)          | `str`'s character array (array \| char)                                 |
+| toChar      | int                   | character representation of `int` (char)                                |
+| toCharCode  | char                  | integer representation of `char` (int)                                  |
+| toLower     | str                   | `str` converted to lowercase (string)                                   |
+| toUpper     | str                   | `str` converted to uppercase (string)                                   |
+| typeOf      | val                   | base type of `val` (string)                                             |
+| values      | dict                  | `dict`'s values (array \| string)                                       |
 
 ### Binary Operators
 

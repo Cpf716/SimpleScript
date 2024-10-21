@@ -88,7 +88,7 @@ namespace ss {
                 break;
         }
             
-        return empty();
+        return null();
     }
 
     void else_if_statement::set_break() {

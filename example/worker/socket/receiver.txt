@@ -4,7 +4,6 @@
 //
 
 include("@/exception/rangeExcept")
-include("@/string")
 include("socket")
 
 func main()

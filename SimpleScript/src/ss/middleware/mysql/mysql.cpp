@@ -12,7 +12,7 @@ namespace ss {
         int conc = 0;
         vector<pair<int, sql::Connection*>> conv;
     
-        int _find_con(const int key, const size_t beg, const size_t end) {
+        int find_con(const int key, const size_t beg = 0, const size_t end = conv.size()) {
             if (beg == end)
                 return -1;
             
@@ -22,13 +22,9 @@ namespace ss {
                 return (int)(beg + len);
             
             if (conv[beg + len].first > key)
-                return _find_con(key, beg, beg + len);
+                return find_con(key, beg, beg + len);
             
-            return _find_con(key, beg + len + 1, end);
-        }
-    
-        int _find_con(const int key) {
-            return _find_con(key, 0, conv.size());
+            return find_con(key, beg + len + 1, end);
         }
 
         int mysql_connect(const string host, const string usr, const string pwd) {
@@ -50,7 +46,7 @@ namespace ss {
         }
 
         int mysql_close(const int con) {
-            int i = _find_con(con);
+            int i = find_con(con);
             
             if (i == -1)
                 return -1;
@@ -86,7 +82,7 @@ namespace ss {
         }
 
         int mysql_set_schema(const int con, const std::string sch) {
-            int i = _find_con(con);
+            int i = find_con(con);
             
             if (i == -1)
                 return -1;
@@ -102,7 +98,7 @@ namespace ss {
         }
 
         sql::ResultSet* mysql_prepared_query(const int con, const string sql, const size_t argc, string* argv) {
-            int i = _find_con(con);
+            int i = find_con(con);
             
             if (i == -1)
                 return NULL;
@@ -131,7 +127,7 @@ namespace ss {
         }
 
         int mysql_prepared_update(const int con, const string sql, const size_t argc, string* argv) {
-            int i = _find_con(con);
+            int i = find_con(con);
             
             if (i == -1)
                 return -1;
@@ -161,7 +157,7 @@ namespace ss {
         }
 
         int mysql_update(const int con, const string sql) {
-            int i = _find_con(con);
+            int i = find_con(con);
             
             if (i == -1)
                 return -1;
@@ -184,7 +180,7 @@ namespace ss {
         }
 
         sql::ResultSet* mysql_query(const int con, const string sql) {
-            int i = _find_con(con);
+            int i = find_con(con);
             
             if (i == -1)
                 return NULL;

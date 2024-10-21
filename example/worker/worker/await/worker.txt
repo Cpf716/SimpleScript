@@ -4,11 +4,11 @@
 //
 
 func main()
-    sw = start()
+    stopwatch = start()
 
-    sleep rand() % 3_000
+    setTimeoutSync(rand() % 3_000)
     
-    return stop(sw)
+    return stop(stopwatch)
 end func
 
 return main()

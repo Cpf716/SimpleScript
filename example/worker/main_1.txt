@@ -4,10 +4,10 @@
 //
 
 n = 0
-sw = start()
+stopwatch = start()
 
 func onMessage(workerId, message)
-    echo "Worker {} returned in {} s.\n" format array(workerId + 1, lap(sw))
+    echo "Worker {} returned in {} s.\n" format array(workerId + 1, lap(stopwatch))
     n += 1
 end func
 

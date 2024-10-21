@@ -47,14 +47,14 @@ namespace ss {
             string* tokenv = new string[pow_2(src[i].length() + 1)];
             size_t tokenc = tokenize(tokenv, src[i], "/*");
             
-            tokenc = merge(tokenc, tokenv, empty());
+            tokenc = merge(tokenc, tokenv, null());
             
             size_t j = 0;
             while (j < tokenc) {
                 string _tokenv[tokenv[j].length() + 1];
                 size_t _tokenc = tokenize(_tokenv, tokenv[j], "*/");
                 
-                _tokenc = merge(_tokenc, _tokenv, empty());
+                _tokenc = merge(_tokenc, _tokenv, null());
                 tokenv[j] = trim(_tokenv[0]);
                 
                 for (size_t k = 1; k < _tokenc; ++k) {
@@ -304,7 +304,7 @@ namespace ss {
                 tokenv[0] = decode(tokenv[0]);
                 
                 if (tokenv[0].empty())
-                    undefined_error(encode(empty()));
+                    undefined_error(encode(null()));
                 
                 if (tokenv[0] == "fileSystem") {
                     if (tokenc == 2)
@@ -379,6 +379,7 @@ namespace ss {
                 if (!dst.size())
                     throw error("No such file: " + tokenv[0]);
                 
+                // file import
                 if (tokenc == 2) {
                     if (dst.size() != 1)
                         logger_write(dst[0] + " is a directory\n");
@@ -1208,7 +1209,7 @@ namespace ss {
             size_t k = stoi(data[i * (j + 1)]);
             
             for (size_t l = 0; l < j - k; ++l)
-                data.insert(i * (j + 1) + k + l + 1, empty());
+                data.insert(i * (j + 1) + k + l + 1, null());
         }
         
         data.insert(0, std::to_string(j + 1));

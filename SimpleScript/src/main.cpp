@@ -13,54 +13,58 @@ using namespace ss;
 
 command_processor cp;
 
-size_t intervalc = 0, timeoutc = 0;
+vector<int> timeoutv;
+
+int find_timeout(const int key, const size_t beg = 0, const size_t end = timeoutv.size()) {
+    if (beg == end)
+        return -1;
+    
+    size_t len = floor((end - beg) / 2);
+    
+    if (timeoutv[beg + len] == key)
+        return (int)(beg + len);
+    
+    if (timeoutv[beg + len] > key)
+        return find_timeout(key, beg, beg + len);
+    
+    return find_timeout(key, beg + len + 1, end);
+}
 
 //  NON-MEMBER FUNCTIONS
 
-void set_interval() {
-    double num = cp.get_number("interval");
-    
-    size_t lis = intervalc++;
-    
-    if (!num)
-        return;
+void set_interval(int interval) {
+    int id = timeoutv[timeoutv.size() - 1];
     
     while (true) {
-        this_thread::sleep_for(seconds((int)num));
+        this_thread::sleep_for(seconds(interval));
         
-        if (lis != intervalc - 1)
-            break;
+        int index = find_timeout(id);
+        if (index == -1)
+            return;
         
         call(&cp, "onInterval");
     }
 }
 
-void set_timeout() {
-    double num = cp.get_number("timeout");
+void set_timeout(int timeout) {
+    int id = timeoutv[timeoutv.size() - 1];
     
-    size_t lis = timeoutc++;
+    this_thread::sleep_for(seconds(timeout));
     
-    if (!num)
+    int index = find_timeout(id);
+    if (index == -1)
         return;
     
-    this_thread::sleep_for(seconds((int)num));
+    timeoutv.erase(timeoutv.begin() + index);
     
-    if (lis == timeoutc - 1 && evaluate(call(&cp, "onTimeout"))) {
-        middleware::socket_close();
-        
-        set_is_running(false);
-        
-        cp.kill();
-    }
+    call(&cp, "onTimeout");
 }
 
 void signal_handler(int signum) {
     thread([signum]() {
-        string argv[1];
+        string _signum[] { to_string(signum) };
         
-        argv[0] = to_string(signum);
-        
-        if (evaluate(call(&cp, "onExit", 1, argv))) {
+        if (evaluate(call(&cp, "onExit", 1, _signum))) {
             middleware::socket_close();
             
             set_is_running(false);
@@ -78,15 +82,30 @@ int main(int argc, char* argv[]) {
     signal(SIGTERM, signal_handler);
     
     init_preferences();
-    
     initialize(&cp);
     
-    add_listener(oninterval_t, [&]() {
-        thread(set_interval).detach();
+    subscribe(offinterval, [&](const string* value) {
+        int index = find_timeout(stoi(value[0]));
+        if (index != -1)
+            timeoutv.erase(timeoutv.begin() + index);
     });
     
-    add_listener(ontimeout_t, [&]() {
-        thread(set_timeout).detach();
+    subscribe(offtimeout, [&](const string* value) {
+        int index = find_timeout(stoi(value[0]));
+        if (index != -1)
+            timeoutv.erase(timeoutv.begin() + index);
+    });
+    
+    subscribe(oninterval, [&](const string* value) {
+        timeoutv.push_back(stoi(value[0]));
+        
+        thread(set_interval, stoi(value[1])).detach();
+    });
+    
+    subscribe(ontimeout, [&](const string* value) {
+        timeoutv.push_back(stoi(value[0]));
+        
+        thread(set_timeout, stoi(value[1])).detach();
     });
     
     //  build
@@ -98,7 +117,7 @@ int main(int argc, char* argv[]) {
     
     time_point<steady_clock> beg = steady_clock::now();;
     
-    node<string>* root = new node<string>(empty(), NULL);
+    node<string>* root = new node<string>(null(), NULL);
     target = new file(filename, root, &cp);
      
     root->close();
@@ -124,20 +143,20 @@ int main(int argc, char* argv[]) {
             
             string result = target->call(sizeof(_argv) / sizeof(_argv[0]), _argv);
             
-            if (is_running()) {
-                string valuev[result.length() + 1];
-                size_t valuec = parse(valuev, result);
-                
-                ostringstream ss;
-                
-                for (size_t i = 0; i < valuec - 1; ++i)
-                    ss << (valuev[i].empty() ? "null" : decode_raw(valuev[i])) << "\t";
-                
-                ss << (valuev[valuec - 1].empty() ? "null" : decode_raw(valuev[valuec - 1]));
-                
-                if (!ss.str().empty())
-                    cout << "  " << ss.str() << endl;
-            }
+//            if (is_running()) {
+//                string valuev[result.length() + 1];
+//                size_t valuec = parse(valuev, result);
+//                
+//                ostringstream ss;
+//                
+//                for (size_t i = 0; i < valuec - 1; ++i)
+//                    ss << (valuev[i].empty() ? "null" : decode_raw(valuev[i])) << "\t";
+//                
+//                ss << (valuev[valuec - 1].empty() ? "null" : decode_raw(valuev[valuec - 1]));
+//                
+//                if (!ss.str().empty())
+//                    cout << "  " << ss.str() << endl;
+//            }
         } catch (ss::exception& e) {
             ostringstream ss;
             

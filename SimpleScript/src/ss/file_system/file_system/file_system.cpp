@@ -17,7 +17,7 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    int _find_file(const int key, const size_t beg, const size_t end) {
+    int find_file(const int key, const size_t beg = 0, const size_t end = filev.size()) {
         if (beg == end)
             return -1;
         
@@ -27,13 +27,9 @@ namespace ss {
             return (int)(beg + len);
         
         if (std::get<0>(filev[beg + len]) > key)
-            return _find_file(key, beg, beg + len);
+            return find_file(key, beg, beg + len);
         
-        return _find_file(key, beg + len + 1, end);
-    }
-
-    int _find_file(const int key) {
-        return _find_file(key, 0, filev.size());
+        return find_file(key, beg + len + 1, end);
     }
 
     //  recursively read directory, including directories, themselves
@@ -68,7 +64,7 @@ namespace ss {
             throw file_system_exception(ss.str());
         }
         
-        ss.str(empty());
+        ss.str(null());
         ss.clear();
         
         file.open(abspath);
@@ -97,26 +93,25 @@ namespace ss {
     }
 
     std::string basename(const std::string src) {
-        size_t ei = src.length();
-        while (ei > 0 && src[ei - 1] != '.')
-            --ei;
+        size_t e = src.length();
+        while (e > 0 && src[e - 1] != '.')
+            --e;
         
-        if (!ei)
-            ei = src.length();
+        if (!e)
+            e = src.length();
         
-        if (src[ei - 1] == '.')
-            --ei;
+        if (src[e - 1] == '.')
+            --e;
         
-        size_t si = ei;
-        while (si > 0 && src[si - 1] != '/')
-            --si;
+        size_t s = e;
+        while (s > 0 && src[s - 1] != '/')
+            --s;
         
-        return src.substr(si, ei - si);
+        return src.substr(s, e - s);
     }
 
     int file_close(const int src) {
-        int i = _find_file(src);
-
+        int i = find_file(src);
         if (i == -1)
             return -1;
 
@@ -257,14 +252,14 @@ namespace ss {
     }
 
     std::string read(const int src) {
-        int i = _find_file(src);
+        int i = find_file(src);
         
         if (i == -1)
-            return empty();
+            return null();
         
         while (true) {
             if (!is_running())
-                return empty();
+                return null();
             
             std::get<1>(filev[i])->seekg(0, std::ios::end);
             
@@ -295,7 +290,7 @@ namespace ss {
             }
         }
         
-        return empty();
+        return null();
     }
 
     std::string read(const std::string src) {
@@ -348,7 +343,7 @@ namespace ss {
             throw file_system_exception(ss.str());
         }
         
-        ss.str(empty());
+        ss.str(null());
         ss.clear();
         
         file.open(abspath);
@@ -404,7 +399,7 @@ namespace ss {
             throw file_system_exception(ss.str());
         }
         
-        ss.str(empty());
+        ss.str(null());
         ss.clear();
         
         file.open(abspath);
@@ -484,7 +479,7 @@ namespace ss {
     }
 
     int write(const int dst, const std::string src) {
-        int i = _find_file(dst);
+        int i = find_file(dst);
 
         if (i == -1)
             return -1;

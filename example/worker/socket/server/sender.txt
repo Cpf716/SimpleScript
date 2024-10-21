@@ -26,7 +26,7 @@ func onExit(_)
     return true
 end func
 
-func onMessage(_, message)
+func onMessage(message)
     if message === undefined
         if connected
             connected = false

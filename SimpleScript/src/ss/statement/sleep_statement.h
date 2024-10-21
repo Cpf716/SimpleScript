@@ -40,7 +40,7 @@ namespace ss {
         
         string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
-            return empty();
+            return null();
         }
         
         string execute(command_processor* cp) {
@@ -65,7 +65,7 @@ namespace ss {
             
             this_thread::sleep_for(milliseconds((long)num));
             
-            return empty();
+            return null();
         }
         
         void exit() { }

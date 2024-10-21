@@ -60,7 +60,7 @@ namespace ss {
 
     string default_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string default_statement::execute(command_processor* cp) {
@@ -81,7 +81,7 @@ namespace ss {
                 break;
         }
         
-        return empty();
+        return null();
     }
 
     void default_statement::set_break() {

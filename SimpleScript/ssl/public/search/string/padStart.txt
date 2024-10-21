@@ -4,7 +4,6 @@
 //
 
 include("@/exception/rangeExcept")
-include("@/string")
 
 func main()
     if nrows(argv) !== 3

@@ -230,7 +230,7 @@ namespace ss {
                 return "undefined";
         }
         
-        return empty();
+        return null();
     }
 
     std::string toupper(std::string str) {

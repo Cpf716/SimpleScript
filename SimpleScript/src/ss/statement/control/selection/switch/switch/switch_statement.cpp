@@ -57,7 +57,7 @@ namespace ss {
 
     string switch_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string switch_statement::execute(command_processor* cp) {
@@ -84,7 +84,7 @@ namespace ss {
         
         cp->set_state(state);
         
-        return empty();
+        return null();
     }
 
     void switch_statement::set_break() {

@@ -25,8 +25,6 @@ namespace ss {
 
     std::string decode_raw(const std::string str);
 
-    std::string empty();
-
     std::string encode(const std::string str);
 
     std::string encode_raw(const std::string str);
@@ -53,6 +51,8 @@ namespace ss {
 
     size_t merge(size_t len, std::string* arr, const std::string sep);
 
+    std::string null();
+
     size_t parse(std::string* dst, const std::string src, std::string sep = get_sep());
 
     double parse_number(const std::string str);
@@ -71,7 +71,7 @@ namespace ss {
 
     std::string trim(const std::string str);
 
-    std::string trim_end(const double num);
+    std::string encode(const double num);
 }
 
 #endif /* preferences_h */

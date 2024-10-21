@@ -1,6 +1,6 @@
 //  Author: Corey Ferguson
 //  Date:   August 3, 2023
-//  File:   dateStr.txt
+//  File:   dateString.txt
 //
 
 include((dir = "@/datetime/constants/") + "months")
@@ -64,9 +64,9 @@ func main()
     seconds = timestamp
     
     time = (array(hours, minutes, seconds) map val, padStart(string(val), 2, "0")) join ":"
-    `dateStr` = array(`weekday`, (((keys months()).month) slice 0, 3), day + 1, time, year)
+    dateStr = array(`weekday`, (((keys months()).month) slice 0, 3), day + 1, time, year)
 
-    return (`dateStr` join " ") + "\n"
+    return (dateStr join " ") + "\n"
 end func
 
 return main()

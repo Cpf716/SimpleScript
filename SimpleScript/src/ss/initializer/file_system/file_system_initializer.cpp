@@ -10,15 +10,15 @@
 namespace ss {
     //  NON-MEMBER FIELDS
     
-    vector<function_t*> _file_systemv;
+    vector<function_t*> file_systemv;
 
     //  NON-MEMBER FUNCTIONS
 
     void init_file_system() {
-        if (_file_systemv.size())
+        if (file_systemv.size())
             return;
         
-        _file_systemv.push_back(new ss::function("closeFile", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("closeFile", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -39,7 +39,7 @@ namespace ss {
             return std::to_string(file_close((int)num));
         }));
         
-        _file_systemv.push_back(new ss::function("exists", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("exists", [](const size_t argc, string* argv) {
             if (!argc)
                 expect_error("1 argument(s), got 0");
             
@@ -57,12 +57,12 @@ namespace ss {
             string src = decode_raw(argv[0]);
             
             if (src.empty())
-                undefined_error(encode(empty()));
+                undefined_error(encode(null()));
             
             return std::to_string(exists(src));
         }));
         
-        _file_systemv.push_back(new ss::function("file", [](const  size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("file", [](const  size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -82,7 +82,7 @@ namespace ss {
             return std::to_string(file_open(src));
         }));
         
-        _file_systemv.push_back(new ss::function("isDir", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("isDir", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -100,12 +100,12 @@ namespace ss {
             string dir = decode_raw(argv[0]);
             
             if (dir.empty())
-                undefined_error(encode(empty()));
+                undefined_error(encode(null()));
             
             return std::to_string(is_dir(dir));
         }));
         
-        _file_systemv.push_back(new ss::function("isFile", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("isFile", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -123,12 +123,12 @@ namespace ss {
             string dir = decode_raw(argv[0]);
             
             if (dir.empty())
-                undefined_error(encode(empty()));
+                undefined_error(encode(null()));
             
             return std::to_string(is_file(dir));
         }));
         
-        _file_systemv.push_back(new ss::function("makeDir", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("makeDir", [](const size_t argc, string* argv) {
             if (!argc)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -171,7 +171,7 @@ namespace ss {
             return encode(to_string(undefined_t));
         }));
         
-        _file_systemv.push_back(new ss::function("major", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("major", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -195,7 +195,7 @@ namespace ss {
             return std::to_string(major((int)num));
         }));
         
-        _file_systemv.push_back(new ss::function("minor", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("minor", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -219,7 +219,7 @@ namespace ss {
             return std::to_string(minor((int)num));
         }));
         
-        _file_systemv.push_back(new ss::function("move", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("move", [](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -244,7 +244,7 @@ namespace ss {
             return encode(to_string(undefined_t));
         }));
         
-        _file_systemv.push_back(new ss::function("readDir", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("readDir", [](const size_t argc, string* argv) {
             if (!argc)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -265,7 +265,7 @@ namespace ss {
             string dir = decode_raw(argv[0]);
             
             if (dir.empty())
-                undefined_error(encode(empty()));
+                undefined_error(encode(null()));
             
             double recursive = 0;
             
@@ -301,7 +301,7 @@ namespace ss {
             return ss.str();
         }));
         
-        _file_systemv.push_back(new ss::function("readFile", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("readFile", [](const size_t argc, string* argv) {
             if (is_string(argv[0])) {
                 if (!argc)
                     expect_error("1 argument(s), got 0");
@@ -381,7 +381,7 @@ namespace ss {
             return encode(read((int)num));
         }));
         
-        _file_systemv.push_back(new ss::function("remove", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("remove", [](const size_t argc, string* argv) {
             if (!argc)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -424,7 +424,7 @@ namespace ss {
             return encode(to_string(undefined_t));
         }));
         
-        _file_systemv.push_back(new ss::function("stat", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("stat", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -487,7 +487,7 @@ namespace ss {
             return stringify(arr);
         }));
         
-        _file_systemv.push_back(new ss::function("write", [](const size_t argc, string* argv) {
+        file_systemv.push_back(new ss::function("write", [](const size_t argc, string* argv) {
             if (argc < 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -502,7 +502,7 @@ namespace ss {
                 string str = decode_raw(argv[0]);
                 
                 if (str.empty())
-                    undefined_error(encode(empty()));
+                    undefined_error(encode(null()));
                 
                 string valuev[argv[1].length() + 1];
                 size_t valuec = parse(valuev, argv[1]);
@@ -540,7 +540,7 @@ namespace ss {
                         string sep = decode_raw(argv[2]);
                         
                         if (sep.empty())
-                            undefined_error(encode(empty()));
+                            undefined_error(encode(null()));
                         
                         if (sep.length() == get_tablen()) {
                             size_t i = 0;
@@ -575,7 +575,7 @@ namespace ss {
                     string sep = decode_raw(argv[2]);
                     
                     if (sep.empty())
-                        undefined_error(encode(empty()));
+                        undefined_error(encode(null()));
                     
                     if (sep.length() == get_tablen()) {
                         size_t i = 0;
@@ -615,18 +615,18 @@ namespace ss {
             }
         }));
         
-        _file_systemv.shrink_to_fit();
+        file_systemv.shrink_to_fit();
     }
 
     void deinit_file_system() {
-        for (size_t i = 0; i < _file_systemv.size(); ++i)
-            _file_systemv[i]->close();
+        for (size_t i = 0; i < file_systemv.size(); ++i)
+            file_systemv[i]->close();
         
         file_system_close();
     }
 
     void set_file_system(command_processor* cp) {
-        for (size_t i = 0; i < _file_systemv.size(); ++i)
-            cp->set_function(_file_systemv[i]);
+        for (size_t i = 0; i < file_systemv.size(); ++i)
+            cp->set_function(file_systemv[i]);
     }
 }

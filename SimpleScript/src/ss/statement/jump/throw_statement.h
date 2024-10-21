@@ -45,7 +45,7 @@ namespace ss {
         
         string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
-            return empty();
+            return null();
         }
         
         string execute(command_processor* cp) {
@@ -55,7 +55,7 @@ namespace ss {
             string message = cp->evaluate(this->expression);
             
             if (should_return)
-                return empty();
+                return null();
             
             if (ss::is_array(message))
                 type_error(array_t, string_t);
@@ -69,7 +69,7 @@ namespace ss {
             this->set_level(0);
             
             throw exception(decode_raw(message));
-            return empty();
+            return null();
         }
         
         void exit() { }

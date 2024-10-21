@@ -69,7 +69,7 @@ namespace ss {
 
     string if_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string if_statement::execute(command_processor* cp) {
@@ -114,7 +114,7 @@ namespace ss {
             }
         }
         
-        return empty();
+        return null();
     }
 
     void if_statement::set_break() {

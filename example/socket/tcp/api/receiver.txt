@@ -41,8 +41,8 @@ func main()
     if nrows(argv) === 1
         port = (argv row 0) slice 1
         
-        if subtypeOf toArray port !== "int"
-            typeExcept(subtypeOf toArray port)
+        if subtypeOf array(...port) !== "int"
+            typeExcept(subtypeOf array(...port), "int")
         end if
         
         if port < 0
@@ -301,7 +301,7 @@ func main()
             end if
         end if
         
-        sw = start()
+        stopwatch = start()
         sfd = client(port)
         
         if sfd === -1
@@ -335,7 +335,7 @@ func main()
             continue
         end if
         
-        dif = precision(stop(sw), 2)
+        dif = precision(stop(stopwatch), 2)
         res = parseTable(res, SEP)
         
         handled = false

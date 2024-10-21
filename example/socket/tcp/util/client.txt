@@ -5,7 +5,6 @@
 
 include("@/exception/rangeExcept")
 include("@/socket/constants/ERRNOs")
-include("@/string")
 include("socket")
 
 func `client`(timeout)

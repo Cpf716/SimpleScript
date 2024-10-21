@@ -8,13 +8,13 @@
 #include "socket_initializer.h"
 
 namespace ss {
-    vector<function_t*> _socketv;
+    vector<function_t*> socketv;
     
     void init_socket() {
-        if (_socketv.size())
+        if (socketv.size())
             return;
         
-        _socketv.push_back(new ss::function("closeTcp", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("closeTcp", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -32,10 +32,10 @@ namespace ss {
                 type_error(double_t, int_t);
                 //  double != int
             
-            return trim_end(middleware::socket_tcp_close((int)num));
+            return encode(middleware::socket_tcp_close((int)num));
         }));
         
-        _socketv.push_back(new ss::function("closeUdp", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("closeUdp", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -53,10 +53,10 @@ namespace ss {
                 type_error(double_t, int_t);
                 //  double != int
             
-            return trim_end(middleware::socket_udp_close((int)num));
+            return encode(middleware::socket_udp_close((int)num));
         }));
         
-        _socketv.push_back(new ss::function("listen", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("listen", [](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -94,7 +94,7 @@ namespace ss {
             return std::to_string(middleware::socket_listen(stoi(argv[0]), stoi(argv[1])));
         }));
         
-        _socketv.push_back(new ss::function("poll", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("poll", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -125,7 +125,7 @@ namespace ss {
             return ss.str();
         }));
         
-        _socketv.push_back(new ss::function("recv", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("recv", [](const size_t argc, string* argv) {
             if (!argc)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -158,7 +158,7 @@ namespace ss {
             return str.empty() ? encode(to_string(undefined_t)) : encode(str);
         }));
         
-        _socketv.push_back(new ss::function("recvFrom", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("recvFrom", [](const size_t argc, string* argv) {
             if (!argc)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -191,7 +191,7 @@ namespace ss {
             return str.empty() ? encode(to_string(undefined_t)) : encode(str);
         }));
         
-        _socketv.push_back(new ss::function("send", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("send", [](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -227,7 +227,7 @@ namespace ss {
             return std::to_string(res);
         }));
         
-        _socketv.push_back(new ss::function("sendTo", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("sendTo", [](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -263,7 +263,7 @@ namespace ss {
             return std::to_string(res);
         }));
         
-        _socketv.push_back(new ss::function("tcpClient", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("tcpClient", [](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -281,7 +281,7 @@ namespace ss {
             string str = decode_raw(argv[0]);
             
             if (str.empty())
-                undefined_error(encode(empty()));
+                undefined_error(encode(null()));
             
             if (ss::is_array(argv[1]))
                 type_error(array_t, int_t);
@@ -305,7 +305,7 @@ namespace ss {
             return std::to_string(fildes);
         }));
         
-        _socketv.push_back(new ss::function("tcpServer", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("tcpServer", [](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -333,7 +333,7 @@ namespace ss {
             return std::to_string(fildes);
         }));
         
-        _socketv.push_back(new ss::function("udpClient", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("udpClient", [](const size_t argc, string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -351,7 +351,7 @@ namespace ss {
             string str = decode_raw(argv[0]);
             
             if (str.empty())
-                undefined_error(encode(empty()));
+                undefined_error(encode(null()));
             
             if (ss::is_array(argv[1]))
                 type_error(array_t, int_t);
@@ -375,7 +375,7 @@ namespace ss {
             return std::to_string(fildes);
         }));
         
-        _socketv.push_back(new ss::function("udpServer", [](const size_t argc, string* argv) {
+        socketv.push_back(new ss::function("udpServer", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
@@ -401,18 +401,18 @@ namespace ss {
             return std::to_string(fildes);
         }));
         
-        _socketv.shrink_to_fit();
+        socketv.shrink_to_fit();
     }
 
     void deinit_socket() {
         middleware::socket_close();
         
-        for (size_t i = 0; i < _socketv.size(); ++i)
-            _socketv[i]->close();
+        for (size_t i = 0; i < socketv.size(); ++i)
+            socketv[i]->close();
     }
 
     void set_socket(command_processor* cp) {
-        for (size_t i = 0; i < _socketv.size(); ++i)
-            cp->set_function(_socketv[i]);
+        for (size_t i = 0; i < socketv.size(); ++i)
+            cp->set_function(socketv[i]);
     }
 }

@@ -33,7 +33,7 @@ namespace ss {
             //  for ;;
             for (size_t i = 0, n = (size_t)floor(tokenc / 2) + 1; i < n; ++i) {
                 if (tokenv[i * 2] == ";") {
-                    tokenv[tokenc] = empty();
+                    tokenv[tokenc] = null();
                     
                     for (size_t j = tokenc; j > i * 2; --j)
                         swap(tokenv[j], tokenv[j - 1]);
@@ -43,7 +43,7 @@ namespace ss {
             }
             
             if (tokenv[tokenc - 1] == ";")
-                tokenv[tokenc++] = empty();
+                tokenv[tokenc++] = null();
             
             if (tokenc < 5)
                 expect_error("';' in 'for' statement specifier");
@@ -111,7 +111,7 @@ namespace ss {
 
     string for_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string for_statement::execute(command_processor* cp) {
@@ -202,7 +202,7 @@ namespace ss {
             valuev = NULL;
         }
         
-        return empty();
+        return null();
     }
 
     void for_statement::set_break() {

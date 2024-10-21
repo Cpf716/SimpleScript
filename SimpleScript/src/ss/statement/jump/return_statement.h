@@ -40,12 +40,12 @@ namespace ss {
         
         string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
-            return empty();
+            return null();
         }
         
         string execute(command_processor* cp) {
             this->set_return(cp->evaluate(expression));
-            return empty();
+            return null();
         }
         
         void exit() { }

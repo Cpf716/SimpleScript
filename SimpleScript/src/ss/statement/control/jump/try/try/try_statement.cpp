@@ -75,7 +75,7 @@ namespace ss {
 
     string try_statement::evaluate(command_processor* cp) {
         unsupported_error("evaluate()");
-        return empty();
+        return null();
     }
 
     string try_statement::execute(command_processor* cp) {
@@ -133,7 +133,7 @@ namespace ss {
                 this->statementv[this->statementc - 1]->execute(cp);
         }
         
-        return empty();
+        return null();
     }
 
     void try_statement::set_break() {
