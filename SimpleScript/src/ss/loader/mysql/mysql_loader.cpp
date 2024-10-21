@@ -1,18 +1,18 @@
 //
-//  mysql_initializer.cpp
+//  mysql_loader.cpp
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 5/4/24.
 //
 
-#include "mysql_initializer.h"
+#include "mysql_loader.h"
 
 namespace ss {
     //  NON-MEMBER FUNCTIONS
 
     vector<function_t*> mysqlv;
 
-    void init_mysql() {
+    void load_mysql() {
         if (mysqlv.size())
             return;
         
@@ -375,15 +375,15 @@ namespace ss {
         mysqlv.shrink_to_fit();
     }
 
-    void deinit_mysql() {
+    void set_mysql(command_processor* cp) {
+        for (size_t i = 0; i < mysqlv.size(); ++i)
+            cp->set_function(mysqlv[i]);
+    }
+
+    void unload_mysql() {
         middleware::mysql_close();
         
         for (size_t i = 0; i < mysqlv.size(); ++i)
             mysqlv[i]->close();
-    }
-
-    void set_mysql(command_processor* cp) {
-        for (size_t i = 0; i < mysqlv.size(); ++i)
-            cp->set_function(mysqlv[i]);
     }
 }

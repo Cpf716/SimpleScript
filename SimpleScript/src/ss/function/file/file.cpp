@@ -317,7 +317,7 @@ namespace ss {
                             logger_write("'fileSystem' is defined\n");
                         }
                     } else {
-                        init_file_system();
+                        load_file_system();
                         
                         this->is_file_system = true;
                     }
@@ -336,7 +336,7 @@ namespace ss {
                             logger_write("'mysql' is defined\n");
                         }
                     } else {
-                        init_mysql();
+                        load_mysql();
                         
                         this->is_mysql = true;
                     }
@@ -355,7 +355,7 @@ namespace ss {
                             logger_write("'socket' is defined\n");
                         }
                     } else {
-                        init_socket();
+                        load_socket();
                         
                         this->is_socket = true;
                     }
@@ -459,19 +459,19 @@ namespace ss {
                     this->filev[this->filec] = new pair<::file*, bool>(_file, true);
                     
                     if (this->filev[this->filec]->first->is_file_system && !this->is_file_system) {
-                        init_file_system();
+                        load_file_system();
                         
                         this->is_file_system = true;
                     }
                     
                     if (this->filev[this->filec]->first->is_mysql && !this->is_mysql) {
-                        init_mysql();
+                        load_mysql();
                         
                         this->is_mysql = true;
                     }
                     
                     if (this->filev[this->filec]->first->is_socket && !this->is_socket) {
-                        init_socket();
+                        load_socket();
                         
                         this->is_socket = true;
                     }

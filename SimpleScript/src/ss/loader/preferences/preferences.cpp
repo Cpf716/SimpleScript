@@ -815,7 +815,7 @@ namespace ss {
         return is_int(log(a) / log(b));
     }
 
-    void init_preferences() {
+    void load_preferences() {
         if (!exists("/tmp/SimpleScript"))
             if (mkdir(std::string("/tmp/SimpleScript").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH ))
                 throw file_system_exception(strerror(errno));

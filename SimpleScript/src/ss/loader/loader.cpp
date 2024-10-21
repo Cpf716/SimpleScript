@@ -1,11 +1,11 @@
 //
-//  initializer.cpp
+//  loader.cpp
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 5/2/24.
 //
 
-#include "initializer.h"
+#include "loader.h"
 
 namespace ss {
     //  NON-MEMBER FIELDS
@@ -43,16 +43,8 @@ namespace ss {
         return result;
     }
 
-    void deinitialize() {
-        deinit_socket();
-        deinit_mysql();
-        deinit_file_system();
-        
-        logger_close();
-    }
-
-    void initialize(command_processor* cp) {
-        init_system(cp);
+    void load(command_processor* cp) {
+        load_system(cp);
         
         // array
         cp->set_function(new ss::function(to_string(array_t), [](const size_t argc, string* argv) {
@@ -262,7 +254,7 @@ namespace ss {
             
             command_processor* _cp = new command_processor();
             
-            initialize(_cp);
+            load(_cp);
             
             try {
                 root = new node<string>(null(), NULL);
@@ -336,6 +328,15 @@ namespace ss {
     void unlock() {
         _is_locked.store(false);
     }
+
+    void unload() {
+        unload_socket();
+        unload_mysql();
+        unload_file_system();
+        
+        logger_close();
+    }
+
 
     void unsubscribe(const size_t subscription) {
         size_t i = 0;

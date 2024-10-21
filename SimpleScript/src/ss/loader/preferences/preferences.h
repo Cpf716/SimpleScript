@@ -47,7 +47,7 @@ namespace ss {
 
     bool is_pow(const size_t a, const size_t b);
 
-    void init_preferences();
+    void load_preferences();
 
     size_t merge(size_t len, std::string* arr, const std::string sep);
 

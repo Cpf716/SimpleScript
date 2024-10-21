@@ -1,16 +1,16 @@
 //
-//  socket_initializer.cpp
+//  socket_loader.cpp
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 5/4/24.
 //
 
-#include "socket_initializer.h"
+#include "socket_loader.h"
 
 namespace ss {
     vector<function_t*> socketv;
     
-    void init_socket() {
+    void load_socket() {
         if (socketv.size())
             return;
         
@@ -404,15 +404,15 @@ namespace ss {
         socketv.shrink_to_fit();
     }
 
-    void deinit_socket() {
+    void set_socket(command_processor* cp) {
+        for (size_t i = 0; i < socketv.size(); ++i)
+            cp->set_function(socketv[i]);
+    }
+
+    void unload_socket() {
         middleware::socket_close();
         
         for (size_t i = 0; i < socketv.size(); ++i)
             socketv[i]->close();
-    }
-
-    void set_socket(command_processor* cp) {
-        for (size_t i = 0; i < socketv.size(); ++i)
-            cp->set_function(socketv[i]);
     }
 }

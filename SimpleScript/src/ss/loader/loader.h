@@ -1,16 +1,16 @@
 //
-//  initializer.h
+//  loader.h
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 5/2/24.
 //
 
-#ifndef initializer_h
-#define initializer_h
+#ifndef loader_h
+#define loader_h
 
 #include "command_processor.h"
 #include "file.h"
-#include "system_initializer.h"
+#include "system_loader.h"
 
 namespace ss {
     //  NON-MEMBER FIELDS
@@ -21,11 +21,9 @@ namespace ss {
 
     string call(command_processor* cp, const string symbol, size_t argc = 0, string* argv = NULL);
 
-    void deinitialize();
-
-    void initialize(command_processor* cp);
-
     bool is_locked();
+
+    void load(command_processor* cp);
 
     void lock();
 
@@ -33,10 +31,12 @@ namespace ss {
 
     size_t subscribe(const event_t event, const std::function<void(const string*)> callback);
 
+    void unload();
+
     void unlock();
 
     void unsubscribe(const size_t subscription);
 }
 
 
-#endif /* initializer_h */
+#endif /* loader_h */

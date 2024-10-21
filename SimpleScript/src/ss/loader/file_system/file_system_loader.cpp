@@ -1,11 +1,11 @@
 //
-//  file_system_initializer.cpp
+//  file_system_loader.cpp
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 5/4/24.
 //
 
-#include "file_system_initializer.h"
+#include "file_system_loader.h"
 
 namespace ss {
     //  NON-MEMBER FIELDS
@@ -14,7 +14,7 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    void init_file_system() {
+    void load_file_system() {
         if (file_systemv.size())
             return;
         
@@ -618,15 +618,15 @@ namespace ss {
         file_systemv.shrink_to_fit();
     }
 
-    void deinit_file_system() {
+    void set_file_system(command_processor* cp) {
+        for (size_t i = 0; i < file_systemv.size(); ++i)
+            cp->set_function(file_systemv[i]);
+    }
+
+     void unload_file_system() {
         for (size_t i = 0; i < file_systemv.size(); ++i)
             file_systemv[i]->close();
         
         file_system_close();
-    }
-
-    void set_file_system(command_processor* cp) {
-        for (size_t i = 0; i < file_systemv.size(); ++i)
-            cp->set_function(file_systemv[i]);
     }
 }

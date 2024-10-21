@@ -5,7 +5,7 @@
 //  Created by Corey Ferguson on 4/18/23.
 //
 
-#include "initializer.h"
+#include "loader.h"
 
 using namespace ss;
 
@@ -81,8 +81,8 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     
-    init_preferences();
-    initialize(&cp);
+    load_preferences();
+    load(&cp);
     
     subscribe(offinterval, [&](const string* value) {
         int index = find_timeout(stoi(value[0]));
@@ -208,5 +208,5 @@ int main(int argc, char* argv[]) {
     
     target->close();
     
-    deinitialize();
+    unload();
 }

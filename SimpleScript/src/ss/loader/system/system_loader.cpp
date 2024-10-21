@@ -1,11 +1,11 @@
 //
-//  system_initializer.cpp
+//  system_loader.cpp
 //  SimpleScript
 //
 //  Created by Corey Ferguson on 5/4/24.
 //
 
-#include "system_initializer.h"
+#include "system_loader.h"
 
 namespace ss {
     //  NON-MEMBER FIELDS
@@ -30,7 +30,7 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    void init_system(command_processor* cp) {
+    void load_system(command_processor* cp) {
         cp->set_function(new ss::function("cmd", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
