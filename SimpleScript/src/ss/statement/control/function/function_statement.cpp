@@ -14,9 +14,9 @@ namespace ss {
         string* tokenv = new string[specifier.length() + 1];
         size_t tokenc = tokens(tokenv, specifier);
             
-        if (!tokenc || !is_symbol(tokenv[0])) {
+        if (!tokenc || !is_key(tokenv[0])) {
             delete[] tokenv;
-            expect_error("symbol: " + tokenv[0]);
+            expect_error("key: " + tokenv[0]);
         }
         
         if (tokenc == 1 || tokenv[1] != "(") {
@@ -60,16 +60,16 @@ namespace ss {
         
         int previous = -1;
         
-        vector<string> symbols;
+        vector<string> keys;
         
         for (int i = 0; i < floor((tokenc - 3) / 2); ++i) {
             string _tokenv[tokenv[i * 2 + 2].length() + 1];
             size_t _tokenc = tokens(_tokenv, tokenv[i * 2 + 2]);
             
             if (_tokenc == 1) {
-                if (!is_symbol(_tokenv[0])) {
+                if (!is_key(_tokenv[0])) {
                     delete[] tokenv;
-                    expect_error("symbol in 'function' statement specificer");
+                    expect_error("key in 'function' statement specificer");
                 }
                 
                 if (previous != -1) {
@@ -81,15 +81,15 @@ namespace ss {
                     continue;
                 
                 size_t j = 0;
-                while (j < symbols.size() && symbols[j] != _tokenv[0])
+                while (j < keys.size() && keys[j] != _tokenv[0])
                     ++j;
                 
-                if (j != symbols.size()) {
+                if (j != keys.size()) {
                     delete[] tokenv;
                     defined_error(_tokenv[0]);
                 }
                 
-                symbols.push_back(_tokenv[0]);
+                keys.push_back(_tokenv[0]);
             } else {
                 size_t j = 0;
                 while (j < _tokenc && _tokenv[j] == "(")
@@ -101,9 +101,9 @@ namespace ss {
                 if (j < _tokenc && tolower(_tokenv[j]) == to_string(array_t))
                     ++j;
                 
-                if (j == _tokenc || !is_symbol(_tokenv[j]) || _tokenv[j + 1] != "=") {
+                if (j == _tokenc || !is_key(_tokenv[j]) || _tokenv[j + 1] != "=") {
                     delete[] tokenv;
-                    expect_error("symbol in 'function' statement specificer");
+                    expect_error("key in 'function' statement specificer");
                 }
                 
                 if (previous != -1 && previous != (int)i - 1) {
@@ -112,15 +112,15 @@ namespace ss {
                 }
                 
                 size_t k = 0;
-                while (k < symbols.size() && symbols[k] != _tokenv[j])
+                while (k < keys.size() && keys[k] != _tokenv[j])
                     ++k;
                 
-                if (k != symbols.size()) {
+                if (k != keys.size()) {
                     delete[] tokenv;
                     defined_error(_tokenv[j]);
                 }
                 
-                symbols.push_back(_tokenv[j]);
+                keys.push_back(_tokenv[j]);
                 
                 previous = i;
                 
@@ -138,9 +138,9 @@ namespace ss {
             size_t _tokenc = tokens(_tokenv, tokenv[tokenc - 2]);
             
             if (_tokenc == 1) {
-                if (!is_symbol(tokenv[tokenc - 2])) {
+                if (!is_key(tokenv[tokenc - 2])) {
                     delete[] tokenv;
-                    expect_error("symbol in 'function' statement specificer");
+                    expect_error("key in 'function' statement specificer");
                 }
                 
                 if (previous != -1) {
@@ -169,16 +169,16 @@ namespace ss {
                 if (i < _tokenc && tolower(_tokenv[i]) == to_string(array_t))
                     ++i;
                 
-                if (i == _tokenc || !is_symbol(_tokenv[i]) || _tokenv[i + 1] != "=") {
+                if (i == _tokenc || !is_key(_tokenv[i]) || _tokenv[i + 1] != "=") {
                     delete[] tokenv;
-                    expect_error("symbol in 'function' statement specificer");
+                    expect_error("key in 'function' statement specificer");
                 }
                 
                 size_t j = 0;
-                while (j < symbols.size() && symbols[j] != _tokenv[i])
+                while (j < keys.size() && keys[j] != _tokenv[i])
                     ++j;
                 
-                if (j != symbols.size()) {
+                if (j != keys.size()) {
                     delete[] tokenv;
                     defined_error(_tokenv[i]);
                 }
@@ -244,9 +244,9 @@ namespace ss {
         if (argc < this->expressionc - this->optionalc || argc > this->expressionc)
             expect_error(std::to_string(this->expressionc - this->optionalc) + " argument(s) but got " + std::to_string(argc));
         
-        this->result = encode(to_string(undefined_t));
-        this->should_pause = false;
-        this->should_return = false;
+        this->value = encode(to_string(undefined_t));
+        this->pause_flag = false;
+        this->return_flag = false;
         
         size_t state = this->cp->get_state();
         
@@ -270,7 +270,7 @@ namespace ss {
                 ++j;
             
             if (this->cp->is_defined(tokenv[j]))
-                this->cp->remove_symbol(tokenv[j]);
+                this->cp->remove_key(tokenv[j]);
             
             if (i < argc)
                 set_value(tokenv[j], argv[i]);
@@ -279,19 +279,19 @@ namespace ss {
         }
         
         for (size_t i = 0; i < this->statementc; ++i) {
-            while (this->should_pause);
+            while (this->pause_flag);
             
             this->statementv[i]->execute(this->cp);
             
 //            while (this->should_pause);
 
-            if (this->should_return)
+            if (this->return_flag)
                 break;
         }
 
         this->cp->set_state(state);
         
-        return result;
+        return value;
     }
 
     bool function_statement::compare(const statement_type value) const {
@@ -311,7 +311,7 @@ namespace ss {
     }
 
     void function_statement::exit() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->exit();
     }
 
@@ -320,7 +320,7 @@ namespace ss {
     }
 
     void function_statement::kill() {
-        this->should_return = true;
+        this->return_flag = true;
         
         for (size_t i = 0; i < this->statementc; ++i)
             this->statementv[i]->kill();
@@ -334,34 +334,38 @@ namespace ss {
         throw error("continue cannot be used outside of a loop");
     }
 
+    void function_statement::set_goto(const string key) {
+        throw error("goto cannot be used outside of a switch");
+    }
+
     void function_statement::set_level(const size_t level) {
         this->parent->set_level(level);
     }
 
-    void function_statement::set_pause(const bool pause) {
-        this->should_pause = pause;
+    void function_statement::set_pause(const bool value) {
+        this->pause_flag = value;
         
         for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->set_pause(pause);
+            this->statementv[i]->set_pause(this->pause_flag);
     }
 
-    void function_statement::set_return(const string result) {
-        this->result = result;
-        this->should_return = true;
+    void function_statement::set_return(const string value) {
+        this->value = value;
+        this->return_flag = true;
     }
 
-    void function_statement::set_value(const string symbol, const string value) {
+    void function_statement::set_value(const string key, const string value) {
 #if DEBUG_LEVEL
-        assert(symbol.length());
+        assert(key.length());
 #endif
-        if (this->cp->is_defined(symbol))
-            this->cp->remove_symbol(symbol);
+        if (this->cp->is_defined(key))
+            this->cp->remove_key(key);
         
         if (ss::is_array(value))
-            this->cp->set_array(symbol, value);
+            this->cp->set_array(key, value);
         else if (value.empty() || is_string(value))
-            this->cp->set_string(symbol, value);
+            this->cp->set_string(key, value);
         else
-            this->cp->set_number(symbol, stod(value));
+            this->cp->set_number(key, stod(value));
     }
 }

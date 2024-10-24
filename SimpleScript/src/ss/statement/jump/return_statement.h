@@ -65,6 +65,10 @@ namespace ss {
             unsupported_error("set_continue()");
         }
         
+        void set_goto(const string key) {
+            unsupported_error("set_goto()");
+        }
+        
         void set_level(const size_t level) {
             unsupported_error("set_level()");
         }
@@ -73,10 +77,10 @@ namespace ss {
             this->parent = parent;
         }
         
-        void set_pause(const bool pause) { }
+        void set_pause(const bool value) { }
         
-        void set_return(const string result) {
-            this->parent->set_return(result);
+        void set_return(const string value) {
+            this->parent->set_return(value);
         }
     };
 }

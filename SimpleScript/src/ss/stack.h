@@ -67,7 +67,7 @@ namespace ss {
         }
         
         void swap(stack& x) {
-            T* _data = new T[pow_2(this->size())];
+            T* _data = new T[pow2(this->size())];
             size_t _n = this->size();
             
             for (size_t i = 0; i < this->size(); ++i)
@@ -76,7 +76,7 @@ namespace ss {
             delete[] this->data;
             
             this->n = x.size();
-            this->data = new T[pow_2(this->size())];
+            this->data = new T[pow2(this->size())];
             
             for (size_t i = 0; i < this->size(); ++i)
                 this->data[i] = x.data[i];

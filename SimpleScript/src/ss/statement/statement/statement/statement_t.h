@@ -42,13 +42,15 @@ namespace ss {
         
         virtual void set_continue() = 0;
         
+        virtual void set_goto(const string key) = 0;
+        
         virtual void set_level(const size_t level) = 0;
         
         virtual void set_parent(statement_t* parent) = 0;
         
-        virtual void set_pause(const bool pause) = 0;
+        virtual void set_pause(const bool value) = 0;
         
-        virtual void set_return(const string result) = 0;
+        virtual void set_return(const string value) = 0;
     };
 
     //  NON-MEMBER FUNCTIONS

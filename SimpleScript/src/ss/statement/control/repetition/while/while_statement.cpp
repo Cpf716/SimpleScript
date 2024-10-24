@@ -68,11 +68,11 @@ namespace ss {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-        this->should_pause = false;
-        this->should_return = false;
+        this->pause_flag = false;
+        this->return_flag = false;
         
         while (1) {
-            while (this->should_pause);
+            while (this->pause_flag);
             
             size_t state = cp->get_state();
             
@@ -81,22 +81,22 @@ namespace ss {
                 break;
             }
             
-            this->should_continue = false;
+            this->continue_flag = false;
             
             for (size_t i = 0; i < this->statementc; ++i) {
-                while (this->should_pause);
+                while (this->pause_flag);
                 
                 this->statementv[i]->execute(cp);
                 
 //                while (this->should_pause);
                 
-                if (this->should_return || this->should_continue)
+                if (this->return_flag || this->continue_flag)
                     break;
             }
             
 //            while (this->should_pause);
             
-            if (this->should_return) {
+            if (this->return_flag) {
                 cp->set_state(state);
                 break;
             }
@@ -112,15 +112,20 @@ namespace ss {
     }
 
     void while_statement::set_break() {
-        this->should_return = true;
+        this->return_flag = true;
     }
 
     void while_statement::set_continue() {
-        this->should_continue = true;
+        this->continue_flag = true;
     }
 
-    void while_statement::set_return(const string result) {
-        this->should_return = true;
-        this->parent->set_return(result);
+    void while_statement::set_goto(const string key) {
+        this->return_flag = true;
+        this->parent->set_goto(key);
+    }
+
+    void while_statement::set_return(const string value) {
+        this->return_flag = true;
+        this->parent->set_return(value);
     }
 }

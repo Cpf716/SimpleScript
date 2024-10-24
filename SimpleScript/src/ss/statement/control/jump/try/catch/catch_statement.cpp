@@ -10,11 +10,11 @@
 namespace ss {
     //  CONSTRUCTORS
 
-    catch_statement::catch_statement(const string symbol, const size_t statementc, statement_t** statementv) {
-        if (!is_symbol(symbol))
-            expect_error("symbol: " + symbol);
+    catch_statement::catch_statement(const string key, const size_t statementc, statement_t** statementv) {
+        if (!is_key(key))
+            expect_error("key: " + key);
         
-        this->symbol = symbol;
+        this->key = key;
         
         if (statementc &&
             (statementv[statementc - 1]->compare(case_t) ||
@@ -61,24 +61,24 @@ namespace ss {
     }
 
     string catch_statement::evaluate(command_processor* cp) {
-        return encode(symbol);
+        return encode(key);
     }
 
     string catch_statement::execute(command_processor* cp) {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-        this->should_pause = false;
-        this->should_return = false;
+        this->pause_flag = false;
+        this->return_flag = false;
         
         for (size_t i = 0; i < this->statementc; ++i) {
-            while (this->should_pause);
+            while (this->pause_flag);
             
             this->statementv[i]->execute(cp);
             
 //            while (this->should_pause);
             
-            if (this->should_return)
+            if (this->return_flag)
                 break;
         }
         
@@ -86,17 +86,22 @@ namespace ss {
     }
 
     void catch_statement::set_break() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_break();
     }
 
     void catch_statement::set_continue() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_continue();
     }
 
-    void catch_statement::set_return(const string result) {
-        this->should_return = true;
-        this->parent->set_return(result);
+    void catch_statement::set_goto(const string key) {
+        this->return_flag = true;
+        this->parent->set_goto(key);
+    }
+
+    void catch_statement::set_return(const string value) {
+        this->return_flag = true;
+        this->parent->set_return(value);
     }
 }

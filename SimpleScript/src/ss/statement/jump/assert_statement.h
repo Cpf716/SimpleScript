@@ -18,7 +18,7 @@ namespace ss {
 
         statement_t* parent = NULL;
         
-        bool should_return = false;
+        bool return_flag = false;
     public:
         //  CONSTRUCTORS
         
@@ -52,9 +52,9 @@ namespace ss {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-            string value = cp->evaluate(expression);
+            string result = cp->evaluate(expression);
             
-            if (should_return || ss::evaluate(value))
+            if (return_flag || ss::evaluate(result))
                 return null();
 
             this->parent->set_level(0);
@@ -71,7 +71,7 @@ namespace ss {
         };
         
         void kill() {
-            this->should_return = true;
+            this->return_flag = true;
         }
         
         void set_break() {
@@ -82,6 +82,10 @@ namespace ss {
             unsupported_error("set_continue()");
         }
         
+        void set_goto(const string key) {
+            unsupported_error("set_goto()");
+        }
+        
         void set_level(const size_t level) {
             unsupported_error("set_level()");
         }
@@ -90,9 +94,9 @@ namespace ss {
             this->parent = parent;
         }
         
-        void set_pause(const bool pause) { }
+        void set_pause(const bool value) { }
         
-        void set_return(const string result) {
+        void set_return(const string value) {
             unsupported_error("set_return()");
         }
     };

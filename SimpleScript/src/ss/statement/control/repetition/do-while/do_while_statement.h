@@ -16,7 +16,7 @@ namespace ss {
         
         string expression;
         
-        bool should_continue;
+        bool continue_flag;
     public:
         //  CONSTRUCTORS
         
@@ -38,7 +38,9 @@ namespace ss {
         
         void set_continue();
         
-        void set_return(const string result);
+        void set_goto(const string key);
+        
+        void set_return(const string value);
     };
 }
 

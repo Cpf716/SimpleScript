@@ -17,11 +17,11 @@ namespace ss {
         
         function_t* parent = NULL;
         
-        string result;
+        string value;
         
-        bool should_pause;
+        bool pause_flag;
         
-        bool should_return;
+        bool return_flag;
         
         size_t statementc;
         statement_t** statementv = NULL;
@@ -52,13 +52,15 @@ namespace ss {
 
         void set_continue();
         
+        void set_goto(const string key);
+        
         void set_level(const size_t level);
 
         void set_parent(statement_t* parent);
         
-        void set_pause(const bool pause);
+        void set_pause(const bool value);
 
-        void set_return(const string result);
+        void set_return(const string value);
     };
 }
 

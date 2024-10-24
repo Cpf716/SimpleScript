@@ -8,13 +8,21 @@
 #ifndef switch_statement_h
 #define switch_statement_h
 
+#include "case_statement.h"
 #include "control_statement.h"
 
 namespace ss {
     class switch_statement: public control_statement {
         //  MEMBER FIELDS
         
-        string expression;        
+        command_processor* cp = NULL;
+        
+        string expression;
+        
+        size_t named_casec = 0;
+        pair<string, size_t>** named_casev = NULL;
+        
+        bool should_goto;
     public:
         //  CONSTRUCTORS
         
@@ -32,11 +40,17 @@ namespace ss {
         
         string execute(command_processor* cp);
         
+        int find_case(const string key);
+        
+        int find_case(const string key, const size_t beg, const size_t end);
+        
         void set_break();
         
         void set_continue();
         
-        void set_return(const string result);
+        void set_goto(const string key);
+        
+        void set_return(const string value);
     };
 }
 

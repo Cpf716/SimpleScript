@@ -105,7 +105,7 @@ namespace ss {
             return str;
             
         size_t n = str.length() + 1;
-        char* dst = new char[pow_2(n)];
+        char* dst = new char[pow2(n)];
         
         strcpy(dst, str.c_str());
         
@@ -139,7 +139,7 @@ namespace ss {
                         if (j == l || dst[j - 1] != '\\') {
                             for (int k = (int)n; k < n + get_tablen() - (j + 1) % get_tablen() - 4; ++k) {
                                 if (is_pow(k, 2)) {
-                                    char* tmp = new char[pow_2(k * 2)];
+                                    char* tmp = new char[pow2(k * 2)];
                                     
                                     for (size_t m = 0; m < n; ++m)
                                         tmp[m] = dst[m];
@@ -180,7 +180,7 @@ namespace ss {
                                         int p;
                                         for (p = (int)n; p < n + ESCAPE_CHARACTERS[k].second.length() - ESCAPE_CHARACTERS[k].first.length(); ++p) {
                                             if (is_pow(p, 2)) {
-                                                char* tmp = new char[pow_2(p * 2)];
+                                                char* tmp = new char[pow2(p * 2)];
                                                 
                                                 for (size_t q = 0; q < n; ++q)
                                                     tmp[q] = dst[q];
@@ -257,7 +257,7 @@ namespace ss {
                         if (j == l || dst[j - 1] != '\\') {
                             for (int k = (int)n; k < n + get_tablen() - (j + 1) % get_tablen() - 4; ++k) {
                                 if (is_pow(k, 2)) {
-                                    char* tmp = new char[pow_2(k * 2)];
+                                    char* tmp = new char[pow2(k * 2)];
                                     
                                     for (size_t m = 0; m < n; ++m)
                                         tmp[m] = dst[m];
@@ -298,7 +298,7 @@ namespace ss {
                                         int p;
                                         for (p = (int)n; p < n + ESCAPE_CHARACTERS[k].second.length() - ESCAPE_CHARACTERS[k].first.length() - 2; ++p) {
                                             if (is_pow(p, 2)) {
-                                                char* tmp = new char[pow_2(p * 2)];
+                                                char* tmp = new char[pow2(p * 2)];
                                                 
                                                 for (size_t q = 0; q < n; ++q)
                                                     tmp[q] = dst[q];
@@ -375,11 +375,11 @@ namespace ss {
             }
         }
         
-        std::string result = std::string(dst);
+        std::string value = std::string(dst);
         
         delete[] dst;
         
-        return result;
+        return value;
     }
 
     std::string decode_raw(const std::string str) {
@@ -391,7 +391,7 @@ namespace ss {
             return str;
             
         size_t n = str.length() + 1;
-        char* dst = new char[pow_2(n)];
+        char* dst = new char[pow2(n)];
         
         strcpy(dst, str.c_str());
         
@@ -471,11 +471,11 @@ namespace ss {
             }
         }
         
-        std::string result = std::string(dst);
+        std::string value = std::string(dst);
         
         delete[] dst;
         
-        return result;
+        return value;
     }
 
     std::string encode(const std::string str) {
@@ -807,7 +807,7 @@ namespace ss {
 
     bool is_pow(const size_t a, const size_t b) {
         if (!b)
-            return !a || a == 1;
+            return a < 2;
         
         if (!a)
             return false;
@@ -988,7 +988,7 @@ namespace ss {
         return stod(std::string(arr));
     }
 
-    size_t pow_2(const size_t num) {
+    size_t pow2(const size_t num) {
         if (!num)
             return 1;
         
@@ -1135,6 +1135,10 @@ namespace ss {
     }
 
     size_t tokens(std::string* dst, const std::string src) {
+        return tokens(dst, src, sizeof(SEPARATORS) / sizeof(SEPARATORS[0]), SEPARATORS);
+    }
+
+    size_t tokens(std::string* dst, const std::string src, const size_t sepc, const std::string* sepv) {
     #if DEBUG_LEVEL
         assert(dst != NULL);
     #endif
@@ -1164,25 +1168,25 @@ namespace ss {
             s = 0;  size_t e = 0;
             while (e < dst[i].length()) {
                 size_t j;
-                for (j = 0; j < sizeof (SEPARATORS) / sizeof(SEPARATORS[0]); ++j) {
-                    if (e + SEPARATORS[j].length() > dst[i].length())
+                for (j = 0; j < sepc; ++j) {
+                    if (e + sepv[j].length() > dst[i].length())
                         continue;
                     
                     size_t k = 0;
-                    while (k < SEPARATORS[j].length() && dst[i][e + k] == SEPARATORS[j][k])
+                    while (k < sepv[j].length() && dst[i][e + k] == sepv[j][k])
                         ++k;
                     
-                    if (k == SEPARATORS[j].length())
+                    if (k == sepv[j].length())
                         break;
                 }
                 
-                if (j == sizeof (SEPARATORS) / sizeof(SEPARATORS[0]))
+                if (j == sepc)
                     ++e;
                 else {
                     if (s != e)
                         tokenv[tokenc++] = dst[i].substr(s, e - s);
                     
-                    tokenv[tokenc++] = SEPARATORS[j];
+                    tokenv[tokenc++] = sepv[j];
                     s = ++e;
                 }
             }

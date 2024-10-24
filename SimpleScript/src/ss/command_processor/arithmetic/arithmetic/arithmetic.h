@@ -32,10 +32,10 @@ namespace ss {
         size_t statec = 0;
         pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>** state_numberv = NULL;
         
-        tuple<size_t, size_t, string*>** statev_symbol;
+        tuple<size_t, size_t, string*>** statev_key;
         
-        size_t symbolc = 0;
-        string* symbolv = NULL;
+        size_t keyc = 0;
+        string* keyv = NULL;
         
         //  MEMBER FUNCTIONS
             
@@ -44,19 +44,19 @@ namespace ss {
         void initialize();
         //  binary operators require discrete jagged array to set precedence levels
         
-        int io_number(const string symbol) const;
+        int io_number(const string key) const;
         
-        int io_number(const string symbol, const size_t start, const size_t end) const;
+        int io_number(const string key, const size_t start, const size_t end) const;
         
         int io_state(const size_t state) const;
         
-        int io_state_number(const size_t state, const string symbol) const;
+        int io_state_number(const size_t state, const string key) const;
         
-        int io_state_number(const size_t state, const string symbol, const size_t start, const size_t end) const;
+        int io_state_number(const size_t state, const string key, const size_t start, const size_t end) const;
         
-        int io_symbol(const string symbol) const;
+        int io_key(const string key) const;
         
-        int io_symbol(const string symbol, const size_t start, const size_t end) const;
+        int io_key(const string key, const size_t start, const size_t end) const;
         
         size_t prefix(string* dst, string src) const;
         
@@ -84,7 +84,7 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        int _get_state(const string symbol) const;
+        int _get_state(const string key) const;
         
         void get_state(const size_t state);
     public:
@@ -96,23 +96,23 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        void add_symbol(const string symbol);
+        void add_key(const string key);
 
-        void consume(const string symbol);
+        void consume(const string key);
         
         double evaluate(const string expression);
         
-        double get_number(const string symbol);
+        double get_number(const string key);
         
         size_t get_state();
         
-        bool is_defined(const string symbol) const;
+        bool is_defined(const string key) const;
         
-        void remove_symbol(const string symbol);
+        void remove_key(const string key);
         
-        void set_number(const string symbol, const double new_value);
+        void set_number(const string key, const double new_value);
         
-        void set_read_only(const string symbol, const bool value);
+        void set_read_only(const string key, const bool value);
         
         void set_state(const size_t state, bool verbose = true, bool update = true);
     };

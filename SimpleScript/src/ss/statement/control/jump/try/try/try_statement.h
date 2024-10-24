@@ -14,7 +14,7 @@ namespace ss {
     class try_statement: public control_statement {
         //  MEMBER FIELDS
         
-        int index;
+        size_t position;
     public:
         //  CONSTRUCTORS
         
@@ -36,7 +36,9 @@ namespace ss {
 
         void set_continue();
         
-        void set_return(const string result);
+        void set_goto(const string key);
+        
+        void set_return(const string value);
     };
 }
 

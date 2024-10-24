@@ -15,7 +15,7 @@ namespace ss {
         //  MEMBER FUNCTIONS
         
         void exit() {
-            this->should_return = true;
+            this->return_flag = true;
             this->parent->exit();
         }
         
@@ -24,7 +24,7 @@ namespace ss {
         };
         
         void kill() {
-            this->should_return = true;
+            this->return_flag = true;
             
             for (size_t i = 0; i < this->statementc; ++i)
                 this->statementv[i]->kill();
@@ -41,20 +41,20 @@ namespace ss {
                 this->statementv[i]->set_parent(this);
         }
         
-        void set_pause(const bool pause) {
-            this->should_pause = pause;
+        void set_pause(const bool value) {
+            this->pause_flag = value;
             
             for (size_t i = 0; i < this->statementc; ++i)
-                this->statementv[i]->set_pause(pause);
+                this->statementv[i]->set_pause(this->pause_flag);
         }
     protected:
         //  MEMBER FIELDS
         
         statement_t* parent = NULL;
         
-        bool should_pause;
+        bool pause_flag;
         
-        bool should_return;
+        bool return_flag;
         
         size_t statementc;
         statement_t** statementv = NULL;

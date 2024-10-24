@@ -14,7 +14,7 @@ namespace ss {
     class define_statement : public statement_t {
         //  MEMBER FIELDS
         
-        string symbol;
+        string key;
         string expression;
     public:
         //  CONSTRUCTORS
@@ -23,10 +23,10 @@ namespace ss {
             string tokenv[specifier.length() + 1];
             size_t tokenc = tokens(tokenv, specifier);
             
-            if (!tokenc || !is_symbol(tokenv[0]))
-                expect_error("symbol in 'define' statement specifier");
+            if (!tokenc || !is_key(tokenv[0]))
+                expect_error("key in 'define' statement specifier");
             
-            this->symbol = tokenv[0];
+            this->key = tokenv[0];
             
             ostringstream ss;
             
@@ -66,21 +66,21 @@ namespace ss {
 #if DEBUG_LEVEL
             assert(cp != NULL);
 #endif
-            if (cp->is_defined(this->symbol))
-                defined_error(this->symbol);
+            if (cp->is_defined(this->key))
+                defined_error(this->key);
             
-            string value = cp->evaluate(this->expression);
+            string result = cp->evaluate(this->expression);
             
-            cp->apply([this, &cp, value](const bool is_save) {
-                if (ss::is_array(value))
-                    cp->set_array(symbol, value);
+            cp->apply([this, &cp, result](const bool is_save) {
+                if (ss::is_array(result))
+                    cp->set_array(key, result);
 
-                else if (value.empty() || is_string(value))
-                    cp->set_string(symbol, value);
+                else if (result.empty() || is_string(result))
+                    cp->set_string(key, result);
                 else
-                    cp->set_number(symbol, stod(value));
+                    cp->set_number(key, stod(result));
                 
-                cp->set_read_only(symbol, true);
+                cp->set_read_only(key, true);
             });
             
             return null();
@@ -103,15 +103,19 @@ namespace ss {
             unsupported_error("set_continue()");
         }
         
+        void set_goto(const string key) {
+            unsupported_error("set_goto()");
+        }
+        
         void set_level(const size_t level) {
             unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) { }
         
-        void set_pause(const bool pause) { }
+        void set_pause(const bool value) { }
         
-        void set_return(const string result) {
+        void set_return(const string value) {
             unsupported_error("set_return()");
         }
     };

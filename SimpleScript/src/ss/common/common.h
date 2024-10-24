@@ -28,7 +28,7 @@ namespace ss {
 
     bool is_string(const std::string val);
 
-    bool is_symbol(const std::string val);
+    bool is_key(const std::string val);
 
     bool is_table(const size_t len, std::string* arr);
 

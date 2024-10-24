@@ -20,18 +20,14 @@ namespace ss {
             statementv[statementc - 1]->compare(default_t))
             expect_error("expression");
         
-        this->index = 0;
-        while (this->index < statementc && !statementv[this->index]->compare(catch_t))
-            ++this->index;
+        this->position = statementc - 1;
+        if (this->position && statementv[this->position]->compare(finally_t))
+            --this->position;
         
-        if (this->index == statementc)
+        if (!statementv[this->position]->compare(catch_t))
             expect_error("'catch'");
         
-        if (this->index == statementc - 1) {
-            if (statementc == 1)
-                logger_write("'try' statement has empty body\n");
-            
-        } else if (statementc == 2)
+        if (!this->position)
             logger_write("'try' statement has empty body\n");
         
         this->statementc = statementc;
@@ -52,18 +48,16 @@ namespace ss {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-        if (this->index) {
+        if (this->position) {
             size_t i = 0;
-            while (i < this->index - 1 && !this->statementv[i]->analyze(cp))
+            while (i < this->position && !this->statementv[i]->analyze(cp))
                 ++i;
             
-            if (i != this->index - 1)
+            if (i != this->position)
                 logger_write("Unreachable code\n");
-            
-            this->statementv[this->index - 1]->analyze(cp);
         }
         
-        for (size_t i = this->index; i < this->statementc; ++i)
+        for (size_t i = this->position; i < this->statementc; ++i)
             this->statementv[i]->analyze(cp);
         
         return false;
@@ -82,22 +76,20 @@ namespace ss {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-        this->should_pause = false;
-        this->should_return = false;
+        this->pause_flag = false;
+        this->return_flag = false;
         
-        size_t state;
+        size_t state = cp->get_state();
         
         try {
-            state = cp->get_state();
-            
-            for (size_t i = 0; i < index; ++i) {
-                while (this->should_pause);
+            for (size_t i = 0; i < this->position; ++i) {
+                while (this->pause_flag);
                 
                 this->statementv[i]->execute(cp);
                 
 //                while (this->should_pause);
                 
-                if (this->should_return)
+                if (this->return_flag)
                     break;
             }
             
@@ -109,27 +101,21 @@ namespace ss {
             
             cp->set_state(state);
             
-            size_t i = this->statementc - 1;
-            
-            if (this->statementv[i]->compare(finally_t))
-                --i;
-            
             state = cp->get_state();
             
-            string symbol = decode_raw(this->statementv[i]->evaluate(cp));
+            string key = decode_raw(this->statementv[this->position]->evaluate(cp));
             
-            if (cp->is_defined(symbol))
-                cp->remove_symbol(symbol);
+            if (cp->is_defined(key))
+                cp->remove_key(key);
             
-            cp->set_string(symbol, encode(e.what()));
+            cp->set_string(key, encode(e.what()));
             
-            this->statementv[i]->execute(cp);
+            this->statementv[this->position]->execute(cp);
             
-            cp->remove_symbol(symbol);
-            
+            cp->remove_key(key);
             cp->set_state(state);
             
-            if (i != this->statementc - 1)
+            if (this->position != this->statementc - 1)
                 this->statementv[this->statementc - 1]->execute(cp);
         }
         
@@ -137,17 +123,22 @@ namespace ss {
     }
 
     void try_statement::set_break() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_break();
     }
 
     void try_statement::set_continue() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_continue();
     }
 
-    void try_statement::set_return(const string result) {
-        this->should_return = true;
-        this->parent->set_return(result);
+    void try_statement::set_goto(const string key) {
+        this->return_flag = true;
+        this->parent->set_goto(key);
+    }
+
+    void try_statement::set_return(const string value) {
+        this->return_flag = true;
+        this->parent->set_return(value);
     }
 }

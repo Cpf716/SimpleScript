@@ -16,7 +16,7 @@ namespace ss {
         
         string expression;
         
-        bool should_return = false;
+        bool return_flag = false;
     public:
         //  CONSTRUCTORS
         
@@ -67,7 +67,7 @@ namespace ss {
                 throw error("Unexpected token: " + ss.str());
             }
             
-            if (this->should_return)
+            if (this->return_flag)
                 return null();
             
             cout << (result.empty() ? "null" : escape(decode_raw(result)));
@@ -83,7 +83,7 @@ namespace ss {
         };
         
         void kill() {
-            this->should_return = true;
+            this->return_flag = true;
         }
         
         void set_break() {
@@ -94,15 +94,19 @@ namespace ss {
             unsupported_error("set_continue()");
         }
         
+        void set_goto(const string key) {
+            unsupported_error("set_goto()");
+        }
+        
         void set_level(const size_t level) {
             unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) { }
         
-        void set_pause(const bool pause) { }
+        void set_pause(const bool value) { }
         
-        void set_return(const string result) {
+        void set_return(const string value) {
             unsupported_error("set_return()");
         }
     };

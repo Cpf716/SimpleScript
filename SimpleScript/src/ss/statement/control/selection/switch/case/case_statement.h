@@ -15,10 +15,12 @@ namespace ss {
         //  MEMBER FIELDS
         
         string expression;
+        
+        string key = null();
     public:
         //  CONSTRUCTORS
         
-        case_statement(const string expression, const size_t statementc, statement_t** statementv);
+        case_statement(const string specifier, const size_t statementc, statement_t** statementv);
         
         void close();
         
@@ -32,11 +34,15 @@ namespace ss {
         
         string execute(command_processor* cp);
         
+        string get_key();
+        
         void set_break();
         
         void set_continue();
         
-        void set_return(const string result);
+        void set_goto(const string key);
+        
+        void set_return(const string value);
     };
 }
 

@@ -50,7 +50,7 @@ namespace ss {
             unsupported_error("set_level()");
         }
         
-        void set_pause(const bool pause) { }
+        void set_pause(const bool value) { }
     };
 }
 

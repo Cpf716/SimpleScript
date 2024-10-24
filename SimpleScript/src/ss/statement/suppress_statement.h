@@ -14,15 +14,15 @@ namespace ss {
     class suppress_statement: public statement_t {
         //  MEMBER FIELDS
         
-        string symbol;
+        string key;
     public:
         //  CONSTRUCTORS
         
-        suppress_statement(const string symbol) {
-            if (!is_symbol(symbol))
-                expect_error("symbol: " + symbol);
+        suppress_statement(const string key) {
+            if (!is_key(key))
+                expect_error("key: " + key);
             
-            this->symbol = symbol;
+            this->key = key;
         }
         
         void close() {
@@ -48,7 +48,8 @@ namespace ss {
 #if DEBUG_LEVEL
             assert(cp != NULL);
 #endif
-            cp->consume(symbol);
+            cp->consume(key);
+            
             return null();
         }
         
@@ -69,15 +70,19 @@ namespace ss {
             unsupported_error("set_continue()");
         }
         
+        void set_goto(const string key) {
+            unsupported_error("set_goto()");
+        }
+        
         void set_level(const size_t level) {
             unsupported_error("set_level()");
         }
         
         void set_parent(statement_t* parent) { }
         
-        void set_pause(const bool pause) { }
+        void set_pause(const bool value) { }
         
-        void set_return(const string result) {
+        void set_return(const string value) {
             unsupported_error("set_return()");
         }
     };

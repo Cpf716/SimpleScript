@@ -17,7 +17,7 @@ namespace ss {
         
         string expression;
         
-        int index;
+        int position;
     public:
         //  CONSTRUCTORS
         
@@ -39,7 +39,9 @@ namespace ss {
         
         void set_continue();
         
-        void set_return(const string result);
+        void set_goto(const string key);
+        
+        void set_return(const string value);
     };
 }
 

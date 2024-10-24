@@ -21,26 +21,27 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    string call(command_processor* cp, const string symbol, size_t argc, string* argv) {
+    bool call(command_processor* cp, const string key, size_t argc, string* argv) {
         while (is_locked());
         
         lock();
         
-        string result = std::to_string(1);
+        bool flag = false;
         
-        if (cp->is_defined(symbol)) {
+        if (cp->is_defined(key)) {
+            flag = true;
+            
             cp->set_pause(true);
             
             this_thread::sleep_for(milliseconds(10));
         
-            result = cp->call(symbol, argc, argv);
-            
+            cp->call(key, argc, argv);
             cp->set_pause(false);
         }
         
         unlock();
         
-        return result;
+        return flag;
     }
 
     void load(command_processor* cp) {
@@ -100,7 +101,7 @@ namespace ss {
             
             string id[] { std::to_string(num) };
             
-            notify(offinterval, id);
+            broadcast(offinterval, id);
             
             return encode(to_string(undefined_t));
         }));
@@ -123,7 +124,7 @@ namespace ss {
             
             string id[] { std::to_string(num) };
             
-            notify(offtimeout, id);
+            broadcast(offtimeout, id);
             
             return encode(to_string(undefined_t));
         }));
@@ -151,7 +152,7 @@ namespace ss {
             
             string interval[] { std::to_string(id), std::to_string(num) };
             
-            notify(oninterval, interval);
+            broadcast(oninterval, interval);
             
             return std::to_string(id);
         }));
@@ -179,7 +180,7 @@ namespace ss {
             
             string timeout[] { std::to_string(id), std::to_string(num) };
             
-            notify(ontimeout, timeout);
+            broadcast(ontimeout, timeout);
             
             return std::to_string(id);
         }));
@@ -274,14 +275,14 @@ namespace ss {
                 _argv[i] = argv[i];
             
             thread([_cp, argc, _argv, cp, target]() {
-                string result;
-                bool success = true;
+                string value;
+                bool flag = true;
                 
                 try {
-                    result = target->call(argc, _argv);
+                    value = target->call(argc, _argv);
                     
                 } catch (error& e) {
-                    success = false;
+                    flag = false;
                     
                     cout << e.what() << endl;
                 }
@@ -291,10 +292,10 @@ namespace ss {
                 
                 target->close();
                 
-                if (!success || !is_running())
+                if (!flag || !is_running())
                     return;
                 
-                string message[] { result };
+                string message[] { value };
                 
                 call(cp, "onMessage", 1, message);
             }).detach();
@@ -319,7 +320,7 @@ namespace ss {
         return callbackc++;
     }
 
-    void notify(const event_t event, const string* value) {
+    void broadcast(const event_t event, const string* value) {
         for (size_t i = 0; i < callbackv.size(); ++i)
             if (std::get<1>(callbackv[i]) == event)
                 std::get<2>(callbackv[i])(value);

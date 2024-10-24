@@ -71,26 +71,26 @@ namespace ss {
 #endif
         analyze(cp);
         
-        this->result = encode(to_string(undefined_t));
-        this->should_pause = false;
-        this->should_return = false;
+        this->value = encode(to_string(undefined_t));
+        this->pause_flag = false;
+        this->return_flag = false;
         
         for (size_t i = 0; i < statementc; ++i) {
-            while (this->should_pause);
+            while (this->pause_flag);
             
             this->statementv[i]->execute(cp);
             
 //            while (this->should_pause);
             
-            if (this->should_return)
+            if (this->return_flag)
                 break;
         }
         
-        return result;
+        return value;
     }
 
     void file_statement::exit() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->exit();
     }
 
@@ -99,7 +99,7 @@ namespace ss {
     };
 
     void file_statement::kill() {
-        this->should_return = true;
+        this->return_flag = true;
         
         for (size_t i = 0; i < this->statementc; ++i)
             this->statementv[i]->kill();
@@ -113,6 +113,10 @@ namespace ss {
         throw error("continue cannot be used outside of a loop");
     }
 
+    void file_statement::set_goto(const string key) {
+        throw error("goto cannot be used outside of a switch");
+    }
+
     void file_statement::set_level(const size_t level) {
         this->parent->set_level(level);
     }
@@ -121,15 +125,15 @@ namespace ss {
         unsupported_error("set_parent()");
     }
 
-    void file_statement::set_pause(const bool pause) {
-        this->should_pause = pause;
+    void file_statement::set_pause(const bool value) {
+        this->pause_flag = value;
         
         for (size_t i = 0; i < this->statementc; ++i)
-            this->statementv[i]->set_pause(pause);
+            this->statementv[i]->set_pause(this->pause_flag);
     }
 
-    void file_statement::set_return(const string result) {
-        this->result = result;
-        this->should_return = true;
+    void file_statement::set_return(const string value) {
+        this->value = value;
+        this->return_flag = true;
     }
 }

@@ -55,7 +55,7 @@ namespace ss {
         
         virtual void set_level(const size_t level) = 0;
         
-        virtual void set_pause(const bool pause) = 0;
+        virtual void set_pause(const bool value) = 0;
     };
 }
 

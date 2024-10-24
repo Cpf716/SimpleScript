@@ -12,15 +12,13 @@ namespace ss {
 
     for_statement::for_statement(const string specifier, const size_t statementc, statement_t** statementv) {
         string tokenv[specifier.length() + 1];
-        size_t tokenc = tokenize(tokenv, specifier, ";");
-        
-        tokenc = merge(tokenc, tokenv, ";");
-        
+        size_t tokenc = parse(tokenv, specifier, ";");
+
         //  for-in
         if (tokenc == 1) {
             tokenc = tokens(tokenv, tokenv[0]);
             
-            if (tokenc < 3 || !is_symbol(tokenv[0]) || tokenv[1] != "in")
+            if (tokenc < 3 || !is_key(tokenv[0]) || tokenv[1] != "in")
                 expect_error("';' in 'for' statement specifier");
             
             this->expressionv = new string[expressionc = 2];
@@ -30,31 +28,16 @@ namespace ss {
             for (size_t i = 3; i < tokenc; ++i)
                 this->expressionv[1] += " " + tokenv[i];
         } else {
-            //  for ;;
-            for (size_t i = 0, n = (size_t)floor(tokenc / 2) + 1; i < n; ++i) {
-                if (tokenv[i * 2] == ";") {
-                    tokenv[tokenc] = null();
-                    
-                    for (size_t j = tokenc; j > i * 2; --j)
-                        swap(tokenv[j], tokenv[j - 1]);
-                    
-                    ++tokenc;
-                }
-            }
-            
-            if (tokenv[tokenc - 1] == ";")
-                tokenv[tokenc++] = null();
-            
-            if (tokenc < 5)
+            if (tokenc < 3)
                 expect_error("';' in 'for' statement specifier");
             
-            if (tokenc > 5)
+            if (tokenc > 3)
                 expect_error("expression");
             
             this->expressionv = new string[this->expressionc = 3];
-            
+
             for (size_t i = 0; i < 3; ++i)
-                this->expressionv[i] = tokenv[i * 2];
+                this->expressionv[i] = tokenv[i];
         }
         
         if (statementc && is_clause(statementv[statementc - 1]))
@@ -118,15 +101,15 @@ namespace ss {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-        this->should_pause = false;
-        this->should_return = false;
+        this->pause_flag = false;
+        this->return_flag = false;
         
         size_t state = cp->get_state();
         size_t valuec = 0;
         
         if (this->expressionc == 2) {
             if (cp->is_defined(this->expressionv[0]))
-                cp->remove_symbol(this->expressionv[0]);
+                cp->remove_key(this->expressionv[0]);
             
             string result = cp->evaluate(this->expressionv[1]);
             
@@ -137,24 +120,25 @@ namespace ss {
             //  available to every iteration
             cp->evaluate(this->expressionv[0]);
         
-        size_t index = 0;
+        size_t pos = 0;
+        
         while (1) {
-            while (this->should_pause);
+            while (this->pause_flag);
             
             size_t _state = cp->get_state();
             
             if (this->expressionc == 2) {
-                if (index == valuec) {
+                if (pos == valuec) {
                     cp->set_state(_state);
                     break;
                 }
                 
-                if (valuev[index].empty() || is_string(this->valuev[index]))
-                    cp->set_string(this->expressionv[0], this->valuev[index]);
+                if (valuev[pos].empty() || is_string(this->valuev[pos]))
+                    cp->set_string(this->expressionv[0], this->valuev[pos]);
                 else
-                    cp->set_number(this->expressionv[0], stod(valuev[index]));
+                    cp->set_number(this->expressionv[0], stod(valuev[pos]));
                 
-                ++index;
+                ++pos;
                 
             } else if (!this->expressionv[1].empty() && !ss::evaluate(cp->evaluate(this->expressionv[1]))) {
                 //  available for one iteration
@@ -162,24 +146,24 @@ namespace ss {
                 break;
             }
             
-            this->should_continue = false;
+            this->continue_flag = false;
             
             for (size_t j = 0; j < this->statementc; ++j) {
-                while (this->should_pause);
+                while (this->pause_flag);
                 
                 this->statementv[j]->execute(cp);
                 
 //                while (this->should_pause);
                 
-                if (this->should_return || this->should_continue)
+                if (this->return_flag || this->continue_flag)
                     break;
             }
             
 //            while (this->should_pause);
             
-            if (this->should_return) {
+            if (this->return_flag) {
                 if (this->expressionc == 2)
-                    cp->remove_symbol(this->expressionv[0]);
+                    cp->remove_key(this->expressionv[0]);
                 
                 cp->set_state(_state);
                 
@@ -187,7 +171,7 @@ namespace ss {
             }
             
             if (this->expressionc == 2)
-                cp->remove_symbol(this->expressionv[0]);
+                cp->remove_key(this->expressionv[0]);
             else
                 //  available once
                 cp->evaluate(this->expressionv[2]);
@@ -206,15 +190,20 @@ namespace ss {
     }
 
     void for_statement::set_break() {
-        this->should_return = true;
+        this->return_flag = true;
     }
 
     void for_statement::set_continue() {
-        this->should_continue = true;
+        this->continue_flag = true;
     }
 
-    void for_statement::set_return(const string result) {
-        this->should_return = true;
-        this->parent->set_return(result);
+    void for_statement::set_goto(const string key) {
+        this->return_flag = true;
+        this->parent->set_goto(key);
+    }
+
+    void for_statement::set_return(const string value) {
+        this->return_flag = true;
+        this->parent->set_return(value);
     }
 }

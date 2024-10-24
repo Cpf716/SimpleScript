@@ -25,11 +25,11 @@
 #include "finally_statement.h"
 #include "for_statement.h"
 #include "function_statement.h"
+#include "goto_statement.h"
 #include "if_statement.h"
 #include "mysql_loader.h"
 #include "node.h"
 #include "return_statement.h"
-#include "sleep_statement.h"
 #include "socket_loader.h"
 #include "statement.h"
 #include "suppress_statement.h"
@@ -63,7 +63,7 @@ namespace ss {
         
         function_t* parent = NULL;
         
-        bool should_pause;
+        bool pause_flag;
         
         file_statement* target = NULL;
         
@@ -95,7 +95,7 @@ namespace ss {
         
         void set_level(const size_t level);
         
-        void set_pause(const bool pause);
+        void set_pause(const bool value);
     };
 }
 

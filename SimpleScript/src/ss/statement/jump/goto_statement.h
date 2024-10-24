@@ -1,27 +1,30 @@
 //
-//  sleep_statement.h
+//  goto_statement.h
 //  SimpleScript
 //
-//  Created by Corey Ferguson on 9/28/23.
+//  Created by Corey Ferguson on 10/22/24.
 //
 
-#ifndef sleep_statement_h
-#define sleep_statement_h
+#ifndef goto_statement_h
+#define goto_statement_h
 
 #include "statement_t.h"
 
 namespace ss {
-    class sleep_statement: public statement_t {
-        string expression;
+    class goto_statement: public statement_t {
+        //  MEMBER FIELDS
         
+        string key;
+        
+        statement_t* parent = NULL;
     public:
         //  CONSTRUCTORS
         
-        sleep_statement(const string expression) {
-            if (expression.empty())
-                expect_error("expression");
+        goto_statement(string key) {
+            if (!is_key(key))
+                expect_error("key: " + key);
             
-            this->expression = expression;
+            this->key = key;
         }
         
         void close() {
@@ -31,7 +34,7 @@ namespace ss {
         //  MEMBER FUNCTIONS
         
         bool analyze(command_processor* cp) const {
-            return false;
+            return true;
         }
         
         bool compare(const statement_type value) const {
@@ -40,30 +43,12 @@ namespace ss {
         
         string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
+            
             return null();
         }
         
         string execute(command_processor* cp) {
-#if DEBUG_LEVEL
-            assert(cp != NULL);
-#endif
-            string val = cp->evaluate(this->expression);
-            
-            if (ss::is_array(val))
-                type_error(array_t, int_t);
-            
-            if (is_string(val))
-                type_error(string_t, int_t);
-            
-            double num = stod(val);
-            
-            if (!is_int(num))
-                type_error(int_t, double_t);
-            
-            if (num < 0)
-                range_error(std::to_string((int)num));
-            
-            this_thread::sleep_for(milliseconds((long)num));
+            this->set_goto(this->key);
             
             return null();
         }
@@ -72,6 +57,7 @@ namespace ss {
         
         size_t get_level() const {
             unsupported_error("get_level()");
+            
             return 0;
         };
         
@@ -85,18 +71,24 @@ namespace ss {
             unsupported_error("set_continue()");
         }
         
+        void set_goto(const string key) {
+            this->parent->set_goto(key);
+        }
+        
         void set_level(const size_t level) {
             unsupported_error("set_level()");
         }
         
-        void set_parent(statement_t* parent) { }
+        void set_parent(statement_t* parent) {
+            this->parent = parent;
+        }
         
-        void set_pause(const bool pause) { }
+        void set_pause(const bool value) { }
         
-        void set_return(const string result) {
-            unsupported_error("set_return()");
+        void set_return(const string value) {
+            this->parent->set_return(value);
         }
     };
 }
 
-#endif /* sleep_statement_h */
+#endif /* goto_statement_h */

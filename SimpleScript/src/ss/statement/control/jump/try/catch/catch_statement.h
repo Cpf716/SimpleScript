@@ -14,11 +14,11 @@ namespace ss {
     class catch_statement: public control_statement {
         //  MEMBER FIELDS
         
-        string symbol;
+        string key;
     public:
         //  CONSTRUCTORS
         
-        catch_statement(const string symbol, const size_t statementc, statement_t** statementv);
+        catch_statement(const string key, const size_t statementc, statement_t** statementv);
         
         void close();
         
@@ -35,6 +35,8 @@ namespace ss {
         void set_break();
         
         void set_continue();
+        
+        void set_goto(const string key);
         
         void set_return(const string value);
     };

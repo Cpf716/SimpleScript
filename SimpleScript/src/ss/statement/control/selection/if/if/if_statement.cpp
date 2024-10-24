@@ -21,9 +21,9 @@ namespace ss {
             statementv[statementc - 1]->compare(finally_t)))
             expect_error("expression");
         
-        index = 0;
-        while (index < statementc && !statementv[index]->compare(else_t) && !statementv[index]->compare(else_if_t))
-            ++index;
+        this->position = 0;
+        while (position < statementc && !statementv[position]->compare(else_t) && !statementv[position]->compare(else_if_t))
+            ++position;
         
         this->statementc = statementc;
         this->statementv = statementv;
@@ -43,21 +43,21 @@ namespace ss {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-        if (this->index) {
+        if (this->position) {
             size_t i = 0;
-            while (i < this->index - 1 && !this->statementv[i]->analyze(cp))
+            while (i < this->position - 1 && !this->statementv[i]->analyze(cp))
                 ++i;
             
-            if (i != this->index - 1)
+            if (i != this->position - 1)
                 logger_write("Unreachable code\n");
             
-            this->statementv[this->index - 1]->analyze(cp);
+            this->statementv[this->position - 1]->analyze(cp);
         }
         
-        for (size_t i = this->index; i < this->statementc; ++i)
+        for (size_t i = this->position; i < this->statementc; ++i)
             this->statementv[i]->analyze(cp);
         
-        if (!this->index)
+        if (!this->position)
             logger_write("'if' statement has empty body\n");
         
         return false;
@@ -76,20 +76,20 @@ namespace ss {
 #if DEBUG_LEVEL
         assert(cp != NULL);
 #endif
-        this->should_pause = false;
-        this->should_return = false;
+        this->pause_flag = false;
+        this->return_flag = false;
         
         size_t state = cp->get_state();
         
         if (ss::evaluate(cp->evaluate(this->expression))) {
-            for (size_t i = 0; i < this->index; ++i) {
-                while (this->should_pause);
+            for (size_t i = 0; i < this->position; ++i) {
+                while (this->pause_flag);
                 
                 this->statementv[i]->execute(cp);
                 
 //                while (this->should_pause);
                 
-                if (this->should_return)
+                if (this->return_flag)
                     break;
             }
             
@@ -98,7 +98,7 @@ namespace ss {
             cp->set_state(state);
             
             size_t i;
-            for (i = this->index; i < this->statementc; ++i) {
+            for (i = this->position; i < this->statementc; ++i) {
                 state = cp->get_state();
                 
                 if (this->statementv[i]->compare(else_t) ||
@@ -118,17 +118,22 @@ namespace ss {
     }
 
     void if_statement::set_break() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_break();
     }
 
     void if_statement::set_continue() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_continue();
     }
 
-    void if_statement::set_return(const string result) {
-        this->should_return = true;
-        this->parent->set_return(result);
+    void if_statement::set_goto(const string key) {
+        this->return_flag = true;
+        this->parent->set_goto(key);
+    }
+
+    void if_statement::set_return(const string value) {
+        this->return_flag = true;
+        this->parent->set_return(value);
     }
 }

@@ -77,7 +77,7 @@ namespace ss {
         return i != val.length();
     }
 
-    bool is_symbol(const std::string str) {
+    bool is_key(const std::string str) {
         if (str.empty())
             return false;
         

@@ -21,11 +21,11 @@ namespace ss {
         
         size_t optionalc = 0;
         
-        string result;
+        string value;
         
         //  MEMBER FUNCTIONS
         
-        void set_value(const string symbol, const string value);
+        void set_value(const string key, const string value);
     public:
         //  CONSTRUCTORS
         
@@ -55,11 +55,13 @@ namespace ss {
         
         void set_continue();
         
+        void set_goto(const string key);
+        
         void set_level(const size_t level);
         
-        void set_pause(const bool pause);
+        void set_pause(const bool value);
         
-        void set_return(const string result);
+        void set_return(const string value);
     };
 }
 

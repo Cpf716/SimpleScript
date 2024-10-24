@@ -13,9 +13,9 @@ using namespace ss;
 
 command_processor cp;
 
-vector<int> timeoutv;
+vector<size_t> timeoutv;
 
-int find_timeout(const int key, const size_t beg = 0, const size_t end = timeoutv.size()) {
+int find_timeout(const size_t key, const size_t beg = 0, const size_t end = timeoutv.size()) {
     if (beg == end)
         return -1;
     
@@ -33,13 +33,12 @@ int find_timeout(const int key, const size_t beg = 0, const size_t end = timeout
 //  NON-MEMBER FUNCTIONS
 
 void set_interval(int interval) {
-    int id = timeoutv[timeoutv.size() - 1];
+    size_t id = timeoutv[timeoutv.size() - 1];
     
     while (true) {
-        this_thread::sleep_for(seconds(interval));
+        this_thread::sleep_for(milliseconds(interval));
         
-        int index = find_timeout(id);
-        if (index == -1)
+        if (find_timeout(id) == -1)
             return;
         
         call(&cp, "onInterval");
@@ -47,15 +46,15 @@ void set_interval(int interval) {
 }
 
 void set_timeout(int timeout) {
-    int id = timeoutv[timeoutv.size() - 1];
+    size_t id = timeoutv[timeoutv.size() - 1];
     
-    this_thread::sleep_for(seconds(timeout));
+    this_thread::sleep_for(milliseconds(timeout));
     
-    int index = find_timeout(id);
-    if (index == -1)
+    int pos = find_timeout(id);
+    if (pos == -1)
         return;
     
-    timeoutv.erase(timeoutv.begin() + index);
+    timeoutv.erase(timeoutv.begin() + pos);
     
     call(&cp, "onTimeout");
 }
@@ -64,7 +63,7 @@ void signal_handler(int signum) {
     thread([signum]() {
         string _signum[] { to_string(signum) };
         
-        if (evaluate(call(&cp, "onExit", 1, _signum))) {
+        if (!call(&cp, "onExit", 1, _signum)) {
             middleware::socket_close();
             
             set_is_running(false);
@@ -85,15 +84,15 @@ int main(int argc, char* argv[]) {
     load(&cp);
     
     subscribe(offinterval, [&](const string* value) {
-        int index = find_timeout(stoi(value[0]));
-        if (index != -1)
-            timeoutv.erase(timeoutv.begin() + index);
+        int pos = find_timeout(stoi(value[0]));
+        if (pos != -1)
+            timeoutv.erase(timeoutv.begin() + pos);
     });
     
     subscribe(offtimeout, [&](const string* value) {
-        int index = find_timeout(stoi(value[0]));
-        if (index != -1)
-            timeoutv.erase(timeoutv.begin() + index);
+        int pos = find_timeout(stoi(value[0]));
+        if (pos != -1)
+            timeoutv.erase(timeoutv.begin() + pos);
     });
     
     subscribe(oninterval, [&](const string* value) {
@@ -141,22 +140,8 @@ int main(int argc, char* argv[]) {
             for (size_t i = 0; i < sizeof(_argv) / sizeof(_argv[0]); i += 1)
                 _argv[i] = raw(argv[i + 2]);
             
-            string result = target->call(sizeof(_argv) / sizeof(_argv[0]), _argv);
+            target->call(sizeof(_argv) / sizeof(_argv[0]), _argv);
             
-//            if (is_running()) {
-//                string valuev[result.length() + 1];
-//                size_t valuec = parse(valuev, result);
-//                
-//                ostringstream ss;
-//                
-//                for (size_t i = 0; i < valuec - 1; ++i)
-//                    ss << (valuev[i].empty() ? "null" : decode_raw(valuev[i])) << "\t";
-//                
-//                ss << (valuev[valuec - 1].empty() ? "null" : decode_raw(valuev[valuec - 1]));
-//                
-//                if (!ss.str().empty())
-//                    cout << "  " << ss.str() << endl;
-//            }
         } catch (ss::exception& e) {
             ostringstream ss;
             

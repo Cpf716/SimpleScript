@@ -16,6 +16,12 @@ namespace ss {
         set_number("E", exp(1));
         set_read_only("E", true);
         
+        set_number("SIGINT", SIGINT);
+        set_read_only("SIGINT", true);
+        
+        set_number("SIGTERM", SIGTERM);
+        set_read_only("SIGTERM", true);
+        
         set_number("false", 0);
         set_read_only("false", true);
         
@@ -31,11 +37,11 @@ namespace ss {
 
     arithmetic::~arithmetic() {
         while (statec)
-            set_state(std::get<0>(* statev_symbol[statec - 1]), false, false);
+            set_state(std::get<0>(* statev_key[statec - 1]), false, false);
         
         //  deallocate get_states
         delete[] state_numberv;
-        delete[] statev_symbol;
+        delete[] statev_key;
         
         //  dellocate numbers
         for (size_t i = 0; i < numberc; ++i)
@@ -43,8 +49,8 @@ namespace ss {
         
         delete[] numberv;
           
-        //  deallocate symbols
-        delete[] symbolv;
+        //  deallocate keys
+        delete[] keyv;
         
         //  deallocate arithmetic operators tree
         for (size_t i = 0; i < 9; ++i)
@@ -61,8 +67,8 @@ namespace ss {
 
     //  MEMBER FUNCTIONS
 
-    int arithmetic::_get_state(const string symbol) const {
-        int i = io_number(symbol);
+    int arithmetic::_get_state(const string key) const {
+        int i = io_number(key);
         
 #if DEBUG_LEVEL == 2
         if (i == -1)
@@ -71,31 +77,31 @@ namespace ss {
         return (int)std::get<3>(* numberv[i]);
     }
 
-    void arithmetic::add_symbol(const string symbol) {
+    void arithmetic::add_key(const string key) {
 #if DEBUG_LEVEL
-        if (!is_symbol(symbol))
-            expect_error("symbol: " + symbol);
+        if (!is_key(key))
+            expect_error("key: " + key);
 #endif
-        int i = this->io_symbol(symbol);
+        int i = this->io_key(key);
         
         if (i != -1)
-            defined_error(symbol);
-        if (is_pow(this->symbolc, 2)) {
-            string* tmp = new string[this->symbolc * 2];
+            defined_error(key);
+        if (is_pow(this->keyc, 2)) {
+            string* tmp = new string[this->keyc * 2];
             
-            for (size_t j = 0; j < this->symbolc; ++j)
-                tmp[j] = this->symbolv[j];
+            for (size_t j = 0; j < this->keyc; ++j)
+                tmp[j] = this->keyv[j];
             
-            delete[] this->symbolv;
-            this->symbolv = tmp;
+            delete[] this->keyv;
+            this->keyv = tmp;
         }
         
-        this->symbolv[this->symbolc] = symbol;
+        this->keyv[this->keyc] = key;
         
-        size_t j = this->symbolc++;
+        size_t j = this->keyc++;
         
-        while (j > 0 && symbol < this->symbolv[j - 1]) {
-            swap(this->symbolv[j], this->symbolv[j - 1]);
+        while (j > 0 && key < this->keyv[j - 1]) {
+            swap(this->keyv[j], this->keyv[j - 1]);
             --j;
         }
     }
@@ -301,21 +307,21 @@ namespace ss {
             delete[] state_numberv;
             state_numberv = _state_numberv;
             
-            //  resize symbols
-            tuple<size_t, size_t, string*>** _statev_symbol = NULL;
+            //  resize keys
+            tuple<size_t, size_t, string*>** _statev_key = NULL;
             
-            _statev_symbol = new tuple<size_t, size_t, string*>*[statec * 2];
+            _statev_key = new tuple<size_t, size_t, string*>*[statec * 2];
             
             for (size_t i = 0; i < statec; ++i)
-                _statev_symbol[i] = statev_symbol[i];
+                _statev_key[i] = statev_key[i];
             
-            delete[] statev_symbol;
-            statev_symbol = _statev_symbol;
+            delete[] statev_key;
+            statev_key = _statev_key;
         }
         
         tuple<string, double, pair<bool, bool>, size_t>** _numberv = NULL;
         
-        _numberv = new tuple<string, double, pair<bool, bool>, size_t>*[pow_2(numberc)];
+        _numberv = new tuple<string, double, pair<bool, bool>, size_t>*[pow2(numberc)];
         
         for (size_t i = 0; i < numberc; ++i) {
             string key = std::get<0>(* numberv[i]);
@@ -328,12 +334,12 @@ namespace ss {
 
         state_numberv[statec] = new pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>(numberc, _numberv);
         
-        string* _symbolv = new string[pow_2(symbolc)];
+        string* _keyv = new string[pow2(keyc)];
         
-        for (size_t i = 0; i < symbolc; ++i)
-            _symbolv[i] = symbolv[i];
+        for (size_t i = 0; i < keyc; ++i)
+            _keyv[i] = keyv[i];
         
-        statev_symbol[statec] = new tuple<size_t, size_t, string*>(_state, symbolc, _symbolv);
+        statev_key[statec] = new tuple<size_t, size_t, string*>(_state, keyc, _keyv);
         
         statec++;
         
@@ -359,29 +365,29 @@ namespace ss {
             delete[] state_numberv;
             state_numberv = _state_numberv;
             
-            //  resize symbols
-            tuple<size_t, size_t, string*>** _statev_symbol = NULL;
+            //  resize keys
+            tuple<size_t, size_t, string*>** _statev_key = NULL;
             
-            _statev_symbol = new tuple<size_t, size_t, string*>*[statec * 2];
+            _statev_key = new tuple<size_t, size_t, string*>*[statec * 2];
             
             for (size_t i = 0; i < statec; ++i)
-                _statev_symbol[i] = statev_symbol[i];
+                _statev_key[i] = statev_key[i];
             
-            delete[] statev_symbol;
-            statev_symbol = _statev_symbol;
+            delete[] statev_key;
+            statev_key = _statev_key;
         }
         
-        //  get_state symbols
-        string* _symbolv = new string[pow_2(symbolc)];
+        //  get_state keys
+        string* _keyv = new string[pow2(keyc)];
         
-        for (size_t i = 0; i < symbolc; ++i)
-            _symbolv[i] = symbolv[i];
+        for (size_t i = 0; i < keyc; ++i)
+            _keyv[i] = keyv[i];
         
-        statev_symbol[statec] = new tuple<size_t, size_t, string*>(state, symbolc, _symbolv);
+        statev_key[statec] = new tuple<size_t, size_t, string*>(state, keyc, _keyv);
         
         tuple<string, double, pair<bool, bool>, size_t>** _numberv = NULL;
         
-        _numberv = new tuple<string, double, pair<bool, bool>, size_t>*[pow_2(numberc)];
+        _numberv = new tuple<string, double, pair<bool, bool>, size_t>*[pow2(numberc)];
         
         for (size_t i = 0; i < numberc; ++i) {
             string key = std::get<0>(* numberv[i]);
@@ -397,32 +403,32 @@ namespace ss {
         ++statec;
     }
 
-    void arithmetic::consume(const string symbol) {
-        int i = io_number(symbol);
+    void arithmetic::consume(const string key) {
+        int i = io_number(key);
         
         if (i == -1)
-            undefined_error(symbol);
+            undefined_error(key);
         
         std::get<2>(* numberv[i]).second = true;
     }
 
-    int arithmetic::io_symbol(const string symbol) const {
-        return io_symbol(symbol, 0, symbolc);
+    int arithmetic::io_key(const string key) const {
+        return io_key(key, 0, keyc);
     }
 
-    int arithmetic::io_symbol(const string symbol, const size_t start, const size_t end) const {
+    int arithmetic::io_key(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (symbolv[start + len] == symbol)
+        if (keyv[start + len] == key)
             return (int)(start + len);
         
-        if (symbolv[start + len] > symbol)
-            return io_symbol(symbol, start, start + len);
+        if (keyv[start + len] > key)
+            return io_key(key, start, start + len);
         
-        return io_symbol(symbol, start + len + 1, end);
+        return io_key(key, start + len + 1, end);
     }
 
     double arithmetic::evaluate(const string expr) {
@@ -479,11 +485,11 @@ namespace ss {
         return value(s.top());
     }
 
-    double arithmetic::get_number(const string symbol) {
-        int i = io_number(symbol);
+    double arithmetic::get_number(const string key) {
+        int i = io_number(key);
         
         if (i == -1)
-            undefined_error(symbol);
+            undefined_error(key);
         
         std::get<2>(* numberv[i]).second = true;
         
@@ -494,9 +500,9 @@ namespace ss {
         numberv = new tuple<string, double, pair<bool, bool>, size_t>*[1];
     
         state_numberv = new pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>*[1];
-        statev_symbol = new tuple<size_t, size_t, string*>*[1];
+        statev_key = new tuple<size_t, size_t, string*>*[1];
         
-        symbolv = new string[1];
+        keyv = new string[1];
         
         aov = new operator_t*[aoc];
         
@@ -618,10 +624,10 @@ namespace ss {
         baov[8][10] = (bao_t *)aov[35];      //  =
     }
 
-    bool arithmetic::is_defined(const string symbol) const {
+    bool arithmetic::is_defined(const string key) const {
         while (this->is_locked.load());
         
-        return this->io_symbol(symbol) != -1;
+        return this->io_key(key) != -1;
     }
 
     //  precondition:   expr is non-empty & data is non-null
@@ -722,19 +728,19 @@ namespace ss {
         return n;
     }
 
-    void arithmetic::remove_symbol(const string symbol) {
-        int i = io_symbol(symbol);
+    void arithmetic::remove_key(const string key) {
+        int i = io_key(key);
         
 #if DEBUG_LEVEL
         if (i == -1)
-            undefined_error(symbol);
+            undefined_error(key);
 #endif
-        for (size_t j = i; j < symbolc - 1; ++j)
-            swap(symbolv[j], symbolv[j + 1]);
+        for (size_t j = i; j < keyc - 1; ++j)
+            swap(keyv[j], keyv[j + 1]);
         
-        --symbolc;
+        --keyc;
         
-        int j = io_number(symbol);
+        int j = io_number(key);
         
         if (j == -1)
             return;
@@ -784,80 +790,80 @@ namespace ss {
         for (size_t j = i; j < statec - 1; ++j)
             swap(state_numberv[j], state_numberv[j + 1]);
         
-        //  deallocate symbols
-        delete[] this->symbolv;
+        //  deallocate keys
+        delete[] this->keyv;
         
-        //  copy symbols
-        this->symbolc = std::get<1>(* statev_symbol[i]);
-        this->symbolv = std::get<2>(* statev_symbol[i]);
+        //  copy keys
+        this->keyc = std::get<1>(* statev_key[i]);
+        this->keyv = std::get<2>(* statev_key[i]);
         
-        delete statev_symbol[i];
+        delete statev_key[i];
         
-        //  remove symbols get_state
+        //  remove keys get_state
         for (size_t j = i; j < statec - 1; ++j)
-            swap(statev_symbol[j], statev_symbol[j + 1]);
+            swap(statev_key[j], statev_key[j + 1]);
         
         --statec;
     }
 
-    int arithmetic::io_number(const string symbol) const {
-        return io_number(symbol, 0, numberc);
+    int arithmetic::io_number(const string key) const {
+        return io_number(key, 0, numberc);
     }
 
-    int arithmetic::io_number(const string symbol, const size_t start, const size_t end) const {
+    int arithmetic::io_number(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* numberv[start + len]) == symbol)
+        if (std::get<0>(* numberv[start + len]) == key)
             return (int)(start + len);
         
-        if (std::get<0>(* numberv[start + len]) > symbol)
-            return io_number(symbol, start, start + len);
+        if (std::get<0>(* numberv[start + len]) > key)
+            return io_number(key, start, start + len);
         
-        return io_number(symbol, start + len + 1, end);
+        return io_number(key, start + len + 1, end);
     }
 
     int arithmetic::io_state(const size_t key) const {
         int i = (int)statec - 1;
-        while (i >= 0 && std::get<0>(* statev_symbol[i]) != key)
+        while (i >= 0 && std::get<0>(* statev_key[i]) != key)
             --i;
         
         return i;
     }
 
-    int arithmetic::io_state_number(const size_t state, const string symbol) const {
-        return io_state_number(state, symbol, 0, state_numberv[state]->first);
+    int arithmetic::io_state_number(const size_t state, const string key) const {
+        return io_state_number(state, key, 0, state_numberv[state]->first);
     }
 
-    int arithmetic::io_state_number(const size_t state, const string symbol, const size_t start, const size_t end) const {
+    int arithmetic::io_state_number(const size_t state, const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* state_numberv[state]->second[start + len]) == symbol)
+        if (std::get<0>(* state_numberv[state]->second[start + len]) == key)
             return (int)(start + len);
         
-        if (std::get<0>(* state_numberv[state]->second[start + len]) > symbol)
-            return io_state_number(state, symbol, start, start + len);
+        if (std::get<0>(* state_numberv[state]->second[start + len]) > key)
+            return io_state_number(state, key, start, start + len);
         
-        return io_state_number(state, symbol, start + len + 1, end);
+        return io_state_number(state, key, start + len + 1, end);
     }
 
     //  precondition:   key is non-empty & double is not nan
-    void arithmetic::set_number(const string symbol, const double value) {
+    void arithmetic::set_number(const string key, const double value) {
 #if DEBUG_LEVEL
-        if (!is_symbol(symbol))
-            expect_error("symbol: " + symbol);
+        if (!is_key(key))
+            expect_error("key: " + key);
 #endif
-        int i = io_number(symbol);
+        int i = io_number(key);
         
         if (i == -1) {
 #if DEBUG_LEVEL
-            if (is_defined(symbol))
-                defined_error(symbol);
+            if (is_defined(key))
+                defined_error(key);
 #endif
             if (is_pow(numberc, 2)) {
                 tuple<string, double, pair<bool, bool>, size_t>** tmp = new tuple<string, double, pair<bool, bool>, size_t>*[numberc * 2];
@@ -869,26 +875,26 @@ namespace ss {
                 numberv = tmp;
             }
             
-            numberv[numberc] = new tuple<string, double, pair<bool, bool>, size_t>(symbol, value, pair<bool, bool>(false, false), _statec);
+            numberv[numberc] = new tuple<string, double, pair<bool, bool>, size_t>(key, value, pair<bool, bool>(false, false), _statec);
             
-            for (size_t j = numberc++; j > 0 && symbol < std::get<0>(* numberv[j - 1]); --j)
+            for (size_t j = numberc++; j > 0 && key < std::get<0>(* numberv[j - 1]); --j)
                 swap(numberv[j], numberv[j - 1]);
             
-            add_symbol(symbol);
+            add_key(key);
         } else {
             if (std::get<2>(* numberv[i]).first)
-                write_error(symbol);
+                write_error(key);
             
             std::get<1>(* numberv[i]) = value;
         }
     }
 
-    void arithmetic::set_read_only(const string symbol, const bool value) {
-        int i = io_number(symbol);
+    void arithmetic::set_read_only(const string key, const bool value) {
+        int i = io_number(key);
         
 #if DEBUG_LEVEL
         if (i == -1)
-            undefined_error(symbol);
+            undefined_error(key);
 #endif
         std::get<2>(* numberv[i]).first = value;
     }
@@ -1136,7 +1142,7 @@ namespace ss {
         if (val.empty())
             throw invalid_argument("empty");
 #endif
-        if (is_symbol(val))
+        if (is_key(val))
             return get_number(val);
             
         return stod(val);

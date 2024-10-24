@@ -10,11 +10,50 @@
 namespace ss {
     //  CONSTRUCTORS
 
-    case_statement::case_statement(const string expression, const size_t statementc, statement_t** statementv) {
-        if (expression.empty())
+    case_statement::case_statement(const string specifier, const size_t statementc, statement_t** statementv) {
+        if (specifier.empty())
             expect_error("expression");
         
-        this->expression = expression;
+        string tokenv[specifier.length() + 1];
+        
+        string sepv[] { "(", ")", ":" };
+        size_t tokenc = tokens(tokenv, specifier, sizeof(sepv) / sizeof(sepv[0]), sepv);
+        
+        int i; size_t p = 0;
+        for (i = 0; i < tokenc; ++i) {
+            if (tokenv[i] == "(")
+                ++p;
+            else if (tokenv[i] == ")")
+                --p;
+            else if (!p && tokenv[i] == ":")
+                break;
+        }
+        
+        for (int j = 0; j < i - 1; ++j) {
+            tokenv[0] += " " + tokenv[1];
+            
+            for (size_t k = 1; k < tokenc - 1; ++k)
+                swap(tokenv[k], tokenv[k + 1]);
+            
+            --tokenc;
+        }
+        
+        if (tokenc != 1) {
+            if (tokenc > 3)
+                expect_error("';' after expression");
+                
+            string token = tokenv[tokenc - 1];
+            
+            if (!is_key(token))
+                expect_error("key: " + token);
+            
+            if (token == "defined")
+                defined_error(token);
+            
+            this->key = token;
+        }
+        
+        this->expression = tokenv[0];
         
         if (statementc &&
             (statementv[statementc - 1]->compare(catch_t) ||
@@ -74,35 +113,44 @@ namespace ss {
     #if DEBUG_LEVEL
         assert(cp != NULL);
     #endif
-        this->should_pause = false;
-        this->should_return = false;
+        this->pause_flag = false;
+        this->return_flag = false;
         
         for (size_t i = 0; i < this->statementc; ++i) {
-            while (this->should_pause);
+            while (this->pause_flag);
             
             this->statementv[i]->execute(cp);
             
 //            while (this->should_pause);
             
-            if (this->should_return)
+            if (this->return_flag)
                 break;
         }
         
         return null();
     }
 
+    string case_statement::get_key() {
+        return this->key;
+    }
+
     void case_statement::set_break() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_break();
     }
 
     void case_statement::set_continue() {
-        this->should_return = true;
+        this->return_flag = true;
         this->parent->set_continue();
     }
 
-    void case_statement::set_return(const string result) {
-        this->should_return = true;
-        this->parent->set_return(result);
+    void case_statement::set_goto(const string key) {
+        this->return_flag = true;
+        this->parent->set_goto(key);
+    }
+
+    void case_statement::set_return(const string value) {
+        this->return_flag = true;
+        this->parent->set_return(value);
     }
 }

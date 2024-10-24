@@ -44,7 +44,7 @@ namespace ss {
         
         size_t i = 0;
         while (i < n) {
-            string* tokenv = new string[pow_2(src[i].length() + 1)];
+            string* tokenv = new string[pow2(src[i].length() + 1)];
             size_t tokenc = tokenize(tokenv, src[i], "/*");
             
             tokenc = merge(tokenc, tokenv, null());
@@ -975,7 +975,7 @@ namespace ss {
                     if (tokenv[0] == "switch") {
                         delete[] tokenv;
                         ++p;
-                    } else if (tokenc >= 2 && tokenv[0] == "end" && tokenv[1] == "switch") {
+                    } else if (tokenc > 1 && tokenv[0] == "end" && tokenv[1] == "switch") {
                         delete[] tokenv;
                         
                         if (tokenc > 2)
@@ -1033,6 +1033,7 @@ namespace ss {
                 size_t _s = build(_dst, src, i + 1, k);
                 
                 dst[s++] = new try_statement(_s, _dst);
+                
                 i = k + 1;
             } else if (tokenv[0] == "while") {
                 delete[] tokenv;
@@ -1082,9 +1083,10 @@ namespace ss {
                 } else if (src[i] == "break") {
                     delete[] tokenv;
                     dst[s] = new break_statement();
-                } else if (tokenv[0] == "suppress") {
+                } 
+                else if (tokenv[0] == "goto") {
                     delete[] tokenv;
-                    dst[s] = new suppress_statement(trim_start(src[i].substr(8)));
+                    dst[s] = new goto_statement(trim_start(src[i].substr(4)));
                 } else if (src[i] == "continue") {
                     delete[] tokenv;
                     dst[s] = new continue_statement();
@@ -1100,9 +1102,9 @@ namespace ss {
                 } else if (tokenv[0] == "return") {
                     delete[] tokenv;
                     dst[s] = new return_statement(trim_start(src[i].substr(6)));
-                } else if (tokenv[0] == "sleep") {
+                } else if (tokenv[0] == "suppress") {
                     delete[] tokenv;
-                    dst[s] = new sleep_statement(trim_start(src[i].substr(5)));
+                    dst[s] = new suppress_statement(trim_start(src[i].substr(8)));
                 } else if (tokenv[0] == "throw") {
                     delete[] tokenv;
                     dst[s] = new throw_statement(trim_start(src[i].substr(5)));
@@ -1156,9 +1158,9 @@ namespace ss {
         this->cp->evaluate("shrink argv");
         this->cp->consume("argv");
         
-        this->should_pause = false;
+        this->pause_flag = false;
         
-        string result = this->target->execute(this->cp);
+        string value = this->target->execute(this->cp);
         
 //        while (this->should_pause);
         
@@ -1166,7 +1168,7 @@ namespace ss {
         this->cp->set_state(_state);
         this->cp->set_state(state);
         
-        return result;
+        return value;
     }
 
     void file::exit() {
@@ -1228,13 +1230,13 @@ namespace ss {
             this->parent->set_level(this->get_level());
     }
 
-    void file::set_pause(const bool pause) {
-        this->should_pause = pause;
+    void file::set_pause(const bool value) {
+        this->pause_flag = value;
         
-        this->target->set_pause(pause);
+        this->target->set_pause(this->pause_flag);
         
         for (size_t i = 0; i < this->filec; ++i)
             if (this->filev[i]->second)
-                this->filev[i]->first->set_pause(pause);
+                this->filev[i]->first->set_pause(this->pause_flag);
     }
 }

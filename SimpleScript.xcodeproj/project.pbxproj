@@ -21,11 +21,11 @@
 		9C1BB8C12A36BD15006E4360 /* file.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C1BB8C02A36BD15006E4360 /* file.cpp */; };
 		9C38E3502BD5097E00825E45 /* preferences.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C38E34F2BD5097E00825E45 /* preferences.cpp */; };
 		9C3DC9F12AC898290014F28A /* exception.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C3DC9F02AC898290014F28A /* exception.cpp */; };
-		9C5294602BE3526600A8A293 /* initializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C52945F2BE3526600A8A293 /* initializer.cpp */; };
-		9C52946A2BE6295800A8A293 /* file_system_initializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C5294692BE6295800A8A293 /* file_system_initializer.cpp */; };
-		9C52946E2BE62C6600A8A293 /* mysql_initializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C52946D2BE62C6600A8A293 /* mysql_initializer.cpp */; };
-		9C5294722BE62D9800A8A293 /* socket_initializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C5294712BE62D9800A8A293 /* socket_initializer.cpp */; };
-		9C5294762BE631EE00A8A293 /* system_initializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C5294752BE631EE00A8A293 /* system_initializer.cpp */; };
+		9C5294602BE3526600A8A293 /* loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C52945F2BE3526600A8A293 /* loader.cpp */; };
+		9C52946A2BE6295800A8A293 /* file_system_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C5294692BE6295800A8A293 /* file_system_loader.cpp */; };
+		9C52946E2BE62C6600A8A293 /* mysql_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C52946D2BE62C6600A8A293 /* mysql_loader.cpp */; };
+		9C5294722BE62D9800A8A293 /* socket_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C5294712BE62D9800A8A293 /* socket_loader.cpp */; };
+		9C5294762BE631EE00A8A293 /* system_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C5294752BE631EE00A8A293 /* system_loader.cpp */; };
 		9C63BEFD29F1DDDE008C46ED /* logic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C1CFB3C2915ED8500584726 /* logic.cpp */; };
 		9C63BEFE29F1DDE0008C46ED /* arithmetic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9C6F3C3A290CA179004559AB /* arithmetic.cpp */; };
 		9C63BF0229F1DE4D008C46ED /* command_processor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9CF86541291AF97E00CFCF26 /* command_processor.cpp */; };
@@ -140,18 +140,18 @@
 		9C4E9EDD29EEE0FB0048F743 /* echo_statement.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = echo_statement.h; sourceTree = "<group>"; };
 		9C52945B2BDB4B7B00A8A293 /* apiTest.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = apiTest.txt; sourceTree = "<group>"; };
 		9C52945C2BE3427E00A8A293 /* table.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = table.txt; sourceTree = "<group>"; };
-		9C52945D2BE3522600A8A293 /* initializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = initializer.h; sourceTree = "<group>"; };
-		9C52945F2BE3526600A8A293 /* initializer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = initializer.cpp; sourceTree = "<group>"; };
+		9C52945D2BE3522600A8A293 /* loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = loader.h; sourceTree = "<group>"; };
+		9C52945F2BE3526600A8A293 /* loader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = loader.cpp; sourceTree = "<group>"; };
 		9C5294642BE61D3A00A8A293 /* sender.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = sender.txt; sourceTree = "<group>"; };
 		9C5294662BE61DA200A8A293 /* receiver.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = receiver.txt; sourceTree = "<group>"; };
-		9C5294682BE6293000A8A293 /* file_system_initializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = file_system_initializer.h; sourceTree = "<group>"; };
-		9C5294692BE6295800A8A293 /* file_system_initializer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = file_system_initializer.cpp; sourceTree = "<group>"; };
-		9C52946C2BE62BE100A8A293 /* mysql_initializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mysql_initializer.h; sourceTree = "<group>"; };
-		9C52946D2BE62C6600A8A293 /* mysql_initializer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mysql_initializer.cpp; sourceTree = "<group>"; };
-		9C5294702BE62D6B00A8A293 /* socket_initializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = socket_initializer.h; sourceTree = "<group>"; };
-		9C5294712BE62D9800A8A293 /* socket_initializer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = socket_initializer.cpp; sourceTree = "<group>"; };
-		9C5294742BE631BC00A8A293 /* system_initializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = system_initializer.h; sourceTree = "<group>"; };
-		9C5294752BE631EE00A8A293 /* system_initializer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = system_initializer.cpp; sourceTree = "<group>"; };
+		9C5294682BE6293000A8A293 /* file_system_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = file_system_loader.h; sourceTree = "<group>"; };
+		9C5294692BE6295800A8A293 /* file_system_loader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = file_system_loader.cpp; sourceTree = "<group>"; };
+		9C52946C2BE62BE100A8A293 /* mysql_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mysql_loader.h; sourceTree = "<group>"; };
+		9C52946D2BE62C6600A8A293 /* mysql_loader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mysql_loader.cpp; sourceTree = "<group>"; };
+		9C5294702BE62D6B00A8A293 /* socket_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = socket_loader.h; sourceTree = "<group>"; };
+		9C5294712BE62D9800A8A293 /* socket_loader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = socket_loader.cpp; sourceTree = "<group>"; };
+		9C5294742BE631BC00A8A293 /* system_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = system_loader.h; sourceTree = "<group>"; };
+		9C5294752BE631EE00A8A293 /* system_loader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = system_loader.cpp; sourceTree = "<group>"; };
 		9C5294792BE6C8F400A8A293 /* getPref.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = getPref.txt; sourceTree = "<group>"; };
 		9C52947C2BE6D46F00A8A293 /* ERRNOs.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ERRNOs.txt; sourceTree = "<group>"; };
 		9C538A962BB310DD00A92091 /* prefs.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = prefs.csv; sourceTree = "<group>"; };
@@ -663,7 +663,7 @@
 			path = ssl;
 			sourceTree = "<group>";
 		};
-		9C52945E2BE3523B00A8A293 /* initializer */ = {
+		9C52945E2BE3523B00A8A293 /* loader */ = {
 			isa = PBXGroup;
 			children = (
 				9C5294672BE6290100A8A293 /* file_system */,
@@ -671,10 +671,10 @@
 				9C52946F2BE62D5F00A8A293 /* socket */,
 				9C52946B2BE62BD200A8A293 /* mysql */,
 				9C38E34C2BD5090F00825E45 /* preferences */,
-				9C52945D2BE3522600A8A293 /* initializer.h */,
-				9C52945F2BE3526600A8A293 /* initializer.cpp */,
+				9C52945D2BE3522600A8A293 /* loader.h */,
+				9C52945F2BE3526600A8A293 /* loader.cpp */,
 			);
-			path = initializer;
+			path = loader;
 			sourceTree = "<group>";
 		};
 		9C5294612BE61CE800A8A293 /* tcp */ = {
@@ -708,8 +708,8 @@
 		9C5294672BE6290100A8A293 /* file_system */ = {
 			isa = PBXGroup;
 			children = (
-				9C5294682BE6293000A8A293 /* file_system_initializer.h */,
-				9C5294692BE6295800A8A293 /* file_system_initializer.cpp */,
+				9C5294682BE6293000A8A293 /* file_system_loader.h */,
+				9C5294692BE6295800A8A293 /* file_system_loader.cpp */,
 			);
 			path = file_system;
 			sourceTree = "<group>";
@@ -717,8 +717,8 @@
 		9C52946B2BE62BD200A8A293 /* mysql */ = {
 			isa = PBXGroup;
 			children = (
-				9C52946C2BE62BE100A8A293 /* mysql_initializer.h */,
-				9C52946D2BE62C6600A8A293 /* mysql_initializer.cpp */,
+				9C52946C2BE62BE100A8A293 /* mysql_loader.h */,
+				9C52946D2BE62C6600A8A293 /* mysql_loader.cpp */,
 			);
 			path = mysql;
 			sourceTree = "<group>";
@@ -726,8 +726,8 @@
 		9C52946F2BE62D5F00A8A293 /* socket */ = {
 			isa = PBXGroup;
 			children = (
-				9C5294702BE62D6B00A8A293 /* socket_initializer.h */,
-				9C5294712BE62D9800A8A293 /* socket_initializer.cpp */,
+				9C5294702BE62D6B00A8A293 /* socket_loader.h */,
+				9C5294712BE62D9800A8A293 /* socket_loader.cpp */,
 			);
 			path = socket;
 			sourceTree = "<group>";
@@ -735,8 +735,8 @@
 		9C5294732BE631AD00A8A293 /* system */ = {
 			isa = PBXGroup;
 			children = (
-				9C5294742BE631BC00A8A293 /* system_initializer.h */,
-				9C5294752BE631EE00A8A293 /* system_initializer.cpp */,
+				9C5294742BE631BC00A8A293 /* system_loader.h */,
+				9C5294752BE631EE00A8A293 /* system_loader.cpp */,
 			);
 			path = system;
 			sourceTree = "<group>";
@@ -1317,7 +1317,7 @@
 				9C3DC9EE2AC898110014F28A /* exception */,
 				9C13ED062BFD52950078F46C /* file_system */,
 				9C163A762A3E3058006CAABD /* function */,
-				9C52945E2BE3523B00A8A293 /* initializer */,
+				9C52945E2BE3523B00A8A293 /* loader */,
 				9C67CE2A2ADAFE0A00B4B071 /* logger */,
 				9C1246AD2ABE3A5600692A3B /* middleware */,
 				9C63BED629F0F1BF008C46ED /* statement */,
@@ -1535,16 +1535,16 @@
 				9C67CE2D2ADAFED400B4B071 /* logger.cpp in Sources */,
 				9C6C920C2B15076D00A709FE /* socket.cpp in Sources */,
 				9C9713F92AC2206B00FDB285 /* common.cpp in Sources */,
-				9C5294762BE631EE00A8A293 /* system_initializer.cpp in Sources */,
+				9C5294762BE631EE00A8A293 /* system_loader.cpp in Sources */,
 				9C63BEFD29F1DDDE008C46ED /* logic.cpp in Sources */,
 				9C163A722A3E0C4D006CAABD /* function_statement.cpp in Sources */,
 				9C6C920B2B15072600A709FE /* main.cpp in Sources */,
 				9C9860CE2C0A317F001255E6 /* switch_statement.cpp in Sources */,
 				9C163A802A3E3324006CAABD /* else_statement.cpp in Sources */,
-				9C52946E2BE62C6600A8A293 /* mysql_initializer.cpp in Sources */,
+				9C52946E2BE62C6600A8A293 /* mysql_loader.cpp in Sources */,
 				9C38E3502BD5097E00825E45 /* preferences.cpp in Sources */,
 				9C3DC9F12AC898290014F28A /* exception.cpp in Sources */,
-				9C5294722BE62D9800A8A293 /* socket_initializer.cpp in Sources */,
+				9C5294722BE62D9800A8A293 /* socket_loader.cpp in Sources */,
 				9CCBFC672A37DA2C00AB115B /* do_while_statement.cpp in Sources */,
 				9CCBFC612A37D7BB00AB115B /* while_statement.cpp in Sources */,
 				9CA5D77D2A0F7CEF001C560E /* error.cpp in Sources */,
@@ -1557,11 +1557,11 @@
 				9C13ED092BFD52AE0078F46C /* file_system.cpp in Sources */,
 				9C163A7D2A3E329E006CAABD /* else_if_statement.cpp in Sources */,
 				9CCBFC642A37D8F600AB115B /* for_statement.cpp in Sources */,
-				9C52946A2BE6295800A8A293 /* file_system_initializer.cpp in Sources */,
+				9C52946A2BE6295800A8A293 /* file_system_loader.cpp in Sources */,
 				9C163A832A3E3390006CAABD /* try_statement.cpp in Sources */,
 				9C67CE292ADAE99F00B4B071 /* file_statement.cpp in Sources */,
 				9CA157842A11B840009201E1 /* statement_t.cpp in Sources */,
-				9C5294602BE3526600A8A293 /* initializer.cpp in Sources */,
+				9C5294602BE3526600A8A293 /* loader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

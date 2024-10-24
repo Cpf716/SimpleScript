@@ -57,7 +57,7 @@ namespace ss {
 
     double parse_number(const std::string str);
 
-    size_t pow_2(const size_t num);
+    size_t pow2(const size_t num);
 
     std::string raw(const std::string val);
 
@@ -68,6 +68,8 @@ namespace ss {
     size_t split(std::string* dst, const std::string src, const std::string sep = get_sep());
 
     size_t tokens(std::string* dst, const std::string src);
+
+    size_t tokens(std::string* dst, const std::string src, const size_t sepc, const std::string* sepv);
 
     std::string trim(const std::string str);
 

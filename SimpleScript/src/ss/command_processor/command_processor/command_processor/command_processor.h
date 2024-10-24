@@ -29,45 +29,45 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        void add_listener(const string symbol, const std::function<void(const string)> callback);
+        void add_listener(const string key, const std::function<void(const string)> callback);
         
         void apply(const std::function<void(const bool)> cb);
         
-        string call(const string symbol, const size_t argc = 0, string* argv = NULL);
+        string call(const string key, const size_t argc = 0, string* argv = NULL);
         
-        void consume(const string symbol);
+        void consume(const string key);
         
         string evaluate(const string expression);
         
         size_t get_state();
         
-        string get_string(const string symbol);
+        string get_string(const string key);
         
         bool is_mutating(const string expression) const;
         
         void kill();
         
-        void remove_listener(const string symbol);
+        void remove_listener(const string key);
         
-        void remove_symbol(const string symbol);
+        void remove_key(const string key);
         
         void save_state();
         
-        void set_array(const string symbol, const string value);
+        void set_array(const string key, const string value);
         
-        void set_array(const string symbol, const size_t index, const string value);
+        void set_array(const string key, const size_t index, const string value);
         
         void set_function(function_t* function);
         
-        void set_pause(const bool pause);
+        void set_pause(const bool value);
         
-        void set_read_only(const string symbol, const bool value);
+        void set_read_only(const string key, const bool value);
         
         void set_state();
         
         void set_state(const size_t state, bool verbose = true, bool update = true);
         
-        void set_string(const string symbol, const string value);
+        void set_string(const string key, const string value);
         
         void stack_push(function_t* function);
         
@@ -150,9 +150,9 @@ namespace ss {
         
         string _call(function_t* function, const size_t argc = 0, string* argv = NULL);
         
-        int _get_state(const string symbol) const;
+        int _get_state(const string key) const;
         
-        void _set_array(const string symbol, const size_t valuec, string* valuev);
+        void _set_array(const string key, const size_t valuec, string* valuev);
                         
         string element(string val);
         
@@ -160,29 +160,29 @@ namespace ss {
         
         void initialize();
         
-        int io_array(const string symbol) const;
+        int io_array(const string key) const;
         
-        int io_array(const string symbol, const size_t start, const size_t end) const;
+        int io_array(const string key, const size_t start, const size_t end) const;
         
-        int io_function(const string symbol) const;
+        int io_function(const string key) const;
         
-        int io_function(const string symbol, const size_t start, const size_t end) const;
+        int io_function(const string key, const size_t start, const size_t end) const;
         
-        int io_state_array(const size_t state, const string symbol) const;
+        int io_state_array(const size_t state, const string key) const;
         
-        int io_state_array(const size_t state, const string symbol, size_t start, size_t end) const;
+        int io_state_array(const size_t state, const string key, size_t start, size_t end) const;
         
-        int io_state_function(const size_t state, const string symbol) const;
+        int io_state_function(const size_t state, const string key) const;
         
-        int io_state_function(const size_t state, const string symbol, size_t start, size_t end) const;
+        int io_state_function(const size_t state, const string key, size_t start, size_t end) const;
         
-        int io_state_string(const size_t state, const string symbol) const;
+        int io_state_string(const size_t state, const string key) const;
         
-        int io_state_string(const size_t state, const string symbol, const size_t start, const size_t end) const;
+        int io_state_string(const size_t state, const string key, const size_t start, const size_t end) const;
         
-        int io_string(const string symbol) const;
+        int io_string(const string key) const;
         
-        int io_string(const string symbol, const size_t start, const size_t end) const;
+        int io_string(const string key, const size_t start, const size_t end) const;
         
         int merge(int n, string* data) const;
         

@@ -53,11 +53,11 @@ namespace ss {
             
             system(cmd.c_str());
             
-            string result = encode(read(abspath));
+            string value = encode(read(abspath));
         
             remove(abspath.c_str());
             
-            return result;
+            return value;
         }));
         
         cp->set_function(new ss::function("gmt", [](const size_t argc, string* argv) {

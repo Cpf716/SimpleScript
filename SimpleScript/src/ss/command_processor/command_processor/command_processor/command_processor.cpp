@@ -13,12 +13,6 @@ namespace ss {
     command_processor::command_processor() {
         initialize();
         
-        set_number("SIGINT", SIGINT);
-        logic::set_read_only("SIGINT", true);
-        
-        set_number("SIGTERM", SIGTERM);
-        logic::set_read_only("SIGTERM", true);
-        
         set_string("cwd", encode(filesystem::current_path()));
         std::get<2>(* stringv[io_string("cwd")]).first = true;
         
@@ -34,9 +28,10 @@ namespace ss {
         set_array("types", 6, encode(to_string(table_t)));
         set_array("types", 7, encode(to_string(undefined_t)));
         
-        int i;
-        std::get<1>(* arrayv[i = io_array("types")]).shrink_to_fit();
-        std::get<2>(* arrayv[i]).first = true;
+        int pos = io_array("types");
+        
+        std::get<1>(* arrayv[pos]).shrink_to_fit();
+        std::get<2>(* arrayv[pos]).first = true;
         
         //  undefined
         set_string(to_string(undefined_t), encode(to_string(undefined_t)));
@@ -94,19 +89,19 @@ namespace ss {
 #endif
         stack_push(function);
         
-        string result = function->call(argc, argv);
+        string value = function->call(argc, argv);
         
         this->stack.pop();
         
-        return result;
+        return value;
     }
 
-    int command_processor::_get_state(const string symbol) const {
+    int command_processor::_get_state(const string key) const {
         int i;
-        if ((i = io_function(symbol)) == -1) {
-            if ((i = io_array(symbol)) == -1) {
-                if ((i = io_string(symbol)) == -1)
-                    return logic::_get_state(symbol);
+        if ((i = io_function(key)) == -1) {
+            if ((i = io_array(key)) == -1) {
+                if ((i = io_string(key)) == -1)
+                    return logic::_get_state(key);
                 
                 return (int)std::get<3>(* stringv[i]);
             }
@@ -117,13 +112,13 @@ namespace ss {
         return -1;
     }
 
-    void command_processor::_set_array(const string symbol, const size_t valuec, string* valuev) {
-        int i = io_array(symbol);
+    void command_processor::_set_array(const string key, const size_t valuec, string* valuev) {
+        int i = io_array(key);
         
         if (i == -1) {
 #if DEBUG_LEVEL
-            if (is_defined(symbol))
-                defined_error(symbol);
+            if (is_defined(key))
+                defined_error(key);
 #endif
             if (is_pow(arrayc, 2)) {
                 tuple<string, ss::array<string>, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[arrayc * 2];
@@ -135,7 +130,7 @@ namespace ss {
                 arrayv = _arrayv;
             }
             
-            arrayv[arrayc] = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>(symbol, ss::array<string>(valuec), pair<bool, bool>(false, false), _statec);
+            arrayv[arrayc] = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>(key, ss::array<string>(valuec), pair<bool, bool>(false, false), _statec);
             
             size_t j;
             for (j = arrayc++; j > 0 && std::get<0>(* arrayv[j]) < std::get<0>(* arrayv[j - 1]); --j)
@@ -146,10 +141,10 @@ namespace ss {
             for (size_t k = 0; k < valuec; ++k)
                 std::get<1>(* arrayv[j])[k] = valuev[k];
             
-            add_symbol(symbol);
+            add_key(key);
         } else {
             if (std::get<2>(* arrayv[i]).first)
-                write_error(symbol);
+                write_error(key);
             
             std::get<1>(* arrayv[i]).resize(valuec);
             
@@ -174,11 +169,11 @@ namespace ss {
         set_state(state, false, false);
     }
 
-    string command_processor::call(const string symbol, const size_t argc, string* argv) {
-        int i = io_function(symbol);
+    string command_processor::call(const string key, const size_t argc, string* argv) {
+        int i = io_function(key);
         
         if (i == -1)
-            undefined_error(symbol);
+            undefined_error(key);
         
 #if DEBUG_LEVEL
         for (size_t i = 0; i < argc; ++i) {
@@ -197,12 +192,12 @@ namespace ss {
         return _call(functionv[i], argc, argv);
     }
 
-    void command_processor::consume(const string symbol) {
+    void command_processor::consume(const string key) {
         int i;
-        if ((i = io_function(symbol)) == -1) {
-            if ((i = io_array(symbol)) == -1) {
-                if ((i = io_string(symbol)) == -1)
-                    logic::consume(symbol);
+        if ((i = io_function(key)) == -1) {
+            if ((i = io_array(key)) == -1) {
+                if ((i = io_string(key)) == -1)
+                    logic::consume(key);
                 else
                     std::get<2>(* stringv[i]).second = true;
             } else
@@ -222,7 +217,7 @@ namespace ss {
         if (is_string(val))
             return encode(decode(val));
         
-        if (is_symbol(val)) {
+        if (is_key(val)) {
             if (io_array(val) != -1)
                 type_error(array_t, string_t);
                 //  array != string
@@ -332,7 +327,7 @@ namespace ss {
                             tokenc = merge_numbers(tokenc, tokenv);
                             
                             if (tokenc == 1 && !is_string(tokenv[0]) &&
-                                !is_symbol(tokenv[0]) && !is_number(tokenv[0]))
+                                !is_key(tokenv[0]) && !is_number(tokenv[0]))
                                 throw error("Unexpected token: " + data[i]);
                             
                             operands.push(data[i]);
@@ -369,7 +364,7 @@ namespace ss {
                             if (flag)
                                 ++argc;
                             
-                            string* argv = new string[pow_2(argc)];
+                            string* argv = new string[pow2(argc)];
                             
                             size_t k = 0;
                             while (k < argc) {
@@ -432,7 +427,7 @@ namespace ss {
                             if (s == 1) {
                                 delete[] dst;
                                 
-                                if (!is_symbol(lhs))
+                                if (!is_key(lhs))
                                     operation_error();
                                 
                                 int k = io_array(lhs);
@@ -459,7 +454,7 @@ namespace ss {
                                         
                                     double b;
                                     
-                                    if (is_symbol(rhs)) {
+                                    if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, double_t);
                                             //  array != double
@@ -543,7 +538,7 @@ namespace ss {
                                             //  string != double
                                         
                                         double b;
-                                        if (is_symbol(rhs)) {
+                                        if (is_key(rhs)) {
                                             if (io_array(rhs) != -1)
                                                 type_error(array_t, double_t);
                                                 //  array != double
@@ -564,7 +559,7 @@ namespace ss {
                                         
                                         std::get<1>(* arrayv[k])[l * 2 + 1] = rhs;
                                         
-                                    } else if (is_symbol(rhs)) {
+                                    } else if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
@@ -603,7 +598,7 @@ namespace ss {
                                                 //  string != double
                                             
                                             double b;
-                                            if (is_symbol(rhs)) {
+                                            if (is_key(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(array_t, double_t);
                                                     //  array != double
@@ -666,7 +661,7 @@ namespace ss {
                                                 //  string != double
                                             
                                             double b;
-                                            if (is_symbol(rhs)) {
+                                            if (is_key(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(array_t, double_t);
                                                     //  array != double
@@ -720,7 +715,7 @@ namespace ss {
                                             //  string != double
                                         
                                         double b;
-                                        if (is_symbol(rhs)) {
+                                        if (is_key(rhs)) {
                                             if (io_array(rhs) != -1)
                                                 type_error(array_t, double_t);
                                                 //  array != double
@@ -821,7 +816,7 @@ namespace ss {
                                         //  string != double
                                     
                                     double b;
-                                    if (is_symbol(rhs)) {
+                                    if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, double_t);
                                             //  array != double
@@ -842,7 +837,7 @@ namespace ss {
                                     
                                     rhs = stringify(s, dst);
                                     
-                                } else if (is_symbol(rhs)) {
+                                } else if (is_key(rhs)) {
                                     if (io_array(rhs) != -1)
                                         type_error(array_t, int_t);
                                         //  array != int
@@ -879,7 +874,7 @@ namespace ss {
                                             //  string != double
                                         
                                         double b;
-                                        if (is_symbol(rhs)) {
+                                        if (is_key(rhs)) {
                                             if (io_array(rhs) != -1)
                                                 type_error(array_t, double_t);
                                                 //  array != double
@@ -950,7 +945,7 @@ namespace ss {
                                             //  string != double
                                         
                                         double b;
-                                        if (is_symbol(rhs)) {
+                                        if (is_key(rhs)) {
                                             if (io_array(rhs) != -1)
                                                 type_error(array_t, double_t);
                                                 //  array != double
@@ -1002,7 +997,7 @@ namespace ss {
                                         //  string != double
                                     
                                     double b;
-                                    if (is_symbol(rhs)) {
+                                    if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, double_t);
                                             //  array != double
@@ -1036,7 +1031,7 @@ namespace ss {
                                 //  string != double
                             
                             double a;
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 if (io_array(rhs) != -1)
                                     type_error(array_t, double_t);
                                     //  array != double
@@ -1063,7 +1058,7 @@ namespace ss {
                                     //  string != double
                                 
                                 double b;
-                                if (is_symbol(rhs)) {
+                                if (is_key(rhs)) {
                                     if (io_array(rhs) != -1)
                                         type_error(array_t, double_t);
                                         //  array != double
@@ -1100,7 +1095,7 @@ namespace ss {
                             rhs = decode(rhs);
                             num = !(rhs.empty() || rhs == to_string(undefined_t));
                             
-                        } else if (is_symbol(rhs)) {
+                        } else if (is_key(rhs)) {
                             int k = io_array(rhs);
                             if (k == -1) {
                                 k = io_string(rhs);
@@ -1286,7 +1281,7 @@ namespace ss {
                                 
                                 rhs = encode(rhs);
                             } else {
-                                if (!is_symbol(lhs))
+                                if (!is_key(lhs))
                                     type_error(double_t, array_t);
                                     //  double != array
                                 
@@ -1504,7 +1499,7 @@ namespace ss {
                                 type_error(string_t, array_t);
                                 //  string != array
                             
-                            if (!is_symbol(lhs))
+                            if (!is_key(lhs))
                                 type_error(double_t, array_t);
                                 //  double != array
                             
@@ -1802,7 +1797,7 @@ namespace ss {
                             null_error();
                         
                         if (!is_string(lhs)) {
-                            if (!is_symbol(lhs))
+                            if (!is_key(lhs))
                                 type_error(double_t, string_t);
                                 //  double != string
                             
@@ -1895,7 +1890,7 @@ namespace ss {
                             if (lhs.empty() || is_string(lhs))
                                 type_error(string_t, array_t);
                             
-                            if (!is_symbol(lhs))
+                            if (!is_key(lhs))
                                 type_error(double_t, array_t);
                             
                             int k = io_array(lhs);
@@ -2066,7 +2061,7 @@ namespace ss {
                         if (p == 1) {
                             delete[] v;
                             
-                            if (!is_symbol(lhs))
+                            if (!is_key(lhs))
                                 operation_error();
                             
                             rhs = operands.pop();
@@ -2100,7 +2095,7 @@ namespace ss {
                                         type_error(string_t, double_t);
                                         //  string != double
                                     
-                                    if (is_symbol(rhs)) {
+                                    if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, double_t);
                                             //  array != double
@@ -2151,7 +2146,7 @@ namespace ss {
                                     if (is_string(rhs))
                                         rhs = decode(rhs);
                                     
-                                    else if (is_symbol(rhs)) {
+                                    else if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, string_t);
                                             //  array != string
@@ -2240,7 +2235,7 @@ namespace ss {
                                             if (is_string(rhs))
                                                 rhs = decode(rhs);
                                             
-                                            else if (is_symbol(rhs)) {
+                                            else if (is_key(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(array_t, string_t);
                                                     //  array != string
@@ -2276,7 +2271,7 @@ namespace ss {
                                                 type_error(string_t, double_t);
                                                 //  string != double
                                                 
-                                            if (is_symbol(rhs)) {
+                                            if (is_key(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(array_t, double_t);
                                                     //  array != double
@@ -2296,7 +2291,7 @@ namespace ss {
                                             
                                             std::get<1>(* arrayv[k])[m * 2 + 1] = rhs;
                                         }
-                                    } else if (is_symbol(rhs)) {
+                                    } else if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
@@ -2342,7 +2337,7 @@ namespace ss {
                                                 if (is_string(rhs))
                                                     rhs = decode(rhs);
                                                 
-                                                else if (is_symbol(rhs)) {
+                                                else if (is_key(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(array_t, string_t);
                                                         //  array != string
@@ -2378,7 +2373,7 @@ namespace ss {
                                                     type_error(string_t, double_t);
                                                     //  string != double
                                                     
-                                                if (is_symbol(rhs)) {
+                                                if (is_key(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(array_t, double_t);
                                                         //  array != double
@@ -2445,7 +2440,7 @@ namespace ss {
                                                 if (is_string(rhs))
                                                     rhs = decode(rhs);
                                                 
-                                                else if (is_symbol(rhs)) {
+                                                else if (is_key(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(array_t, string_t);
                                                         //  array != string
@@ -2481,7 +2476,7 @@ namespace ss {
                                                     type_error(string_t, double_t);
                                                     //  string != double
                                                     
-                                                if (is_symbol(rhs)) {
+                                                if (is_key(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(array_t, double_t);
                                                         //  array != double
@@ -2542,7 +2537,7 @@ namespace ss {
                                             if (is_string(rhs))
                                                 rhs = decode(rhs);
                                             
-                                            else if (is_symbol(rhs)) {
+                                            else if (is_key(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(array_t, string_t);
                                                     //  array != string
@@ -2578,7 +2573,7 @@ namespace ss {
                                                 type_error(string_t, double_t);
                                                 //  string != double
                                                 
-                                            if (is_symbol(rhs)) {
+                                            if (is_key(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(array_t, double_t);
                                                     //  array != double
@@ -2622,7 +2617,7 @@ namespace ss {
                                                 std::get<2>(* arrayv[k]).second = true;
                                                 std::get<1>(* arrayv[k]).push(rhs);
                                                 
-                                            } else if (is_symbol(rhs)) {
+                                            } else if (is_key(rhs)) {
                                                 int l = io_array(rhs);
                                                 if (l == -1) {
                                                     l = io_string(rhs);
@@ -2762,7 +2757,7 @@ namespace ss {
                                     
                                     v[l * 2 + 1] = encode(number);
                                 }
-                            } else if (is_symbol(rhs)) {
+                            } else if (is_key(rhs)) {
                                 if (io_array(rhs) != -1)
                                     type_error(array_t, int_t);
                                     //  array != int
@@ -2946,7 +2941,7 @@ namespace ss {
                             if (valuec == 1) {
                                 delete[] valuev;
                                 
-                                if (!is_symbol(lhs))
+                                if (!is_key(lhs))
                                     operation_error();
                                 
                                 int k = io_array(lhs);
@@ -2980,7 +2975,7 @@ namespace ss {
                                         set_array(lhs, 0, ctr);
                                         set_array(lhs, 1, rhs);
                                         
-                                    } else if (is_symbol(rhs)) {
+                                    } else if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
@@ -3068,7 +3063,7 @@ namespace ss {
                                             std::get<1>(* arrayv[k]).push(rhs);
                                         } else
                                             std::get<1>(* arrayv[k])[l * 2 + 1] = rhs;
-                                    } else if (is_symbol(rhs)) {
+                                    } else if (is_key(rhs)) {
                                         if (io_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
@@ -3186,7 +3181,7 @@ namespace ss {
                                         valuev[valuec++] = rhs;
                                     } else
                                         valuev[k * 2 + 1] = rhs;
-                                } else if (is_symbol(rhs)) {
+                                } else if (is_key(rhs)) {
                                     if (io_array(rhs) != -1) {
                                         delete[] valuev;
                                         type_error(array_t, int_t);
@@ -3301,7 +3296,7 @@ namespace ss {
                                 delete[] valuev;
                             }
                         } else {
-                            if (!is_symbol(lhs))
+                            if (!is_key(lhs))
                                 operation_error();
                         
                             if (data[k] == uov[const_pos]->opcode() || data[k] == uov[var_pos]->opcode()) {
@@ -3316,7 +3311,7 @@ namespace ss {
                                     if (_get_state(lhs) == (int)_statec)
                                         defined_error(lhs);
                                     
-                                    remove_symbol(lhs);
+                                    remove_key(lhs);
                                 }
                                     
                                 string valuev[rhs.length() + 1];
@@ -3331,7 +3326,7 @@ namespace ss {
                                         
                                         set_array(lhs, 0, rhs);
                                         
-                                    } else if (is_symbol(rhs)) {
+                                    } else if (is_key(rhs)) {
                                         int l = io_array(rhs);
                                         if (l == -1) {
                                             l = io_string(rhs);
@@ -3383,7 +3378,7 @@ namespace ss {
                                         if (_get_state(lhs) == (int)_statec)
                                             defined_error(lhs);
                                         
-                                        remove_symbol(lhs);
+                                        remove_key(lhs);
                                         
                                         handle = false;
                                     }
@@ -3410,7 +3405,7 @@ namespace ss {
                                                 
                                                 double ctr;
                                                 
-                                                if (is_symbol(rhs)) {
+                                                if (is_key(rhs)) {
                                                     if (io_array(rhs) != -1)
                                                         type_error(array_t, double_t);
                                                         //  array != double
@@ -3439,7 +3434,7 @@ namespace ss {
                                             if (is_string(rhs))
                                                 rhs = encode(decode(rhs));
                                                 
-                                            else if (is_symbol(rhs)) {
+                                            else if (is_key(rhs)) {
                                                 if (io_array(rhs) != -1)
                                                     type_error(array_t, string_t);
                                                     //  array != string
@@ -3484,7 +3479,7 @@ namespace ss {
                                                     
                                                     std::get<1>(* arrayv[k]).push(rhs);
                                                     
-                                                } else if (is_symbol(rhs)) {
+                                                } else if (is_key(rhs)) {
                                                     int l = io_array(rhs);
                                                     if (l == -1) {
                                                         l = io_string(rhs);
@@ -3539,7 +3534,7 @@ namespace ss {
                                                 if (data[i + 1] == uov[const_pos]->opcode())
                                                     std::get<2>(* stringv[io_string(lhs)]).first = true;
                                                 
-                                            } else if (is_symbol(rhs))  {
+                                            } else if (is_key(rhs))  {
                                                 k = io_array(rhs);
                                                 if (k == -1) {
                                                     k = io_string(rhs);
@@ -3610,7 +3605,7 @@ namespace ss {
                             else if (is_string(lhs))
                                 flag = decode(lhs) != to_string(undefined_t);
                             
-                            else if (is_symbol(lhs)) {
+                            else if (is_key(lhs)) {
                                 int k = io_array(lhs);
                                 if (k == -1) {
                                     k = io_string(lhs);
@@ -3690,7 +3685,7 @@ namespace ss {
                     continue;
             }
             
-            if (is_symbol(operands.top())) {
+            if (is_key(operands.top())) {
                 int i = io_array(operands.top());
                 
                 if (i == -1) {
@@ -3716,7 +3711,7 @@ namespace ss {
         if (is_string(operands.top()))
             return encode(decode(operands.pop()));
         
-        if (is_symbol(operands.top())) {
+        if (is_key(operands.top())) {
             int i = io_array(operands.top());
             
             if (i == -1) {
@@ -3788,7 +3783,7 @@ namespace ss {
         state_numberv[statec] = _state;
         
         //  get_state arrays
-        tuple<string, ss::array<string>*, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>*[pow_2(arrayc)];
+        tuple<string, ss::array<string>*, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>*[pow2(arrayc)];
         
         for (size_t i = 0; i < arrayc; ++i) {
             string key = std::get<0>(* arrayv[i]);
@@ -3801,14 +3796,14 @@ namespace ss {
         
         state_arrayv[statec] = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>(arrayc, _arrayv);
         
-        function_t** _functionv = new function_t*[pow_2(functionc)];
-        
+        function_t** _functionv = new function_t*[pow2(functionc)];
+
         for (size_t i = 0; i < functionc; ++i)
             _functionv[i] = functionv[i];
-        
+    
         state_functionv[statec] = new pair<size_t, function_t**>(functionc, _functionv);
         
-        tuple<string, string, pair<bool, bool>, size_t>** _stringv = new tuple<string, string, pair<bool, bool>, size_t>*[pow_2(stringc)];
+        tuple<string, string, pair<bool, bool>, size_t>** _stringv = new tuple<string, string, pair<bool, bool>, size_t>*[pow2(stringc)];
         
         for (size_t i = 0; i < stringc; ++i) {
             string key = std::get<0>(* stringv[i]);
@@ -3871,7 +3866,7 @@ namespace ss {
         
         state_numberv[statec] = state;
         
-        tuple<string, ss::array<string>*, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>*[pow_2(arrayc)];
+        tuple<string, ss::array<string>*, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>*[pow2(arrayc)];
         
         for (size_t i = 0; i < arrayc; ++i) {
             string key = std::get<0>(* arrayv[i]);
@@ -3884,7 +3879,7 @@ namespace ss {
         
         state_arrayv[statec] = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>(arrayc, _arrayv);
         
-        function_t** _functionv = new function_t*[pow_2(functionc)];
+        function_t** _functionv = new function_t*[pow2(functionc)];
         
         for (size_t i = 0; i < functionc; ++i)
             _functionv[i] = functionv[i];
@@ -3892,7 +3887,7 @@ namespace ss {
         state_functionv[statec] = new pair<size_t, function_t**>(functionc, _functionv);
         
         //  get_state strings
-        tuple<string, string, pair<bool, bool>, size_t>** _stringv = new tuple<string, string, pair<bool, bool>, size_t>*[pow_2(stringc)];
+        tuple<string, string, pair<bool, bool>, size_t>** _stringv = new tuple<string, string, pair<bool, bool>, size_t>*[pow2(stringc)];
         
         for (size_t i = 0; i < stringc; ++i) {
             string key = std::get<0>(* stringv[i]);
@@ -3908,11 +3903,11 @@ namespace ss {
         ++statec;
     }
 
-    string command_processor::get_string(const string symbol) {
-        int i = io_string(symbol);
+    string command_processor::get_string(const string key) {
+        int i = io_string(key);
         
         if (i == -1)
-            undefined_error(symbol);
+            undefined_error(key);
         
         std::get<2>(* stringv[i]).second = true;
         
@@ -3941,7 +3936,7 @@ namespace ss {
                     return std::to_string(str.length());
                 }
                 
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                 
                 int i = io_array(rhs);
@@ -3984,7 +3979,7 @@ namespace ss {
                 if (rhs.empty() || is_string(rhs))
                     type_error(string_t, array_t);
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         if (io_string(rhs) != -1)
@@ -4022,7 +4017,7 @@ namespace ss {
                     type_error(string_t, table_t);
                     //  string != table
                 
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, table_t);
                     //  double != table
                 
@@ -4090,7 +4085,7 @@ namespace ss {
                 null_error();
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4134,7 +4129,7 @@ namespace ss {
                 null_error();
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4179,7 +4174,7 @@ namespace ss {
                 null_error();
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4223,7 +4218,7 @@ namespace ss {
                 null_error();
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4268,7 +4263,7 @@ namespace ss {
                 null_error();
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4311,7 +4306,7 @@ namespace ss {
                 null_error();
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4356,7 +4351,7 @@ namespace ss {
                     type_error(string_t, dictionary_t);
                     //  string != dictionary
                 
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, dictionary_t);
                 
                 int i = io_array(rhs);
@@ -4411,7 +4406,7 @@ namespace ss {
                 if (rhs.empty() || is_string(rhs))
                     type_error(string_t, array_t);
                 
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, array_t);
                 
                 int i = io_array(rhs);
@@ -4442,7 +4437,7 @@ namespace ss {
                 if (rhs.empty())
                     null_error();
                 
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4481,7 +4476,7 @@ namespace ss {
         });
         
         uov[shrink_pos = uoc++] = new uuo("shrink", [this](string rhs) {
-            if (!is_symbol(rhs))
+            if (!is_key(rhs))
                 operation_error();
             
             int i = io_array(rhs);
@@ -4506,7 +4501,7 @@ namespace ss {
         });
         
         uov[uoc++] = new uuo("sizeof", [this](const string rhs) {
-            if (!is_symbol(rhs))
+            if (!is_key(rhs))
                 operation_error();
             
             int i = io_array(rhs);
@@ -4548,7 +4543,7 @@ namespace ss {
                 //  char | string
             }
             
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 int i = io_array(rhs);
                 if (i == -1) {
                     i = io_string(rhs);
@@ -4613,7 +4608,7 @@ namespace ss {
                 type_error(string_t, int_t);
                 //  string != int
             
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 if (io_array(rhs) != -1)
                     type_error(array_t, int_t);
                     //  array != int
@@ -4667,7 +4662,7 @@ namespace ss {
                 return ss.str();
             }
             
-            if (!is_symbol(rhs))
+            if (!is_key(rhs))
                 type_error(double_t, string_t);
                 
             if (io_array(rhs) != -1)
@@ -4714,7 +4709,7 @@ namespace ss {
                 null_error();
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, char_t);
                     //  double != char
                 
@@ -4757,7 +4752,7 @@ namespace ss {
                 //  array != string
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4797,7 +4792,7 @@ namespace ss {
                 //  array != string
             
             if (!is_string(rhs)) {
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -4835,7 +4830,7 @@ namespace ss {
             if (rhs.empty() || is_string(rhs))
                 return encode(to_string(string_t));
             
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 int i = io_array(rhs);
                 if (i == -1) {
                     i = io_string(rhs);
@@ -4871,7 +4866,7 @@ namespace ss {
                     type_error(string_t, dictionary_t);
                     //  string != dictionary
                 
-                if (!is_symbol(rhs))
+                if (!is_key(rhs))
                     type_error(double_t, dictionary_t);
                 
                 int i = io_array(rhs);
@@ -4948,7 +4943,7 @@ namespace ss {
                     
                     double num;
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(array_t, int_t);
                             //  array != int
@@ -4975,7 +4970,7 @@ namespace ss {
                     return encode(rhs);
                 }
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, string_t);
                     //  double != string
                 
@@ -5011,7 +5006,7 @@ namespace ss {
                     
                     double num;
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(array_t, int_t);
                             //  array != int
@@ -5071,7 +5066,7 @@ namespace ss {
                     return std::get<1>(* arrayv[i])[j * 2 + 1];
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(array_t, int_t);
                         //  array != int
@@ -5161,7 +5156,7 @@ namespace ss {
                 return valuev[i * 2 + 1];
             }
             
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 if (io_array(rhs) != -1)
                     type_error(array_t, int_t);
                     //  array != int
@@ -5260,7 +5255,7 @@ namespace ss {
                     if (is_string(rhs))
                         rhs = decode(rhs);
                     
-                    else if (is_symbol(rhs)) {
+                    else if (is_key(rhs)) {
                         if (io_array(rhs) != -1)
                             type_error(array_t, string_t);
                             //  array != string
@@ -5285,7 +5280,7 @@ namespace ss {
                     return encode(lhs + rhs);
                 }
                 
-                if (is_symbol(lhs)) {
+                if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -5300,7 +5295,7 @@ namespace ss {
                                 type_error(array_t, double_t);
                                 //  array != double
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 if (io_array(rhs) != -1)
                                     type_error(array_t, double_t);
                                     //  array != double
@@ -5333,7 +5328,7 @@ namespace ss {
                         if (is_string(rhs))
                             rhs = decode(rhs);
                         
-                        else if (is_symbol(rhs)) {
+                        else if (is_key(rhs)) {
                             int j = io_string(rhs);
                             
                             if (j == -1)
@@ -5361,7 +5356,7 @@ namespace ss {
                             if (is_string(rhs))
                                 rhs = encode(decode(rhs));
                                 
-                            else if (is_symbol(rhs)) {
+                            else if (is_key(rhs)) {
                                 int j = io_array(rhs);
                                 
                                 if (j == -1) {
@@ -5399,7 +5394,7 @@ namespace ss {
                     type_error(string_t, double_t);
                     //  string != double
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(array_t, double_t);
                         //  array != double
@@ -5420,7 +5415,7 @@ namespace ss {
                     if (is_string(rhs))
                         rhs = encode(decode(rhs));
                         
-                    else if (is_symbol(rhs)) {
+                    else if (is_key(rhs)) {
                         int i = io_array(rhs);
                         
                         if (i == -1) {
@@ -5481,7 +5476,7 @@ namespace ss {
                 if (lhs.empty() || is_string(lhs))
                     type_error(string_t, array_t);
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                     
                 int i = io_array(lhs);
@@ -5497,13 +5492,13 @@ namespace ss {
                     undefined_error(lhs);
                 }
                 
-                if (!is_symbol(ctr))
-                    expect_error("symbol");
+                if (!is_key(ctr))
+                    expect_error("key");
                 
                 size_t state = get_state();
                 
                 if (is_defined(ctr))
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                 
                 valuec = std::get<1>(* arrayv[i]).size();
                 valuev = new string[valuec];
@@ -5531,7 +5526,7 @@ namespace ss {
                 
                 result = std::get<1>(* arrayv[io_array(ctr)])[0];
                 
-                remove_symbol(ctr);
+                remove_key(ctr);
                 
                 set_state(state);
                 
@@ -5540,13 +5535,13 @@ namespace ss {
                 return result;
             }
             
-            if (!is_symbol(ctr))
-                expect_error("symbol");;
+            if (!is_key(ctr))
+                expect_error("key");;
             
             size_t state = get_state();
             
             if (is_defined(ctr))
-                remove_symbol(ctr);
+                remove_key(ctr);
             
             set_array(ctr, 0, valuev[0]);
             
@@ -5566,7 +5561,7 @@ namespace ss {
             
             result = std::get<1>(* arrayv[io_array(ctr)])[0];
             
-            remove_symbol(ctr);
+            remove_key(ctr);
             
             set_state(state);
             
@@ -5581,7 +5576,7 @@ namespace ss {
                 if (lhs.empty() || is_string(lhs))
                     type_error(string_t, table_t);
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, table_t);
                 
                 int i = io_array(lhs);
@@ -5694,7 +5689,7 @@ namespace ss {
                     type_error(string_t, table_t);
                     //  string != table
                 
-                if  (!is_symbol(lhs))
+                if  (!is_key(lhs))
                     type_error(double_t, table_t);
                     //  double != table
                 
@@ -5750,7 +5745,7 @@ namespace ss {
                     return ss.str();
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(array_t, int_t);
                         //  array != int
@@ -5875,7 +5870,7 @@ namespace ss {
                 return ss.str();
             }
             
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 if (io_array(rhs) != -1) {
                     delete[] valuev;
                     type_error(array_t, int_t);
@@ -6004,7 +5999,7 @@ namespace ss {
                         return std::to_string(i != text.length() - pattern.length() + 1);
                     }
                     
-                    if (!is_symbol(rhs))
+                    if (!is_key(rhs))
                         type_error(double_t, string_t);
                         //  double != string
                     
@@ -6046,7 +6041,7 @@ namespace ss {
                     return std::to_string(j != text.length() - pattern.length() + 1);
                 }
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, string_t);
                 
                 int i = io_array(lhs);
@@ -6093,7 +6088,7 @@ namespace ss {
                             return std::to_string(j != text.length() - pattern.length() + 1);
                         }
                         
-                        if (!is_symbol(rhs))
+                        if (!is_key(rhs))
                             type_error(double_t, string_t);
                             //  double != string
                         
@@ -6167,7 +6162,7 @@ namespace ss {
                     type_error(string_t, array_t);
                     //  string != array
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                     //  double != array
                 
@@ -6203,7 +6198,7 @@ namespace ss {
                 if (is_string(rhs))
                     rhs = encode(decode(rhs));
                     
-                else if (is_symbol(rhs)) {
+                else if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(array_t, string_t);
                         //  array != string
@@ -6240,7 +6235,7 @@ namespace ss {
                 if (lhs.empty() || is_string(lhs))
                     type_error(string_t, array_t);
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                 
                 int i = io_array(lhs);
@@ -6254,13 +6249,13 @@ namespace ss {
                     undefined_error(lhs);
                 }
                 
-                if (!is_symbol(ctr))
-                    expect_error("symbol");
+                if (!is_key(ctr))
+                    expect_error("key");
                 
                 size_t state = get_state();
                 
                 if (is_defined(ctr))
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                 
                 valuec = std::get<1>(* arrayv[i]).size();
                 valuev = new string[valuec];
@@ -6277,7 +6272,7 @@ namespace ss {
                     
                     string result = evaluate(rhs);
                     
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                     
                     if (ss::evaluate(result))
                         ++j;
@@ -6300,13 +6295,13 @@ namespace ss {
                 return result;
             }
             
-            if (!is_symbol(ctr))
-                expect_error("symbol");
+            if (!is_key(ctr))
+                expect_error("key");
             
             size_t state = get_state();
             
             if (is_defined(ctr))
-                remove_symbol(ctr);
+                remove_key(ctr);
             
             size_t i = 0;
             while (i < valuec) {
@@ -6317,7 +6312,7 @@ namespace ss {
                 
                 string result = evaluate(rhs);
                 
-                remove_symbol(ctr);
+                remove_key(ctr);
                 
                 if (ss::evaluate(result))
                     ++i;
@@ -6348,7 +6343,7 @@ namespace ss {
                 if (lhs.empty() || is_string(lhs))
                     type_error(string_t, array_t);
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                 
                 int i = io_array(lhs);
@@ -6364,13 +6359,13 @@ namespace ss {
                     undefined_error(lhs);
                 }
                 
-                if (!is_symbol(ctr))
-                    expect_error("symbol");
+                if (!is_key(ctr))
+                    expect_error("key");
                 
                 size_t state = get_state();
                 
                 if (is_defined(ctr))
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                 
                 valuec = std::get<1>(* arrayv[i]).size();
                 valuev = new string[valuec];
@@ -6389,7 +6384,7 @@ namespace ss {
                     
                     string result = evaluate(rhs);
                     
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                     
                     if (ss::evaluate(result))
                         break;
@@ -6411,15 +6406,15 @@ namespace ss {
                 return result;
             }
             
-            if (!is_symbol(ctr)) {
+            if (!is_key(ctr)) {
                 delete[] valuev;
-                expect_error("symbol");
+                expect_error("key");
             }
             
             size_t state = get_state();
             
             if (is_defined(ctr))
-                remove_symbol(ctr);
+                remove_key(ctr);
             
             size_t i;
             for (i = 0; i < valuec; ++i) {
@@ -6430,7 +6425,7 @@ namespace ss {
                 
                 string result = evaluate(rhs);
                 
-                remove_symbol(ctr);
+                remove_key(ctr);
                 
                 if (ss::evaluate(result))
                     break;
@@ -6460,7 +6455,7 @@ namespace ss {
                 if (lhs.empty() || is_string(lhs))
                     type_error(string_t, array_t);
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                 
                 int i = io_array(lhs);
@@ -6476,13 +6471,13 @@ namespace ss {
                     undefined_error(lhs);
                 }
                 
-                if (!is_symbol(ctr))
+                if (!is_key(ctr))
                     operation_error();
                 
                 size_t state = get_state();
                 
                 if (is_defined(ctr))
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                 
                 valuec = std::get<1>(* arrayv[i]).size();
                 valuev = new string[valuec];
@@ -6501,7 +6496,7 @@ namespace ss {
                     
                     string result = evaluate(rhs);
                     
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                     
                     if (ss::evaluate(result))
                         break;
@@ -6523,7 +6518,7 @@ namespace ss {
                 return result;
             }
             
-            if (!is_symbol(ctr)) {
+            if (!is_key(ctr)) {
                 delete[] valuev;
                 operation_error();
             }
@@ -6531,7 +6526,7 @@ namespace ss {
             size_t state = get_state();
             
             if (is_defined(ctr))
-                remove_symbol(ctr);
+                remove_key(ctr);
             
             size_t i;
             for (i = 0; i < valuec; ++i) {
@@ -6542,7 +6537,7 @@ namespace ss {
                 
                 string result = evaluate(rhs);
                 
-                remove_symbol(ctr);
+                remove_key(ctr);
                 
                 if (ss::evaluate(result))
                     break;
@@ -6652,7 +6647,7 @@ namespace ss {
                         return encode(string(str));
                     }
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -6736,7 +6731,7 @@ namespace ss {
                         std::get<2>(* arrayv[i]).second = true;
                         
                         size_t n = text.length() + 1;
-                        char* str = new char[pow_2(n)];
+                        char* str = new char[pow2(n)];
                         
                         strcpy(str, text.c_str());
                         
@@ -6834,7 +6829,7 @@ namespace ss {
                 
                 size_t n = text.length() + 1;
                 
-                char* str = new char[pow_2(n)];
+                char* str = new char[pow2(n)];
                 
                 strcpy(str, text.c_str());
                 
@@ -6894,7 +6889,7 @@ namespace ss {
                 return result;
             }
             
-            if (!is_symbol(lhs))
+            if (!is_key(lhs))
                 type_error(double_t, string_t);
                 //  double != string
             
@@ -7001,7 +6996,7 @@ namespace ss {
                     return encode(string(str));
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int j = io_array(rhs);
                     if (j == -1) {
                         j = io_string(rhs);
@@ -7085,7 +7080,7 @@ namespace ss {
                     std::get<2>(* arrayv[j]).second = true;
                     
                     size_t n = text.length() + 1;
-                    char* str = new char[pow_2(n)];
+                    char* str = new char[pow2(n)];
                     
                     strcpy(str, text.c_str());
                     
@@ -7183,7 +7178,7 @@ namespace ss {
             
             size_t n = text.length() + 1;
             
-            char* str = new char[pow_2(n)];
+            char* str = new char[pow2(n)];
             
             strcpy(str, text.c_str());
             
@@ -7280,7 +7275,7 @@ namespace ss {
                         return std::to_string(i == text.length() - pattern.length() + 1 ? -1 : i);
                     }
                     
-                    if (!is_symbol(rhs))
+                    if (!is_key(rhs))
                         type_error(double_t, string_t);
                         //  double != string
                     
@@ -7322,7 +7317,7 @@ namespace ss {
                     return std::to_string(j == text.length() - pattern.length() + 1 ? -1 : j);
                 }
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, string_t);
                 
                 int i = io_array(lhs);
@@ -7369,7 +7364,7 @@ namespace ss {
                             return std::to_string(j == text.length() - pattern.length() + 1 ? -1 : j);
                         }
                         
-                        if (!is_symbol(rhs))
+                        if (!is_key(rhs))
                             type_error(double_t, string_t);
                             //  double != string
                         
@@ -7438,7 +7433,7 @@ namespace ss {
                 if (lhs.empty() || is_string(lhs))
                     type_error(string_t, array_t);
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                 
                 int i = io_array(lhs);
@@ -7541,7 +7536,7 @@ namespace ss {
                     type_error(string_t, array_t);
                     //  string != array
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                     //  double != array
                 
@@ -7568,7 +7563,7 @@ namespace ss {
                 if (is_string(rhs))
                     rhs = decode(rhs);
                 
-                else if (is_symbol(rhs)) {
+                else if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(array_t, string_t);
                         //  array != string
@@ -7619,7 +7614,7 @@ namespace ss {
             if (is_string(rhs))
                 rhs = decode(rhs);
             
-            else if (is_symbol(rhs)) {
+            else if (is_key(rhs)) {
                 int i = io_array(rhs);
                 if (i != -1)
                     type_error(array_t, string_t);
@@ -7696,7 +7691,7 @@ namespace ss {
                         return std::to_string(i);
                     }
                     
-                    if (!is_symbol(rhs))
+                    if (!is_key(rhs))
                         type_error(double_t, string_t);
                         //  double != string
                     
@@ -7738,7 +7733,7 @@ namespace ss {
                     return std::to_string(j);
                 }
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, string_t);
                 
                 int i = io_array(lhs);
@@ -7786,7 +7781,7 @@ namespace ss {
                         return std::to_string(j);
                     }
                     
-                    if (!is_symbol(rhs))
+                    if (!is_key(rhs))
                         type_error(double_t, string_t);
                         //  double != string
                     
@@ -7854,7 +7849,7 @@ namespace ss {
                 if (lhs.empty() || is_string(lhs))
                     type_error(string_t, array_t);
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     type_error(double_t, array_t);
                 
                 int i = io_array(lhs);
@@ -7870,13 +7865,13 @@ namespace ss {
                     type_error(string_t, array_t);
                 }
                 
-                if (!is_symbol(ctr))
-                    expect_error("symbol");
+                if (!is_key(ctr))
+                    expect_error("key");
                 
                 size_t state = get_state();
                 
                 if (is_defined(ctr))
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                 
                 valuec = std::get<1>(* arrayv[i]).size();
                 valuev = new string[valuec];
@@ -7896,7 +7891,7 @@ namespace ss {
                         type_error(array_t, string_t);
                         //  array != string
                     
-                    remove_symbol(ctr);
+                    remove_key(ctr);
                     
                     valuev[j] = result;
                 }
@@ -7912,13 +7907,13 @@ namespace ss {
                 return result;
             }
             
-            if (!is_symbol(ctr))
-                expect_error("symbol");
+            if (!is_key(ctr))
+                expect_error("key");
             
             size_t state = get_state();
             
             if (is_defined(ctr))
-                remove_symbol(ctr);
+                remove_key(ctr);
             
             size_t i;
             for (i = 0; i < valuec; ++i) {
@@ -7935,7 +7930,7 @@ namespace ss {
                     //  array != string
                 }
                 
-                remove_symbol(ctr);
+                remove_key(ctr);
                 
                 valuev[i] = result;
             }
@@ -7950,7 +7945,7 @@ namespace ss {
         });
         
         uov[reserve_pos = uoc++] = new buo("reserve", [this](const string lhs, const string rhs) {
-            if (!is_symbol(lhs))
+            if (!is_key(lhs))
                 operation_error();
             
             int i = io_array(lhs);
@@ -7976,7 +7971,7 @@ namespace ss {
             
             double num;
             
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 if (io_array(rhs) != -1)
                     type_error(array_t, int_t);
                     //  array != int
@@ -8018,7 +8013,7 @@ namespace ss {
                     type_error(string_t, table_t);
                     //  string != table
                 
-                if  (!is_symbol(lhs))
+                if  (!is_key(lhs))
                     type_error(double_t, table_t);
                     //  double != table
                 
@@ -8074,7 +8069,7 @@ namespace ss {
                     return ss.str();
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(array_t, int_t);
                         //  array != int
@@ -8199,7 +8194,7 @@ namespace ss {
                 return ss.str();
             }
             
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 if (io_array(rhs) != -1) {
                     delete[] valuev;
                     type_error(array_t, int_t);
@@ -8297,7 +8292,7 @@ namespace ss {
             if (valuec == 1) {
                 delete[] valuev;
                 
-                if (!is_symbol(lhs))
+                if (!is_key(lhs))
                     operation_error();
                 
                 int i = io_array(lhs);
@@ -8322,7 +8317,7 @@ namespace ss {
                     //  string != int
                 
                 double num;
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         type_error(array_t, int_t);
                         //  array != int
@@ -8365,7 +8360,7 @@ namespace ss {
             }
             
             double num;
-            if (is_symbol(rhs)) {
+            if (is_key(rhs)) {
                 if (io_array(rhs) != -1) {
                     delete[] valuev;
                     type_error(array_t, int_t);
@@ -8463,7 +8458,7 @@ namespace ss {
                         return std::to_string(lhs <= rhs);
                     }
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -8505,7 +8500,7 @@ namespace ss {
                     }
                 }
                 
-                if (is_symbol(lhs)) {
+                if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -8520,7 +8515,7 @@ namespace ss {
                                 return std::to_string(lhs <= rhs);
                             }
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 int j = io_array(rhs);
                                 if (j == -1) {
                                     j = io_string(rhs);
@@ -8592,7 +8587,7 @@ namespace ss {
                             return std::to_string(lhs <= rhs);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -8659,7 +8654,7 @@ namespace ss {
                             return std::to_string(0);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -8829,7 +8824,7 @@ namespace ss {
                     return std::to_string(lhs <= rhs);
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         i = io_string(rhs);
@@ -8968,7 +8963,7 @@ namespace ss {
                         return std::to_string(lhs >= rhs);
                     }
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -9010,7 +9005,7 @@ namespace ss {
                     }
                 }
                 
-                if (is_symbol(lhs)) {
+                if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -9025,7 +9020,7 @@ namespace ss {
                                 return std::to_string(lhs >= rhs);
                             }
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 int j = io_array(rhs);
                                 if (j == -1) {
                                     j = io_string(rhs);
@@ -9097,7 +9092,7 @@ namespace ss {
                             return std::to_string(lhs >= rhs);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -9164,7 +9159,7 @@ namespace ss {
                             return std::to_string(1);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -9335,7 +9330,7 @@ namespace ss {
                     return std::to_string(lhs >= rhs);
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         i = io_string(rhs);
@@ -9474,7 +9469,7 @@ namespace ss {
                         return std::to_string(lhs < rhs);
                     }
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -9516,7 +9511,7 @@ namespace ss {
                     }
                 }
                 
-                if (is_symbol(lhs)) {
+                if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -9531,7 +9526,7 @@ namespace ss {
                                 return std::to_string(lhs < rhs);
                             }
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 int j = io_array(rhs);
                                 if (j == -1) {
                                     j = io_string(rhs);
@@ -9603,7 +9598,7 @@ namespace ss {
                             return std::to_string(lhs < rhs);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -9670,7 +9665,7 @@ namespace ss {
                             return std::to_string(0);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -9841,7 +9836,7 @@ namespace ss {
                     return std::to_string(lhs < rhs);
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         i = io_string(rhs);
@@ -9979,7 +9974,7 @@ namespace ss {
                         return std::to_string(lhs > rhs);
                     }
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -10021,7 +10016,7 @@ namespace ss {
                     }
                 }
                 
-                if (is_symbol(lhs)) {
+                if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -10036,7 +10031,7 @@ namespace ss {
                                 return std::to_string(lhs > rhs);
                             }
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 int j = io_array(rhs);
                                 if (j == -1) {
                                     j = io_string(rhs);
@@ -10108,7 +10103,7 @@ namespace ss {
                             return std::to_string(lhs > rhs);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -10175,7 +10170,7 @@ namespace ss {
                             return std::to_string(1);
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -10340,7 +10335,7 @@ namespace ss {
                     return std::to_string(lhs > rhs);
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         i = io_string(rhs);
@@ -10469,7 +10464,7 @@ namespace ss {
                     //  null === (array)
                     //  null === (string)
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         i = io_string(rhs);
@@ -10529,7 +10524,7 @@ namespace ss {
                         //  (string) === (string)
                     }
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -10566,7 +10561,7 @@ namespace ss {
                     //  (str) === double
                 }
                 
-                if (is_symbol(lhs)) {
+                if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -10583,7 +10578,7 @@ namespace ss {
                                 //  double === (array)
                                 //  double === (string)
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 i = io_array(rhs);
                                 if (i != -1) {
                                     std::get<2>(* arrayv[i]).second = true;
@@ -10633,7 +10628,7 @@ namespace ss {
                                 //  null === (array)
                                 //  null === (string)
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 if (io_array(rhs) != -1) {
                                     return std::to_string(0);
                                     //  null === array
@@ -10672,7 +10667,7 @@ namespace ss {
                             //  string === (string)
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j != -1) {
                                 std::get<2>(* arrayv[j]).second = true;
@@ -10723,7 +10718,7 @@ namespace ss {
                             return std::to_string(0);
                             //  array === (str)
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -10790,7 +10785,7 @@ namespace ss {
                     //  double === (array)
                     //  double === (string)
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1 || io_string(rhs) != -1)
                         return std::to_string(0);
                         //  double === (array)
@@ -10829,7 +10824,7 @@ namespace ss {
                     //  (array) === (str)
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         delete[] v;
@@ -10904,7 +10899,7 @@ namespace ss {
                     //  null !== (array)
                     //  null !== (string)
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1)
                         return std::to_string(1);
                         //  null !== array
@@ -10955,7 +10950,7 @@ namespace ss {
                         //  (string) !== (string)
                     }
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         if (io_array(rhs) != -1)
                             return std::to_string(1);
                             //  (string) !== array
@@ -10987,7 +10982,7 @@ namespace ss {
                     //  (string) !== (d)
                 }
                 
-                if (is_symbol(lhs)) {
+                if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -11004,7 +10999,7 @@ namespace ss {
                                 //  double !== (array)
                                 //  double !== (string)
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 if (io_array(rhs) != -1 || io_string(rhs) != -1)
                                     return std::to_string(1);
                                     //  double !== array
@@ -11045,7 +11040,7 @@ namespace ss {
                                 return std::to_string(1);
                                 //  null !== (array)
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 if (io_array(rhs) != -1)
                                     return std::to_string(1);
                                     //  null !== array
@@ -11082,7 +11077,7 @@ namespace ss {
                             //  string !== (string)
                         }
                         
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             if (io_array(rhs) != -1)
                                 return std::to_string(1);
                                 //  str !== array
@@ -11128,7 +11123,7 @@ namespace ss {
                             return std::to_string(1);
                             //  array !== (string)
                             
-                        if (is_symbol(rhs)) {
+                        if (is_key(rhs)) {
                             int j = io_array(rhs);
                             if (j == -1) {
                                 j = io_string(rhs);
@@ -11191,7 +11186,7 @@ namespace ss {
                     //  double !== (array)
                     //  double !== (string)
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     if (io_array(rhs) != -1 || io_string(rhs) != -1)
                         return std::to_string(1);
                         // double !== array
@@ -11229,7 +11224,7 @@ namespace ss {
                     //  (array) !== (string)
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         delete[] v;
@@ -11302,7 +11297,7 @@ namespace ss {
                         return std::to_string(0);
                         //  null == (string)
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -11343,7 +11338,7 @@ namespace ss {
                 if (is_string(lhs))
                     lhs = decode(lhs);
                 
-                else if (is_symbol(lhs)) {
+                else if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -11366,7 +11361,7 @@ namespace ss {
                                         return std::to_string(0);
                                         //  null == (string)
                                     
-                                    if (is_symbol(rhs)) {
+                                    if (is_key(rhs)) {
                                         int j = io_array(rhs);
                                         if (j == -1) {
                                             j = io_string(rhs);
@@ -11432,7 +11427,7 @@ namespace ss {
                                 //  array == (string)
                             }
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 int j = io_array(rhs);
                                 if (j == -1) {
                                     j = io_string(rhs);
@@ -11531,7 +11526,7 @@ namespace ss {
                     if (is_string(rhs))
                         rhs = decode(rhs);
                     
-                    else if (is_symbol(rhs)) {
+                    else if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -11586,7 +11581,7 @@ namespace ss {
                     //  (array) == (string)
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         delete[] v;
@@ -11662,7 +11657,7 @@ namespace ss {
                         return std::to_string(1);
                         //  null != (str)
                     
-                    if (is_symbol(rhs)) {
+                    if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -11703,7 +11698,7 @@ namespace ss {
                 if (is_string(lhs))
                     lhs = decode(lhs);
                 
-                else if (is_symbol(lhs)) {
+                else if (is_key(lhs)) {
                     int i = io_array(lhs);
                     if (i == -1) {
                         i = io_string(lhs);
@@ -11726,7 +11721,7 @@ namespace ss {
                                         return std::to_string(1);
                                         //  null != (string)
                                     
-                                    if (is_symbol(rhs)) {
+                                    if (is_key(rhs)) {
                                         int j = io_array(rhs);
                                         if (j == -1) {
                                             j = io_string(rhs);
@@ -11792,7 +11787,7 @@ namespace ss {
                                 //  array != (string)
                             }
                             
-                            if (is_symbol(rhs)) {
+                            if (is_key(rhs)) {
                                 int j = io_array(rhs);
                                 if (j == -1) {
                                     j = io_string(rhs);
@@ -11889,7 +11884,7 @@ namespace ss {
                     if (is_string(rhs))
                         rhs = decode(rhs);
                     
-                    else if (is_symbol(rhs)) {
+                    else if (is_key(rhs)) {
                         int i = io_array(rhs);
                         if (i == -1) {
                             i = io_string(rhs);
@@ -11944,7 +11939,7 @@ namespace ss {
                     //  (array) != (string)
                 }
                 
-                if (is_symbol(rhs)) {
+                if (is_key(rhs)) {
                     int i = io_array(rhs);
                     if (i == -1) {
                         delete[] v;
@@ -12226,118 +12221,118 @@ namespace ss {
         state_stringv = new pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>*[1];
     }
 
-    int command_processor::io_array(const string symbol) const {
-        return io_array(symbol, 0, arrayc);
+    int command_processor::io_array(const string key) const {
+        return io_array(key, 0, arrayc);
     }
 
-    int command_processor::io_array(const string symbol, const size_t start, const size_t end) const {
+    int command_processor::io_array(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* arrayv[start + len]) == symbol)
+        if (std::get<0>(* arrayv[start + len]) == key)
             return (int)(start + len);
         
-        if (std::get<0>(* arrayv[start + len]) > symbol)
-            return io_array(symbol, start, start + len);
+        if (std::get<0>(* arrayv[start + len]) > key)
+            return io_array(key, start, start + len);
         
-        return io_array(symbol, start + len + 1, end);
+        return io_array(key, start + len + 1, end);
     }
 
-    int command_processor::io_function(const string symbol) const {
-        return io_function(symbol, 0, functionc);
+    int command_processor::io_function(const string key) const {
+        return io_function(key, 0, functionc);
     }
 
-    int command_processor::io_function(const string symbol, const size_t start, const size_t end) const {
+    int command_processor::io_function(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (functionv[start + len]->name() == symbol)
+        if (functionv[start + len]->name() == key)
             return (int)(start + len);
         
-        if (functionv[start + len]->name() > symbol)
-            return io_function(symbol, start, start + len);
+        if (functionv[start + len]->name() > key)
+            return io_function(key, start, start + len);
         
-        return io_function(symbol, start + len + 1, end);
+        return io_function(key, start + len + 1, end);
     }
 
-    int command_processor::io_string(const string symbol) const {
-        return io_string(symbol, 0, stringc);
+    int command_processor::io_string(const string key) const {
+        return io_string(key, 0, stringc);
     }
 
-    int command_processor::io_string(const string symbol, const size_t start, const size_t end) const {
+    int command_processor::io_string(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* stringv[start + len]) == symbol)
+        if (std::get<0>(* stringv[start + len]) == key)
             return (int)(start + len);
         
-        if (std::get<0>(* stringv[start + len]) > symbol)
-            return io_string(symbol, start, start + len);
+        if (std::get<0>(* stringv[start + len]) > key)
+            return io_string(key, start, start + len);
         
-        return io_string(symbol, start + len + 1, end);
+        return io_string(key, start + len + 1, end);
     }
 
-    int command_processor::io_state_array(const size_t state, const string symbol) const {
-        return io_state_array(state, symbol, 0, state_arrayv[state]->first);
+    int command_processor::io_state_array(const size_t state, const string key) const {
+        return io_state_array(state, key, 0, state_arrayv[state]->first);
     }
 
-    int command_processor::io_state_array(const size_t state, const string symbol, size_t start, size_t end) const {
+    int command_processor::io_state_array(const size_t state, const string key, size_t start, size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* state_arrayv[state]->second[start + len]) == symbol)
+        if (std::get<0>(* state_arrayv[state]->second[start + len]) == key)
             return (int)(start + len);
         
-        if (std::get<0>(* state_arrayv[state]->second[start + len]) > symbol)
-            return io_state_array(state, symbol, start, start + len);
+        if (std::get<0>(* state_arrayv[state]->second[start + len]) > key)
+            return io_state_array(state, key, start, start + len);
         
-        return io_state_array(state, symbol, start + len + 1, end);
+        return io_state_array(state, key, start + len + 1, end);
     }
 
-    int command_processor::io_state_function(const size_t state, const string symbol) const {
-        return io_state_function(state, symbol, 0, state_functionv[state]->first);
+    int command_processor::io_state_function(const size_t state, const string key) const {
+        return io_state_function(state, key, 0, state_functionv[state]->first);
     }
 
-    int command_processor::io_state_function(const size_t state, const string symbol, size_t start, size_t end) const {
+    int command_processor::io_state_function(const size_t state, const string key, size_t start, size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (state_functionv[state]->second[start + len]->name() == symbol)
+        if (state_functionv[state]->second[start + len]->name() == key)
             return (int)(start + len);
         
-        if (state_functionv[state]->second[start + len]->name() > symbol)
-            return io_state_function(state, symbol, start, start + len);
+        if (state_functionv[state]->second[start + len]->name() > key)
+            return io_state_function(state, key, start, start + len);
         
-        return io_state_function(state, symbol, start + len + 1, end);
+        return io_state_function(state, key, start + len + 1, end);
     }
 
-    int command_processor::io_state_string(const size_t state, const string symbol) const {
-        return io_state_string(state, symbol, 0, state_stringv[state]->first);
+    int command_processor::io_state_string(const size_t state, const string key) const {
+        return io_state_string(state, key, 0, state_stringv[state]->first);
     }
 
-    int command_processor::io_state_string(const size_t state, const string symbol, const size_t start, const size_t end) const {
+    int command_processor::io_state_string(const size_t state, const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* state_stringv[state]->second[start + len]) == symbol)
+        if (std::get<0>(* state_stringv[state]->second[start + len]) == key)
             return (int)(start + len);
         
-        if (std::get<0>(* state_stringv[state]->second[start + len]) > symbol)
-            return io_state_string(state, symbol, start, start + len);
+        if (std::get<0>(* state_stringv[state]->second[start + len]) > key)
+            return io_state_string(state, key, start, start + len);
         
-        return io_state_string(state, symbol, start + len + 1, end);
+        return io_state_string(state, key, start + len + 1, end);
     }
 
     bool command_processor::is_mutating(const string expression) const {
@@ -12351,7 +12346,7 @@ namespace ss {
         while (i < n && data[i] == "(")
             ++i;
         
-        if (is_symbol(data[i]) && i != n - 1 && data[i + 1] == "(")
+        if (is_key(data[i]) && i != n - 1 && data[i + 1] == "(")
             return true;
         
         string term = tolower(data[i]);
@@ -12819,7 +12814,7 @@ namespace ss {
                 ++j;
             
             if (j != functionc) {
-                if (functionv[j]->name() == to_string(array_t) && is_symbol(data[i + 1]))
+                if (functionv[j]->name() == to_string(array_t) && is_key(data[i + 1]))
                     continue;
                 
                 size_t k = ++i + 1, s = k;   int p = 1;
@@ -13232,17 +13227,17 @@ namespace ss {
         return n;
     }
 
-    void command_processor::remove_symbol(const string symbol) {
-        int i = io_function(symbol);
+    void command_processor::remove_key(const string key) {
+        int i = io_function(key);
         
         if (i == -1) {
-            i = io_array(symbol);
+            i = io_array(key);
             
             if (i == -1) {
-                i = io_string(symbol);
+                i = io_string(key);
                 
                 if (i == -1) {
-                    logic::remove_symbol(symbol);
+                    logic::remove_key(key);
                     return;
                 }
                 
@@ -13251,7 +13246,7 @@ namespace ss {
                 
                 delete stringv[--stringc];
                 
-                logic::remove_symbol(symbol);
+                logic::remove_key(key);
                 
                 return;
             }
@@ -13261,7 +13256,7 @@ namespace ss {
             
             delete arrayv[--arrayc];
             
-            logic::remove_symbol(symbol);
+            logic::remove_key(key);
             
             return;
         }
@@ -13330,7 +13325,7 @@ namespace ss {
         delete[] arrayv;
         
         arrayc = state_arrayv[i]->first;
-        arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[pow_2(arrayc)];
+        arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[pow2(arrayc)];
         
         for (size_t j = 0; j < arrayc; ++j) {
             string key = std::get<0>(* state_arrayv[i]->second[j]);
@@ -13413,20 +13408,20 @@ namespace ss {
         this->is_locked.store(false);
     }
 
-    void command_processor::set_array(const string symbol, const size_t index, const string value) {
+    void command_processor::set_array(const string key, const size_t index, const string value) {
 #if DEBUG_LEVEL
-        if (!is_symbol(symbol))
-            expect_error("symbol: " + symbol);
+        if (!is_key(key))
+            expect_error("key: " + key);
         
         if (!value.empty() && !is_string(value) && !is_number(value))
             throw error("Unexpected token: " + value);
 #endif
-        int i = io_array(symbol);
+        int i = io_array(key);
         
         if (i == -1) {
 #if DEBUG_LEVEL
-            if (is_defined(symbol))
-                defined_error(symbol);
+            if (is_defined(key))
+                defined_error(key);
 #endif
             if (is_pow(arrayc, 2)) {
                 tuple<string, ss::array<string>, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[arrayc * 2];
@@ -13438,7 +13433,7 @@ namespace ss {
                 arrayv = _arrayv;
             }
             
-            arrayv[arrayc] = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>(symbol, ss::array<string>(), pair<bool, bool>(false, false), _statec);
+            arrayv[arrayc] = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>(key, ss::array<string>(), pair<bool, bool>(false, false), _statec);
             
             size_t j;
             for (j = arrayc++; j > 0 && std::get<0>(* arrayv[j]) < std::get<0>(* arrayv[j - 1]); --j)
@@ -13446,10 +13441,10 @@ namespace ss {
             
             std::get<1>(* arrayv[j]).push(value);
             
-            add_symbol(symbol);
+            add_key(key);
         } else {
             if (std::get<2>(* arrayv[i]).first)
-                write_error(symbol);
+                write_error(key);
             
             if (index > std::get<1>(* arrayv[i]).size())
                 range_error(std::to_string(index));
@@ -13461,10 +13456,10 @@ namespace ss {
         }
     }
 
-    void command_processor::set_array(const string symbol, const string value) {
+    void command_processor::set_array(const string key, const string value) {
 #if DEBUG_LEVEL
-        if (!is_symbol(symbol))
-            expect_error("symbol: " + symbol);
+        if (!is_key(key))
+            expect_error("key: " + key);
 #endif
         string valuev[value.length() + 1];
         size_t valuec = parse(valuev, value);
@@ -13483,7 +13478,7 @@ namespace ss {
                 throw error("Unexpected token: " + value);
         }
 #endif
-        _set_array(symbol, valuec, valuev);
+        _set_array(key, valuec, valuev);
     }
 
     void command_processor::set_function(function_t* function) {
@@ -13504,48 +13499,48 @@ namespace ss {
         
         functionv[functionc] = function;
         
-        add_symbol(functionv[functionc]->name());
+        add_key(functionv[functionc]->name());
         
         for (size_t i = functionc++; i > 0 && functionv[i]->name() < functionv[i - 1]->name(); --i)
             swap(functionv[i], functionv[i - 1]);
     }
 
-    void command_processor::set_pause(const bool pause) {
+    void command_processor::set_pause(const bool value) {
         ss::stack<function_t*>* _stack = new ss::stack<function_t*>();
         
         while (stack.size() > 1)
             _stack->push(stack.pop());
         
-        stack.top()->set_pause(pause);
+        stack.top()->set_pause(value);
         
         while (_stack->size())
             stack_push(_stack->pop());
     }
 
-    void command_processor::set_read_only(const string symbol, const bool value) {
+    void command_processor::set_read_only(const string key, const bool value) {
         int i;
-        if ((i = io_array(symbol)) == -1) {
-            if ((i = io_string(symbol)) == -1)
-                logic::set_read_only(symbol, false);
+        if ((i = io_array(key)) == -1) {
+            if ((i = io_string(key)) == -1)
+                logic::set_read_only(key, false);
             else
                 std::get<2>(* stringv[i]).first = value;
         } else
             std::get<2>(* arrayv[i]).first = value;
     }
 
-    void command_processor::set_string(const string symbol, const string value) {
+    void command_processor::set_string(const string key, const string value) {
 #if DEBUG_LEVEL
-        if (!is_symbol(symbol))
-            expect_error("symbol: " + symbol);
+        if (!is_key(key))
+            expect_error("key: " + key);
         
         if (!value.empty() && !is_string(value))
             throw error("Unexpected token: " + value);
 #endif
-        int i = io_string(symbol);
+        int i = io_string(key);
         if (i == -1) {
 #if DEBUG_LEVEL
-            if (is_defined(symbol))
-                defined_error(symbol);
+            if (is_defined(key))
+                defined_error(key);
 #endif
             if (is_pow(stringc, 2)) {
                 tuple<string, string, pair<bool, bool>, size_t>** tmp = new tuple<string, string, pair<bool, bool>, size_t>*[stringc * 2];
@@ -13558,15 +13553,15 @@ namespace ss {
                 stringv = tmp;
             }
             
-            stringv[stringc] = new tuple<string, string, pair<bool, bool>, size_t>(symbol, value, pair<bool, bool>(false, false), _statec);
+            stringv[stringc] = new tuple<string, string, pair<bool, bool>, size_t>(key, value, pair<bool, bool>(false, false), _statec);
             
             for (size_t j = stringc++; j > 0 && std::get<0>(* stringv[j]) < std::get<0>(* stringv[j - 1]); --j)
                 swap(stringv[j], stringv[j - 1]);
             
-            add_symbol(symbol);
+            add_key(key);
         } else {
             if (std::get<2>(* stringv[i]).first)
-                write_error(symbol);
+                write_error(key);
             
             std::get<1>(* stringv[i]) = value;
         }
