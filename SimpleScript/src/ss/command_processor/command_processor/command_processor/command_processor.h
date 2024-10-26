@@ -7,13 +7,13 @@
 #ifndef command_processor_h
 #define command_processor_h
 
-#include "buo.h"
+#include "binary_universal_operator.h"
 #include "function.h"
 #include "logic.h"
 #include "socket.h"     //  sleep_for
 #include "stack.h"
-#include "tuo.h"
-#include "uuo.h"
+#include "ternary_universal_operator.h"
+#include "unary_universal_operator.h"
 #include <algorithm>    //  tolower, toupper
 #include <filesystem>
 
@@ -74,6 +74,8 @@ namespace ss {
         string stack_trace();
     private:
         //  MEMBER FIELDS
+        
+        const std::string SEPARATORS[7] = { "!", "(", ")", ",", ".", ";", "^" };
             
         size_t additive_pos;
         size_t additive_assignment_pos;
@@ -119,7 +121,7 @@ namespace ss {
         
         size_t buocc;
         size_t* buocv = NULL;
-        buo*** buov = NULL;
+        binary_universal_operator*** buov = NULL;
         
         string expression;
         
@@ -188,9 +190,7 @@ namespace ss {
         
         int merge_numbers(int n, string* data) const;
         
-        int prefix(string* dst, const string src) const;
-        
-        int split(string* dst, string src) const;
+        int prefix(string* dst, const string src) const;        
     };
 
     //  NON-MEMBER FUNCTIONS

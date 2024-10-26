@@ -9,8 +9,8 @@
 #define logic_h
 
 #include "arithmetic.h"
-#include "blo.h"
-#include "ulo.h"
+#include "binary_logical_operator.h"
+#include "unary_logical_operator.h"
 
 using namespace std;
 

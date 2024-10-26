@@ -67,9 +67,7 @@ namespace ss {
 
     size_t split(std::string* dst, const std::string src, const std::string sep = get_sep());
 
-    size_t tokens(std::string* dst, const std::string src);
-
-    size_t tokens(std::string* dst, const std::string src, const size_t sepc, const std::string* sepv);
+    size_t tokens(std::string* dst, const std::string src, const size_t sepc = 0, const std::string* sepv = NULL);
 
     std::string trim(const std::string str);
 

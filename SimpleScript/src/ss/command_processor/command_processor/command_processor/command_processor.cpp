@@ -322,11 +322,8 @@ namespace ss {
                             //  validate operand
                             
                             string tokenv[data[i].length() + 1];
-                            int tokenc = (int)tokens(tokenv, data[i]);
                             
-                            tokenc = merge_numbers(tokenc, tokenv);
-                            
-                            if (tokenc == 1 && !is_string(tokenv[0]) &&
+                            if (merge_numbers((int)tokens(tokenv, data[i], sizeof(SEPARATORS) / sizeof(SEPARATORS[0]), SEPARATORS), tokenv) == 1 && !is_string(tokenv[0]) &&
                                 !is_key(tokenv[0]) && !is_number(tokenv[0]))
                                 throw error("Unexpected token: " + data[i]);
                             
@@ -469,7 +466,7 @@ namespace ss {
                                     
                                     double a = get_number(lhs);
                                     
-                                    a = ((bao *)aov[j])->apply(a, b);
+                                    a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                     
                                     set_number(lhs, a);
                                     
@@ -553,7 +550,7 @@ namespace ss {
                                         
                                         double a = parse_number(std::get<1>(* arrayv[k])[l * 2 + 1]);
                                         
-                                        a = ((bao *)aov[j])->apply(a, b);
+                                        a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                         
                                         rhs = encode(a);
                                         
@@ -613,7 +610,7 @@ namespace ss {
                                             
                                             double a = parse_number(std::get<1>(* arrayv[k])[(size_t)idx]);
                                             
-                                            a = ((bao *)aov[j])->apply(a, b);
+                                            a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                             
                                             rhs = encode(a);
                                             
@@ -676,7 +673,7 @@ namespace ss {
                                             
                                             double a = parse_number(std::get<1>(* arrayv[k])[m * 2 + 1]);
                                             
-                                            a = ((bao *)aov[j])->apply(a, b);
+                                            a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                             
                                             rhs = encode(a);
                                             
@@ -730,7 +727,7 @@ namespace ss {
                                         
                                         double a = parse_number(std::get<1>(* arrayv[k])[(size_t)idx]);
                                         
-                                        a = ((bao *)aov[j])->apply(a, b);
+                                        a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                         
                                         rhs = encode(a);
                                         
@@ -831,7 +828,7 @@ namespace ss {
                                     
                                     double a = parse_number(dst[k * 2 + 1]);
                                         
-                                    a = ((bao *)aov[j])->apply(a, b);
+                                    a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                     
                                     dst[k * 2 + 1] = encode(a);
                                     
@@ -889,7 +886,7 @@ namespace ss {
                                         
                                         double a = parse_number(dst[(size_t)idx]);
                                             
-                                        a = ((bao *)aov[j])->apply(a, b);
+                                        a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                         
                                         dst[(size_t)idx] = encode(a);
                                         
@@ -960,7 +957,7 @@ namespace ss {
                                         
                                         double a = parse_number(dst[l * 2 + 1]);
                                             
-                                        a = ((bao *)aov[j])->apply(a, b);
+                                        a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                         
                                         dst[l * 2 + 1] = encode(a);
                                         
@@ -1012,7 +1009,7 @@ namespace ss {
                                     
                                     double a = parse_number(dst[(size_t)idx]);
                                         
-                                    a = ((bao *)aov[j])->apply(a, b);
+                                    a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                     
                                     dst[(size_t)idx] = encode(a);
                                     
@@ -1045,7 +1042,7 @@ namespace ss {
                                 a = parse_number(rhs);
                             
                             if (j < logic::unary_count)
-                                a = ((uao *)aov[j])->apply(a);
+                                a = ((unary_arithmetic_operator *)aov[j])->apply(a);
                             else {
                                 rhs = operands.pop();
                                 
@@ -1071,7 +1068,7 @@ namespace ss {
                                 } else
                                     b = parse_number(rhs);
                                 
-                                a = ((bao_t *)aov[j])->apply(a, b);
+                                a = ((binary_arithmetic_operator_t *)aov[j])->apply(a, b);
                             }
                             
                             rhs = encode(a);
@@ -1131,7 +1128,7 @@ namespace ss {
                         } else
                             num = parse_number(rhs);
                         
-                        num = ((ulo *)lov[j])->apply(std::to_string(num));
+                        num = ((unary_logical_operator *)lov[j])->apply(std::to_string(num));
                     } else {
                         string lhs = evaluate(operands.pop());
                         
@@ -1160,7 +1157,7 @@ namespace ss {
                 string rhs;
                 
                 if (j < unary_count) {
-                    rhs = ((uuo *)uov[j])->apply(operands.pop());
+                    rhs = ((unary_universal_operator *)uov[j])->apply(operands.pop());
                     
                     operands.push(rhs);
                 } else {
@@ -1203,14 +1200,14 @@ namespace ss {
                         string ctr = operands.pop();
                         
                         rhs = operands.pop();
-                        rhs = ((tuo *)uov[j])->apply(lhs, ctr, rhs);
+                        rhs = ((ternary_universal_operator *)uov[j])->apply(lhs, ctr, rhs);
                         
                     } else if (j == cell_pos ||
                                j == insert_pos) {
                         string ctr = evaluate(operands.pop());
                         
                         rhs = evaluate(operands.pop());
-                        rhs = ((tuo *)uov[j])->apply(lhs, ctr, rhs);
+                        rhs = ((ternary_universal_operator *)uov[j])->apply(lhs, ctr, rhs);
                         
                     } else if (j == slice_pos) {
                         string valuev[lhs.length() + 1];
@@ -3666,7 +3663,7 @@ namespace ss {
                         operands.pop();
                     } else {
                         rhs = operands.pop();
-                        rhs = ((buo *)uov[j])->apply(lhs, rhs);
+                        rhs = ((binary_universal_operator *)uov[j])->apply(lhs, rhs);
                     }
                     
                     operands.push(rhs);
@@ -3919,7 +3916,7 @@ namespace ss {
         
         uov = new operator_t*[83];
 
-        uov[uoc++] = new uuo("count", [this](const string rhs) {
+        uov[uoc++] = new unary_universal_operator("count", [this](const string rhs) {
             if (rhs.empty())
                 null_error();
             
@@ -3966,12 +3963,12 @@ namespace ss {
         });
         //  10
         
-        uov[const_pos = uoc++] = new uuo("const", [this](string rhs) {
+        uov[const_pos = uoc++] = new unary_universal_operator("const", [this](string rhs) {
             unsupported_error("const");
             return nullptr;
         });
         
-        uov[uoc++] = new uuo("first", [this](const string rhs) {
+        uov[uoc++] = new unary_universal_operator("first", [this](const string rhs) {
             string valuev[rhs.length() + 1];
             size_t valuec = parse(valuev, rhs);
             
@@ -4002,7 +3999,7 @@ namespace ss {
             return valuev[0];
         });
         
-        uov[uoc++] = new uuo("inverse", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("inverse", [this](string rhs) {
            if (rhs.empty())
                type_error(string_t, table_t);
                 //  string != table
@@ -4076,7 +4073,7 @@ namespace ss {
             return stringify(size, result);
         });
         
-        uov[uoc++] = new uuo("isalpha", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("isalpha", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -4120,7 +4117,7 @@ namespace ss {
         });
         //  5
         
-        uov[uoc++] = new uuo("isalnum", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("isalnum", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -4165,7 +4162,7 @@ namespace ss {
         });
         //  6
         
-        uov[uoc++] = new uuo("isdigits", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("isdigits", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -4209,7 +4206,7 @@ namespace ss {
         });
         //  8
         
-        uov[uoc++] = new uuo("islower", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("islower", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -4254,7 +4251,7 @@ namespace ss {
         });
         //  7
         
-        uov[uoc++] = new uuo("isspace", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("isspace", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -4297,7 +4294,7 @@ namespace ss {
             return std::to_string(i == rhs.length());
         });
         
-        uov[uoc++] = new uuo("isupper", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("isupper", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -4342,7 +4339,7 @@ namespace ss {
         });
         //  9
         
-        uov[uoc++] = new uuo("keys", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("keys", [this](string rhs) {
             string valuev[rhs.length() + 1];
             size_t valuec = parse(valuev, rhs);
             
@@ -4398,7 +4395,7 @@ namespace ss {
             return ss.str();
         });
         
-        uov[uoc++] = new uuo("last", [this](const string rhs) {
+        uov[uoc++] = new unary_universal_operator("last", [this](const string rhs) {
             string valuev[rhs.length() + 1];
             size_t valuec = parse(valuev, rhs);
             
@@ -4428,7 +4425,7 @@ namespace ss {
             return valuev[valuec - 1];
         });
         
-        uov[uoc++] = new uuo("parse", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("parse", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -4475,7 +4472,7 @@ namespace ss {
             }
         });
         
-        uov[shrink_pos = uoc++] = new uuo("shrink", [this](string rhs) {
+        uov[shrink_pos = uoc++] = new unary_universal_operator("shrink", [this](string rhs) {
             if (!is_key(rhs))
                 operation_error();
             
@@ -4500,7 +4497,7 @@ namespace ss {
             return rhs;
         });
         
-        uov[uoc++] = new uuo("sizeof", [this](const string rhs) {
+        uov[uoc++] = new unary_universal_operator("sizeof", [this](const string rhs) {
             if (!is_key(rhs))
                 operation_error();
             
@@ -4520,7 +4517,7 @@ namespace ss {
             return std::to_string(std::get<1>(* arrayv[i]).capacity());
         });
         
-        uov[uoc++] = new uuo("subtypeof", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("subtypeof", [this](string rhs) {
             string valuev[rhs.length() + 1];
             size_t valuec = parse(valuev, rhs);
             
@@ -4593,7 +4590,7 @@ namespace ss {
             //  double
         });
         
-        uov[uoc++] = new uuo("tochar", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("tochar", [this](string rhs) {
             if (rhs.empty())
                 type_error(string_t, int_t);
                 //  string != int
@@ -4628,14 +4625,12 @@ namespace ss {
             if (d < 0 || d >= 128)
                 range_error(std::to_string((size_t)d));
             
-            char str[] { (char)((size_t)d), '\0' };
-            
-            rhs = string(str);
+            rhs = string((char[]){ (char)((size_t)d), '\0' });
             
             return encode(rhs);
         });
         
-        uov[uoc++] = new uuo("tochararray", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("tochararray", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, string_t);
             
@@ -4648,15 +4643,10 @@ namespace ss {
                 stringstream ss;
                 
                 if (rhs.length()) {
-                    for (size_t i = 0; i < rhs.length() - 1; ++i) {
-                        char str[] { rhs[i], '\0' };
-                        
-                        ss << encode(string(str)) << get_sep();
-                    }
+                    for (size_t i = 0; i < rhs.length() - 1; ++i)
+                        ss << encode(string((char[]){ rhs[i], '\0' })) << get_sep();
                     
-                    char str[] { rhs[rhs.length() - 1], '\0' };
-                    
-                    ss << encode(string(str));
+                    ss << encode(string((char[]){ rhs[rhs.length() - 1], '\0' }));
                 }
                 
                 return ss.str();
@@ -4687,21 +4677,16 @@ namespace ss {
             stringstream ss;
             
             if (rhs.length()) {
-                for (size_t j = 0; j < rhs.length() - 1; ++j) {
-                    char str[] { rhs[j], '\0' };
-                    
-                    ss << encode(string(str)) << get_sep();
-                }
+                for (size_t j = 0; j < rhs.length() - 1; ++j)
+                    ss << encode(string((char[]){ rhs[j], '\0' })) << get_sep();
                 
-                char str[] { rhs[rhs.length() - 1], '\0' };
-                
-                ss << encode(string(str));
+                ss << encode(string((char[]){ rhs[rhs.length() - 1], '\0' }));
             }
             
             return ss.str();
         });
         
-        uov[uoc++] = new uuo("tocharcode", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("tocharcode", [this](string rhs) {
             if (ss::is_array(rhs))
                 type_error(array_t, char_t);
             
@@ -4743,7 +4728,7 @@ namespace ss {
             return std::to_string((size_t)rhs[0]);
         });
         
-        uov[uoc++] = new uuo("tolower", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("tolower", [this](string rhs) {
             if (rhs.empty())
                 null_error();
             
@@ -4783,7 +4768,7 @@ namespace ss {
         });
         //  14
         
-        uov[uoc++] = new uuo("toupper", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("toupper", [this](string rhs) {
             if (rhs.empty())
                 null_error();
             
@@ -4823,7 +4808,7 @@ namespace ss {
         });
         //  15
         
-        uov[uoc++] = new uuo("typeof", [this](const string rhs) {
+        uov[uoc++] = new unary_universal_operator("typeof", [this](const string rhs) {
             if (ss::is_array(rhs))
                 return encode(to_string(array_t));
             
@@ -4857,7 +4842,7 @@ namespace ss {
             return encode("number");
         });
         
-        uov[uoc++] = new uuo("values", [this](string rhs) {
+        uov[uoc++] = new unary_universal_operator("values", [this](string rhs) {
             string valuev[rhs.length() + 1];
             size_t valuec = parse(valuev, rhs);
             
@@ -4913,12 +4898,12 @@ namespace ss {
             return ss.str();
         });
         
-        uov[var_pos = uoc++] = new uuo("var", [this](string rhs) {
+        uov[var_pos = uoc++] = new unary_universal_operator("var", [this](string rhs) {
             unsupported_error("var");
             return nullptr;
         });
 
-        uov[unary_count = (indexer_pos = uoc)] = new buo(".", [this](string lhs, string rhs) {
+        uov[unary_count = (indexer_pos = uoc)] = new binary_universal_operator(".", [this](string lhs, string rhs) {
             string valuev[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -4963,9 +4948,7 @@ namespace ss {
                     if (num < 0 || num >= lhs.length())
                         range_error("index " + encode(num) + ", count " + std::to_string(lhs.length()));
                     
-                    char str[] { lhs[(size_t)num], '\0' };
-                    
-                    rhs = string(str);
+                    rhs = string((char[]){ lhs[(size_t)num], '\0' });
                     
                     return encode(rhs);
                 }
@@ -5028,9 +5011,7 @@ namespace ss {
                     
                     std::get<2>(* stringv[i]).second = true;
                     
-                    char str[] { lhs[(size_t)num], '\0' };
-                    
-                    rhs = string(str);
+                    rhs = string((char[]){ lhs[(size_t)num], '\0' });
                     
                     return encode(rhs);
                 }
@@ -5214,27 +5195,27 @@ namespace ss {
         
         ++uoc;
 
-        uov[arithmetic_pos = uoc++] = new buo("^^", [this](const string lhs, const string rhs) {
+        uov[arithmetic_pos = uoc++] = new binary_universal_operator("^^", [this](const string lhs, const string rhs) {
             unsupported_error("^^");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("*", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("*", [this](const string lhs, const string rhs) {
             unsupported_error("*");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("/", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("/", [this](const string lhs, const string rhs) {
             unsupported_error("/");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("%", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("%", [this](const string lhs, const string rhs) {
             unsupported_error("%");
             return nullptr;
         });
 
-        uov[additive_pos = uoc++] = new buo("+", [this](string lhs, string rhs) {
+        uov[additive_pos = uoc++] = new binary_universal_operator("+", [this](string lhs, string rhs) {
             string valuev[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
                         
@@ -5441,32 +5422,32 @@ namespace ss {
             return lhs + get_sep() + rhs;
         });
 
-        uov[uoc++] = new buo("-", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("-", [this](const string lhs, const string rhs) {
             unsupported_error("-");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("<<", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("<<", [this](const string lhs, const string rhs) {
             unsupported_error("<<");
             return nullptr;
         });
 
-        uov[uoc++] = new buo(">>", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator(">>", [this](const string lhs, const string rhs) {
             unsupported_error(">>");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("max", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("max", [this](const string lhs, const string rhs) {
             unsupported_error("max");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("min", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("min", [this](const string lhs, const string rhs) {
             unsupported_error("min");
             return nullptr;
         });
         
-        uov[aggregate_pos = uoc++] = new tuo("aggregate", [this](const string lhs, const string ctr, const string rhs) {
+        uov[aggregate_pos = uoc++] = new ternary_universal_operator("aggregate", [this](const string lhs, const string ctr, const string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -5568,7 +5549,7 @@ namespace ss {
             return result;
         });
         
-        uov[cell_pos = uoc++] = new tuo("cell", [this](const string lhs, const string ctr, const string rhs) {
+        uov[cell_pos = uoc++] = new ternary_universal_operator("cell", [this](const string lhs, const string ctr, const string rhs) {
             string valuev[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -5678,7 +5659,7 @@ namespace ss {
             return result;
         });
         
-        uov[col_pos = uoc++] = new buo("col", [this](string lhs, string rhs) {
+        uov[col_pos = uoc++] = new binary_universal_operator("col", [this](string lhs, string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -5962,7 +5943,7 @@ namespace ss {
             return ss.str();
         });
         
-        uov[contains_pos = uoc++] = new buo("contains", [this](const string lhs, const string rhs) {
+        uov[contains_pos = uoc++] = new binary_universal_operator("contains", [this](const string lhs, const string rhs) {
             string valuev[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -6147,7 +6128,7 @@ namespace ss {
             return std::to_string(i != valuec);
         });
         
-        uov[fill_pos = uoc++] = new buo("fill", [this](string lhs, string rhs) {
+        uov[fill_pos = uoc++] = new binary_universal_operator("fill", [this](string lhs, string rhs) {
             if (lhs.empty())
                 type_error(string_t, array_t);
                 //  string != array
@@ -6225,7 +6206,7 @@ namespace ss {
             return rhs;
         });
         
-        uov[filter_pos = uoc++] = new tuo("filter", [this](const string lhs, const string ctr, const string rhs) {
+        uov[filter_pos = uoc++] = new ternary_universal_operator("filter", [this](const string lhs, const string ctr, const string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -6333,7 +6314,7 @@ namespace ss {
             return result;
         });
         
-        uov[find_pos = uoc++] = new tuo("find", [this](const string lhs, const string ctr, const string rhs) {
+        uov[find_pos = uoc++] = new ternary_universal_operator("find", [this](const string lhs, const string ctr, const string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -6445,7 +6426,7 @@ namespace ss {
             return result;
         });
         
-        uov[find_index_pos = uoc++] = new tuo("findindex", [this](const string lhs, const string ctr, const string rhs) {
+        uov[find_index_pos = uoc++] = new ternary_universal_operator("findindex", [this](const string lhs, const string ctr, const string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -6555,7 +6536,7 @@ namespace ss {
             return std::to_string(i);
         });
         
-        uov[format_pos = uoc++] = new buo("format", [this](const string lhs, const string rhs) {
+        uov[format_pos = uoc++] = new binary_universal_operator("format", [this](const string lhs, const string rhs) {
             if (ss::is_array(lhs))
                 type_error(array_t, string_t);
                 //  array != string
@@ -7238,7 +7219,7 @@ namespace ss {
             return result;
         });
         
-        uov[index_of_pos = uoc++] = new buo("indexof", [this](const string lhs, const string rhs) {
+        uov[index_of_pos = uoc++] = new binary_universal_operator("indexof", [this](const string lhs, const string rhs) {
             string valuev[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -7423,7 +7404,7 @@ namespace ss {
             return std::to_string(i == valuec ? -1 : i);
         });
         
-        uov[insert_pos = uoc++] = new tuo("insert", [this](const string lhs, const string ctr, const string rhs) {
+        uov[insert_pos = uoc++] = new ternary_universal_operator("insert", [this](const string lhs, const string ctr, const string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -7527,7 +7508,7 @@ namespace ss {
         });
         //  20
         
-        uov[join_pos = uoc++] = new buo("join", [this](string lhs, string rhs) {
+        uov[join_pos = uoc++] = new binary_universal_operator("join", [this](string lhs, string rhs) {
             string valuev[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -7654,7 +7635,7 @@ namespace ss {
             return encode(ss.str());
         });
         
-        uov[last_index_of_pos = uoc++] = new buo("lastindexof", [this](const string lhs, const string rhs) {
+        uov[last_index_of_pos = uoc++] = new binary_universal_operator("lastindexof", [this](const string lhs, const string rhs) {
             string valuev[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -7839,7 +7820,7 @@ namespace ss {
             return std::to_string(i);
         });
         
-        uov[map_pos = uoc++] = new tuo("map", [this](const string lhs, const string ctr, const string rhs) {
+        uov[map_pos = uoc++] = new ternary_universal_operator("map", [this](const string lhs, const string ctr, const string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -7944,7 +7925,7 @@ namespace ss {
             return result;
         });
         
-        uov[reserve_pos = uoc++] = new buo("reserve", [this](const string lhs, const string rhs) {
+        uov[reserve_pos = uoc++] = new binary_universal_operator("reserve", [this](const string lhs, const string rhs) {
             if (!is_key(lhs))
                 operation_error();
             
@@ -8002,7 +7983,7 @@ namespace ss {
         });
         //  19
         
-        uov[row_pos = uoc++] = new buo("row", [this](string lhs, string rhs) {
+        uov[row_pos = uoc++] = new binary_universal_operator("row", [this](string lhs, string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -8285,7 +8266,7 @@ namespace ss {
             return ss.str();
         });
         
-        uov[resize_pos = uoc++] = new buo("setcount", [this](const string lhs, const string rhs) {
+        uov[resize_pos = uoc++] = new binary_universal_operator("setcount", [this](const string lhs, const string rhs) {
             string* valuev = new string[lhs.length() + 1];
             size_t valuec = parse(valuev, lhs);
             
@@ -8414,27 +8395,27 @@ namespace ss {
         });
         
         
-        uov[slice_pos = uoc++] = new tuo("slice", [this](const string lhs, const string ctr, const string rhs) {
+        uov[slice_pos = uoc++] = new ternary_universal_operator("slice", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("slice");
             return nullptr;
         });
         
-        uov[splice_pos = uoc++] = new tuo("splice", [this](const string lhs, const string ctr, const string rhs) {
+        uov[splice_pos = uoc++] = new ternary_universal_operator("splice", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("splice");
             return nullptr;
         });
         
-        uov[substr_pos = uoc++] = new tuo("substr", [this](const string lhs, const string ctr, const string rhs) {
+        uov[substr_pos = uoc++] = new ternary_universal_operator("substr", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("substr");
             return nullptr;
         });
         
-        uov[tospliced_pos = uoc++] = new tuo("tospliced", [this](const string lhs, const string ctr, const string rhs) {
+        uov[tospliced_pos = uoc++] = new ternary_universal_operator("tospliced", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("tospliced");
             return nullptr;
         });
         
-        uov[relational_pos = uoc++] = new buo("<=", [this](string lhs, string rhs) {
+        uov[relational_pos = uoc++] = new binary_universal_operator("<=", [this](string lhs, string rhs) {
             if (lhs.empty())
                 null_error();
             
@@ -8939,7 +8920,7 @@ namespace ss {
         });
         //  23
         
-        uov[uoc++] = new buo(">=", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator(">=", [this](string lhs, string rhs) {
             if (lhs.empty())
                 null_error();
             
@@ -9445,7 +9426,7 @@ namespace ss {
         });
         //  24
         
-        uov[uoc++] = new buo("<", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("<", [this](string lhs, string rhs) {
             if (lhs.empty())
                 null_error();
             
@@ -9950,7 +9931,7 @@ namespace ss {
             return std::to_string(0);
         });
         
-        uov[uoc++] = new buo(">", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator(">", [this](string lhs, string rhs) {
             if (lhs.empty())
                 null_error();
             
@@ -10445,7 +10426,7 @@ namespace ss {
         });
         //  26
         
-        uov[equality_pos = uoc++] = new buo("===", [this](string lhs, string rhs) {
+        uov[equality_pos = uoc++] = new binary_universal_operator("===", [this](string lhs, string rhs) {
             string* v = NULL;
             size_t n;
             
@@ -10880,7 +10861,7 @@ namespace ss {
         });
         //  27
         
-        uov[uoc++] = new buo("!==", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("!==", [this](string lhs, string rhs) {
             string* v = NULL;
             size_t n;
             
@@ -11279,7 +11260,7 @@ namespace ss {
         });
         //  28
         
-        uov[uoc++] = new buo("==", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("==", [this](string lhs, string rhs) {
             string* v = NULL;
             size_t n;
             
@@ -11639,7 +11620,7 @@ namespace ss {
         });
         //  29
         
-        uov[uoc++] = new buo("!=", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("!=", [this](string lhs, string rhs) {
             string* v = NULL;
             size_t n;
             
@@ -11995,217 +11976,217 @@ namespace ss {
             //  (array) != (array)
         });
 
-        uov[bitwise_pos = uoc++] = new buo("&", [this](const string lhs, const string rhs) {
+        uov[bitwise_pos = uoc++] = new binary_universal_operator("&", [this](const string lhs, const string rhs) {
             unsupported_error("&");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("^", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("^", [this](const string lhs, const string rhs) {
             unsupported_error("&");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("|", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("|", [this](const string lhs, const string rhs) {
             unsupported_error("&");
             return nullptr;
         });
 
-        uov[logical_pos = uoc++] = new buo("&&", [this](const string lhs, const string rhs) {
+        uov[logical_pos = uoc++] = new binary_universal_operator("&&", [this](const string lhs, const string rhs) {
             unsupported_error("&&");
             return nullptr;
         });
 
-        uov[uoc++] = new buo("||", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("||", [this](const string lhs, const string rhs) {
             unsupported_error("||");
             return nullptr;
         });
         
-        uov[assignment_pos = uoc++] = new buo("*=", [this](const string lhs, const string rhs) {
+        uov[assignment_pos = uoc++] = new binary_universal_operator("*=", [this](const string lhs, const string rhs) {
             unsupported_error("*=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("/=", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("/=", [this](const string lhs, const string rhs) {
             unsupported_error("/=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("%=", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("%=", [this](const string lhs, const string rhs) {
             unsupported_error("%=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("+=", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("+=", [this](const string lhs, const string rhs) {
             unsupported_error("+=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("-=", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator("-=", [this](const string lhs, const string rhs) {
             unsupported_error("-=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo(">>=", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator(">>=", [this](string lhs, string rhs) {
             unsupported_error(">>=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("<<=", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("<<=", [this](string lhs, string rhs) {
             unsupported_error("<<=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("&=", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("&=", [this](string lhs, string rhs) {
             unsupported_error("&=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("^=", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("^=", [this](string lhs, string rhs) {
             unsupported_error("^=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("|=", [this](string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("|=", [this](string lhs, string rhs) {
             unsupported_error("|=");
             return nullptr;
         });
         
-        uov[uoc++] = new buo("=", [this](const string lhs, string rhs) {
+        uov[uoc++] = new binary_universal_operator("=", [this](const string lhs, string rhs) {
             unsupported_error("=");
             return nullptr;
         });
         
-        uov[conditional_pos = uoc++] = new tuo("?", [this](const string lhs, const string ctr, const string rhs) {
+        uov[conditional_pos = uoc++] = new ternary_universal_operator("?", [this](const string lhs, const string ctr, const string rhs) {
             unsupported_error("?");
             return nullptr;
         });
         
-        uov[uoc++] = new buo(":", [this](const string lhs, const string rhs) {
+        uov[uoc++] = new binary_universal_operator(":", [this](const string lhs, const string rhs) {
             unsupported_error(":");
             return nullptr;
         });
 
-        uov[nullish_coalescing_pos = uoc++]= new buo("??", [this] (const string lhs, const string rhs) {
+        uov[nullish_coalescing_pos = uoc++]= new binary_universal_operator("??", [this] (const string lhs, const string rhs) {
             unsupported_error("??");
             return nullptr;
         });
         
-        uov[sequencer_pos = uoc++] = new buo(",", [this](const string lhs, const string rhs) {
+        uov[sequencer_pos = uoc++] = new binary_universal_operator(",", [this](const string lhs, const string rhs) {
             unsupported_error(",");
             return nullptr;
         });
         
         buocc = 14;
         buocv = new size_t[buocc];
-        buov = new buo**[buocc];
+        buov = new binary_universal_operator**[buocc];
         
         //  indexer                                     //  .
         
         //  arithmetic
         buocv[0] = 1;
-        buov[0] = new buo*[buocv[0]];
-        buov[0][0] = (buo *)uov[arithmetic_pos];         //  ^^
+        buov[0] = new binary_universal_operator*[buocv[0]];
+        buov[0][0] = (binary_universal_operator *)uov[arithmetic_pos];         //  ^^
         
         buocv[1] = 3;
-        buov[1] = new buo*[buocv[1]];
-        buov[1][0] = (buo *)uov[arithmetic_pos + 1];     //  *
-        buov[1][1] = (buo *)uov[arithmetic_pos + 2];     //  /
-        buov[1][2] = (buo *)uov[arithmetic_pos + 3];     //  %
+        buov[1] = new binary_universal_operator*[buocv[1]];
+        buov[1][0] = (binary_universal_operator *)uov[arithmetic_pos + 1];     //  *
+        buov[1][1] = (binary_universal_operator *)uov[arithmetic_pos + 2];     //  /
+        buov[1][2] = (binary_universal_operator *)uov[arithmetic_pos + 3];     //  %
         
         buocv[2] = 2;
-        buov[2] = new buo*[buocv[2]];
-        buov[2][0] = (buo *)uov[additive_pos];           //  +
-        buov[2][1] = (buo *)uov[additive_pos + 1];       //  -
+        buov[2] = new binary_universal_operator*[buocv[2]];
+        buov[2][0] = (binary_universal_operator *)uov[additive_pos];           //  +
+        buov[2][1] = (binary_universal_operator *)uov[additive_pos + 1];       //  -
         
         buocv[3] = 2;
-        buov[3] = new buo*[buocv[3]];
-        buov[3][0] = (buo *)uov[additive_pos + 2];       //  <<
-        buov[3][1] = (buo *)uov[additive_pos + 3];       //  >>
+        buov[3] = new binary_universal_operator*[buocv[3]];
+        buov[3][0] = (binary_universal_operator *)uov[additive_pos + 2];       //  <<
+        buov[3][1] = (binary_universal_operator *)uov[additive_pos + 3];       //  >>
         
         buocv[4] = 2;
-        buov[4] = new buo*[buocv[4]];
-        buov[4][0] = (buo *)uov[additive_pos + 4];       //  max
-        buov[4][1] = (buo *)uov[additive_pos + 5];       //  min
+        buov[4] = new binary_universal_operator*[buocv[4]];
+        buov[4][0] = (binary_universal_operator *)uov[additive_pos + 4];       //  max
+        buov[4][1] = (binary_universal_operator *)uov[additive_pos + 5];       //  min
         
         //  functional
         buocv[5] = 21;
-        buov[5] = new buo*[buocv[5]];
-        buov[5][0] = (buo *)uov[aggregate_pos];          //  aggregate
-        buov[5][1] = (buo *)uov[cell_pos];               //  cell
-        buov[5][2] = (buo *)uov[col_pos];                //  column
-        buov[5][3] = (buo *)uov[contains_pos];           //  contains
-        buov[5][4] = (buo *)uov[reserve_pos];            //  ensure
-        buov[5][5] = (buo *)uov[fill_pos];               //  fill
-        buov[5][6] = (buo *)uov[find_pos];               //  find
-        buov[5][7] = (buo *)uov[find_index_pos];         //  findIndex
-        buov[5][8] = (buo *)uov[filter_pos];             //  filter
-        buov[5][9] = (buo *)uov[format_pos];             //  format
-        buov[5][10] = (buo *)uov[index_of_pos];          //  index
-        buov[5][11] = (buo *)uov[insert_pos];            //  insert
-        buov[5][12] = (buo *)uov[join_pos];              //  join
-        buov[5][13] = (buo *)uov[last_index_of_pos];     //  lastIndexOf
-        buov[5][14] = (buo *)uov[map_pos];               //  map
-        buov[5][15] = (buo *)uov[splice_pos];            //  remove
-        buov[5][16] = (buo *)uov[resize_pos];            //  resize
-        buov[5][17] = (buo *)uov[row_pos];               //  row
-        buov[5][18] = (buo *)uov[slice_pos];             //  slice
-        buov[5][19] = (buo *)uov[substr_pos];            //  substring
-        buov[5][20] = (buo *)uov[tospliced_pos];         //  toSpliced
+        buov[5] = new binary_universal_operator*[buocv[5]];
+        buov[5][0] = (binary_universal_operator *)uov[aggregate_pos];          //  aggregate
+        buov[5][1] = (binary_universal_operator *)uov[cell_pos];               //  cell
+        buov[5][2] = (binary_universal_operator *)uov[col_pos];                //  column
+        buov[5][3] = (binary_universal_operator *)uov[contains_pos];           //  contains
+        buov[5][4] = (binary_universal_operator *)uov[reserve_pos];            //  ensure
+        buov[5][5] = (binary_universal_operator *)uov[fill_pos];               //  fill
+        buov[5][6] = (binary_universal_operator *)uov[find_pos];               //  find
+        buov[5][7] = (binary_universal_operator *)uov[find_index_pos];         //  findIndex
+        buov[5][8] = (binary_universal_operator *)uov[filter_pos];             //  filter
+        buov[5][9] = (binary_universal_operator *)uov[format_pos];             //  format
+        buov[5][10] = (binary_universal_operator *)uov[index_of_pos];          //  index
+        buov[5][11] = (binary_universal_operator *)uov[insert_pos];            //  insert
+        buov[5][12] = (binary_universal_operator *)uov[join_pos];              //  join
+        buov[5][13] = (binary_universal_operator *)uov[last_index_of_pos];     //  lastIndexOf
+        buov[5][14] = (binary_universal_operator *)uov[map_pos];               //  map
+        buov[5][15] = (binary_universal_operator *)uov[splice_pos];            //  remove
+        buov[5][16] = (binary_universal_operator *)uov[resize_pos];            //  resize
+        buov[5][17] = (binary_universal_operator *)uov[row_pos];               //  row
+        buov[5][18] = (binary_universal_operator *)uov[slice_pos];             //  slice
+        buov[5][19] = (binary_universal_operator *)uov[substr_pos];            //  substring
+        buov[5][20] = (binary_universal_operator *)uov[tospliced_pos];         //  toSpliced
         
         //  relational
         buocv[6] = 4;
-        buov[6] = new buo*[buocv[6]];
-        buov[6][0] = (buo *)uov[relational_pos];         //  <=
-        buov[6][1] = (buo *)uov[relational_pos + 1];     //  >=
-        buov[6][2] = (buo *)uov[relational_pos + 2];     //  <
-        buov[6][3] = (buo *)uov[relational_pos + 3];     //  >
+        buov[6] = new binary_universal_operator*[buocv[6]];
+        buov[6][0] = (binary_universal_operator *)uov[relational_pos];         //  <=
+        buov[6][1] = (binary_universal_operator *)uov[relational_pos + 1];     //  >=
+        buov[6][2] = (binary_universal_operator *)uov[relational_pos + 2];     //  <
+        buov[6][3] = (binary_universal_operator *)uov[relational_pos + 3];     //  >
         
         //  equality
         buocv[7] = 4;
-        buov[7] = new buo*[buocv[7]];
-        buov[7][0] = (buo *)uov[equality_pos];           //  ===
-        buov[7][1] = (buo *)uov[equality_pos + 1];       //  !==
-        buov[7][2] = (buo *)uov[equality_pos + 2];       //  ==
-        buov[7][3] = (buo *)uov[equality_pos + 3];       //  !=
+        buov[7] = new binary_universal_operator*[buocv[7]];
+        buov[7][0] = (binary_universal_operator *)uov[equality_pos];           //  ===
+        buov[7][1] = (binary_universal_operator *)uov[equality_pos + 1];       //  !==
+        buov[7][2] = (binary_universal_operator *)uov[equality_pos + 2];       //  ==
+        buov[7][3] = (binary_universal_operator *)uov[equality_pos + 3];       //  !=
         
         //  bitwise
         buocv[8] = 1;
-        buov[8] = new buo*[buocv[8]];
-        buov[8][0] = (buo *)uov[bitwise_pos];            //  &
+        buov[8] = new binary_universal_operator*[buocv[8]];
+        buov[8][0] = (binary_universal_operator *)uov[bitwise_pos];            //  &
         
         buocv[9] = 1;
-        buov[9] = new buo*[buocv[9]];
-        buov[9][0] = (buo *)uov[bitwise_pos + 1];        //  ^
+        buov[9] = new binary_universal_operator*[buocv[9]];
+        buov[9][0] = (binary_universal_operator *)uov[bitwise_pos + 1];        //  ^
         
         buocv[10] = 1;
-        buov[10] = new buo*[buocv[10]];
-        buov[10][0] = (buo *)uov[bitwise_pos + 2];        //  |
+        buov[10] = new binary_universal_operator*[buocv[10]];
+        buov[10][0] = (binary_universal_operator *)uov[bitwise_pos + 2];        //  |
 
         //  logical
         buocv[11] = 1;
-        buov[11] = new buo*[buocv[11]];
-        buov[11][0] = (buo *)uov[logical_pos];            //  &&
+        buov[11] = new binary_universal_operator*[buocv[11]];
+        buov[11][0] = (binary_universal_operator *)uov[logical_pos];            //  &&
         
         buocv[12] = 1;
-        buov[12] = new buo*[buocv[12]];
-        buov[12][0] = (buo *)uov[logical_pos + 1];        //  ||
+        buov[12] = new binary_universal_operator*[buocv[12]];
+        buov[12][0] = (binary_universal_operator *)uov[logical_pos + 1];        //  ||
         
         //  assignment
         buocv[13] = 13;
-        buov[13] = new buo*[buocv[13]];
-        buov[13][0] = (buo *)uov[assignment_pos];         //  *=
-        buov[13][1] = (buo *)uov[assignment_pos + 1];     //  /=
-        buov[13][2] = (buo *)uov[assignment_pos + 2];     //  %=
-        buov[13][3] = (buo *)uov[additive_assignment_pos = assignment_pos + 3];     //  +=
-        buov[13][4] = (buo *)uov[assignment_pos + 4];     //  -=
-        buov[13][5] = (buo *)uov[assignment_pos + 5];     //  >>=
-        buov[13][6] = (buo *)uov[assignment_pos + 6];     //  <<=
-        buov[13][7] = (buo *)uov[assignment_pos + 7];     //  &=
-        buov[13][8] = (buo *)uov[assignment_pos + 8];     //  ^=
-        buov[13][9] = (buo *)uov[assignment_pos + 9];     //  |=
-        buov[13][10] = (buo *)uov[direct_assignment_pos = assignment_pos + 10];   //  =
-        buov[13][11] = (buo *)uov[conditional_pos];       //  ?
-        buov[13][12] = (buo *)uov[nullish_coalescing_pos];        //  ??
+        buov[13] = new binary_universal_operator*[buocv[13]];
+        buov[13][0] = (binary_universal_operator *)uov[assignment_pos];         //  *=
+        buov[13][1] = (binary_universal_operator *)uov[assignment_pos + 1];     //  /=
+        buov[13][2] = (binary_universal_operator *)uov[assignment_pos + 2];     //  %=
+        buov[13][3] = (binary_universal_operator *)uov[additive_assignment_pos = assignment_pos + 3];     //  +=
+        buov[13][4] = (binary_universal_operator *)uov[assignment_pos + 4];     //  -=
+        buov[13][5] = (binary_universal_operator *)uov[assignment_pos + 5];     //  >>=
+        buov[13][6] = (binary_universal_operator *)uov[assignment_pos + 6];     //  <<=
+        buov[13][7] = (binary_universal_operator *)uov[assignment_pos + 7];     //  &=
+        buov[13][8] = (binary_universal_operator *)uov[assignment_pos + 8];     //  ^=
+        buov[13][9] = (binary_universal_operator *)uov[assignment_pos + 9];     //  |=
+        buov[13][10] = (binary_universal_operator *)uov[direct_assignment_pos = assignment_pos + 10];   //  =
+        buov[13][11] = (binary_universal_operator *)uov[conditional_pos];       //  ?
+        buov[13][12] = (binary_universal_operator *)uov[nullish_coalescing_pos];        //  ??
         
         //  sequencer
                                                           //  ,
@@ -13020,7 +13001,7 @@ namespace ss {
 #if DEBUG_LEVEL == 2
         assert(dst != NULL);
 #endif
-        int n = (int)split(dst, src);
+        int n = merge((int)tokens(dst, src, sizeof(SEPARATORS) / sizeof(SEPARATORS[0]), SEPARATORS), dst);
         
         /*
         for (size_t i = 0; i < n; ++i)
@@ -13565,13 +13546,6 @@ namespace ss {
             
             std::get<1>(* stringv[i]) = value;
         }
-    }
-
-    int command_processor::split(string* dst, string src) const {
-#if DEBUG_LEVEL == 2
-        assert(dst != NULL);
-#endif
-        return merge((int)tokens(dst, src), dst);
     }
 
     void command_processor::stack_push(function_t* function) {

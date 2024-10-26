@@ -44,15 +44,11 @@ namespace ss {
     enum module_t { filesystem_t, mysql_t, socket_t };
 
     class file: public function_t {
-        bool is_file_system = false;
-        
-        bool is_mysql = false;
-        
-        bool is_socket = false;
-        
         //  MEMBER FIELDS
         
         command_processor* cp = NULL;
+        
+        bool file_system_flag = false;
         
         size_t filec = 0;
         pair<file*, bool>** filev = NULL;
@@ -61,9 +57,13 @@ namespace ss {
         
         size_t level = 0;
         
+        bool mysql_flag = false;
+        
         function_t* parent = NULL;
         
         bool pause_flag;
+        
+        bool socket_flag = false;
         
         file_statement* target = NULL;
         

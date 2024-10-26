@@ -8,10 +8,10 @@
 #ifndef arithmetic_h
 #define arithmetic_h
 
-#include "bao.h"
-#include "bbao.h"
+#include "binary_arithmetic_operator.h"
+#include "bitwise_binary_arithmetic_operator.h"
 #include "mysql.h"
-#include "uao.h"
+#include "unary_arithmetic_operator.h"
 #include <atomic>
 #include <cctype>
 #include <cmath>
@@ -71,7 +71,7 @@ namespace ss {
         operator_t** aov;
         size_t aoc = 36;
         
-        bao_t*** baov;
+        binary_arithmetic_operator_t*** baov;
         size_t baoc[9];
         
         size_t additive_pos;

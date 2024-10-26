@@ -19,8 +19,6 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    void broadcast(const event_t event, const string* value);
-
     bool call(command_processor* cp, const string key, size_t argc = 0, string* argv = NULL);
 
     bool is_locked();
@@ -28,6 +26,8 @@ namespace ss {
     void load(command_processor* cp);
 
     void lock();
+
+    void notify(const event_t event, const string* value);
 
     size_t subscribe(const event_t event, const std::function<void(const string*)> callback);
 

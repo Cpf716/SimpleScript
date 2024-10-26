@@ -12,7 +12,7 @@ namespace ss {
 
     function_statement::function_statement(const string specifier, const size_t statementc, statement_t** statementv) {
         string* tokenv = new string[specifier.length() + 1];
-        size_t tokenc = tokens(tokenv, specifier);
+        size_t tokenc = tokens(tokenv, specifier, 3, (string[]){ "(", ")", "," });
             
         if (!tokenc || !is_key(tokenv[0])) {
             delete[] tokenv;
@@ -64,7 +64,7 @@ namespace ss {
         
         for (int i = 0; i < floor((tokenc - 3) / 2); ++i) {
             string _tokenv[tokenv[i * 2 + 2].length() + 1];
-            size_t _tokenc = tokens(_tokenv, tokenv[i * 2 + 2]);
+            size_t _tokenc = tokens(_tokenv, tokenv[i * 2 + 2], 3, (string[]){ "(", ")", "=" });
             
             if (_tokenc == 1) {
                 if (!is_key(_tokenv[0])) {
@@ -135,7 +135,7 @@ namespace ss {
         
         if (tokenc >= 4) {
             string _tokenv[tokenv[tokenc - 2].length() + 1];
-            size_t _tokenc = tokens(_tokenv, tokenv[tokenc - 2]);
+            size_t _tokenc = tokens(_tokenv, tokenv[tokenc - 2], 3, (string[]){ "(", ")", "=" });
             
             if (_tokenc == 1) {
                 if (!is_key(tokenv[tokenc - 2])) {
@@ -254,7 +254,7 @@ namespace ss {
         
         for (size_t i = 0; i < this->expressionc; ++i) {
             string tokenv[this->expressionv[i].length() + 1];
-            size_t tokenc = tokens(tokenv, this->expressionv[i]);
+            size_t tokenc = tokens(tokenv, this->expressionv[i], 3, (string[]){ "(", ")", "=" });
             
             if (tokenc == 1 && tokenv[0] == "_")
                 continue;

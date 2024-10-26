@@ -61,9 +61,7 @@ void set_timeout(int timeout) {
 
 void signal_handler(int signum) {
     thread([signum]() {
-        string _signum[] { to_string(signum) };
-        
-        if (!call(&cp, "onExit", 1, _signum)) {
+        if (!call(&cp, "onExit", 1, (string[]) { to_string(signum) })) {
             middleware::socket_close();
             
             set_is_running(false);
@@ -166,27 +164,7 @@ int main(int argc, char* argv[]) {
     }
     
     seconds = duration<double>(steady_clock::now() - beg).count();
-    
-    int hours = 0;
-    while (seconds >= (hours + 1) * 3600)
-        ++hours;
-    
-    seconds -= hours * 3600;
-    
-    int minutes = 0;
-    while (seconds >= (minutes + 1) * 60)
-        ++minutes;
-    
-    seconds -= minutes * 60;
-    
-    logger_write("Done in ");
-    
-    if (hours)
-        logger_write(to_string(hours) + " h, ");
-    
-    if (minutes)
-        logger_write(to_string(minutes) + " m, ");
-    
+  
     logger_write(to_string(seconds) + " s.\n");
     
     //  deinitialize

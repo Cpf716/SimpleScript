@@ -13,19 +13,19 @@ namespace ss {
     logic::logic() {
         lov = new operator_t*[loc];
         
-        lov[0] = new ulo("!", [this](const string rhs) {
+        lov[0] = new unary_logical_operator("!", [this](const string rhs) {
             return arithmetic::evaluate(rhs) ? 0 : 1;
         });
         
-        lov[1] = new blo("&&", [this](const string lhs, const string rhs) {
+        lov[1] = new binary_logical_operator("&&", [this](const string lhs, const string rhs) {
             return arithmetic::evaluate(lhs) && arithmetic::evaluate(rhs) ? 1 : 0;
         });
         
-        lov[2] = new blo("||", [this](const string lhs, const string rhs) {
+        lov[2] = new binary_logical_operator("||", [this](const string lhs, const string rhs) {
             return arithmetic::evaluate(lhs) || arithmetic::evaluate(rhs) ? 1 : 0;
         });
         
-        lov[3] = new blo("=", [this](const string lhs, const string rhs) {
+        lov[3] = new binary_logical_operator("=", [this](const string lhs, const string rhs) {
             return arithmetic::evaluate(rhs);
         });
     }
@@ -228,7 +228,7 @@ namespace ss {
                 double d;
                 
                 if (!j) {
-                    ulo* u = (ulo *)lov[j];
+                    unary_logical_operator* u = (unary_logical_operator *)lov[j];
                                 
                     d = u->apply(s.top());
                     
@@ -236,7 +236,7 @@ namespace ss {
                 } else {
                     string lhs = s.top();   s.pop();
                     
-                    blo* b = (blo *)lov[j];
+                    binary_logical_operator* b = (binary_logical_operator *)lov[j];
                     
                     if (j == loc - 1) {
                         d = arithmetic::evaluate(s.top());

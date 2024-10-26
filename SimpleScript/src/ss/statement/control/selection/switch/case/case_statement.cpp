@@ -15,9 +15,7 @@ namespace ss {
             expect_error("expression");
         
         string tokenv[specifier.length() + 1];
-        
-        string sepv[] { "(", ")", ":" };
-        size_t tokenc = tokens(tokenv, specifier, sizeof(sepv) / sizeof(sepv[0]), sepv);
+        size_t tokenc = tokens(tokenv, specifier, 3, (string[]){ "(", ")", ":" });
         
         int i; size_t p = 0;
         for (i = 0; i < tokenc; ++i) {

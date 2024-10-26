@@ -38,8 +38,6 @@ namespace ss {
         "Dec"
     };
 
-    const std::string SEPARATORS[] = { "!", "(", ")", ",", ".", ";", "^" };
-
     //  NON-MEMBER FUNCTIONS
 
     std::string datetime() {
@@ -1134,10 +1132,6 @@ namespace ss {
         return n;
     }
 
-    size_t tokens(std::string* dst, const std::string src) {
-        return tokens(dst, src, sizeof(SEPARATORS) / sizeof(SEPARATORS[0]), SEPARATORS);
-    }
-
     size_t tokens(std::string* dst, const std::string src, const size_t sepc, const std::string* sepv) {
     #if DEBUG_LEVEL
         assert(dst != NULL);
@@ -1210,20 +1204,26 @@ namespace ss {
         
         n = merge(n, dst, null());
         
-        int p = 0;
-        for (i = 0; i < n; ++i) {
-            if (dst[i] == "(")
-                ++p;
-            else if (dst[i] == ")") {
-                if (!p)
-                    throw error("Syntax error on token \")\", delete this token");
-                    
-                --p;
-            }
-        }
+        i = 0;
+        while (i < sepc && sepv[i] != "(")
+            ++i;
         
-        if (p)
-            throw error("Syntax error, insert \")\" to complete expr body");
+        if (i != sepc){
+            int p = 0;
+            for (size_t j = 0; j < n; ++j) {
+                if (dst[j] == "(")
+                    ++p;
+                else if (dst[j] == ")") {
+                    if (!p)
+                        throw error("Syntax error on token \")\", delete this token");
+                        
+                    --p;
+                }
+            }
+            
+            if (p)
+                throw error("Syntax error, insert \")\" to complete expr body");
+        }
         
         i = 0;
         while (i < n) {

@@ -14,8 +14,9 @@ namespace ss {
     class define_statement : public statement_t {
         //  MEMBER FIELDS
         
-        string key;
         string expression;
+        
+        string key;
     public:
         //  CONSTRUCTORS
         
@@ -27,20 +28,10 @@ namespace ss {
                 expect_error("key in 'define' statement specifier");
             
             this->key = tokenv[0];
+            this->expression = specifier.substr(tokenv[0].length(), specifier.length() - tokenv[0].length());
             
-            ostringstream ss;
-            
-            if (tokenc > 1) {
-                for (size_t i = 1; i < tokenc - 1; ++i)
-                    ss << tokenv[i] << " ";
-                
-                ss << tokenv[tokenc - 1];
-            }
-            
-            if (ss.str().empty())
+            if (this->expression.empty())
                 expect_error("expression");
-            
-            this->expression = ss.str();
         }
         
         void close() {

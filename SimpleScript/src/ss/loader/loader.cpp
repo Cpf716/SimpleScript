@@ -99,9 +99,7 @@ namespace ss {
                 type_error(double_t, int_t);
                 //  double != int
             
-            string id[] { std::to_string(num) };
-            
-            broadcast(offinterval, id);
+            notify(offinterval, (string[]){ std::to_string(num) });
             
             return encode(to_string(undefined_t));
         }));
@@ -122,9 +120,7 @@ namespace ss {
                 type_error(double_t, int_t);
                 //  double != int
             
-            string id[] { std::to_string(num) };
-            
-            broadcast(offtimeout, id);
+            notify(offtimeout, (string[]){ std::to_string(num) });
             
             return encode(to_string(undefined_t));
         }));
@@ -150,9 +146,7 @@ namespace ss {
             
             size_t id = timeoutc++;
             
-            string interval[] { std::to_string(id), std::to_string(num) };
-            
-            broadcast(oninterval, interval);
+            notify(oninterval, (string[]){ std::to_string(id), std::to_string(num) });
             
             return std::to_string(id);
         }));
@@ -178,9 +172,7 @@ namespace ss {
             
             size_t id = timeoutc++;
             
-            string timeout[] { std::to_string(id), std::to_string(num) };
-            
-            broadcast(ontimeout, timeout);
+            notify(ontimeout, (string[]){ std::to_string(id), std::to_string(num) });
             
             return std::to_string(id);
         }));
@@ -295,9 +287,8 @@ namespace ss {
                 if (!flag || !is_running())
                     return;
                 
-                string message[] { value };
-                
-                call(cp, "onMessage", 1, message);
+
+                call(cp, "onMessage", 1, (string[]){ value });
             }).detach();
             
             return encode(to_string(undefined_t));
@@ -314,16 +305,16 @@ namespace ss {
         _is_locked.store(true);
     }
 
+    void notify(const event_t event, const string* value) {
+        for (size_t i = 0; i < callbackv.size(); ++i)
+            if (std::get<1>(callbackv[i]) == event)
+                std::get<2>(callbackv[i])(value);
+    }
+
     size_t subscribe(const event_t event, const std::function<void(const string*)> callback) {
         callbackv.push_back(tuple<size_t, event_t, std::function<void(const string*)>>(callbackc, event, callback));
         
         return callbackc++;
-    }
-
-    void broadcast(const event_t event, const string* value) {
-        for (size_t i = 0; i < callbackv.size(); ++i)
-            if (std::get<1>(callbackv[i]) == event)
-                std::get<2>(callbackv[i])(value);
     }
 
     void unlock() {

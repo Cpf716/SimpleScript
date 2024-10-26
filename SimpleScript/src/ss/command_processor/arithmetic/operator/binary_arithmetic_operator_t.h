@@ -1,16 +1,16 @@
 //  Author: Corey Ferguson
 //  Date:   September 28, 2023
-//  File:   bao_t.h
+//  File:   binary_arithmetic_operator_t.h
 //
 
-#ifndef bao_t_h
-#define bao_t_h
+#ifndef binary_arithmetic_operator_t_h
+#define binary_arithmetic_operator_t_h
 
 #include "operator_t.h"
 #include <functional>
 
 namespace ss {
-    struct bao_t : public operator_t {
+    struct binary_arithmetic_operator_t : public operator_t {
         //  MEMBER FUNCTIONS
         
         virtual double apply(const double lhs, const double rhs) const = 0;

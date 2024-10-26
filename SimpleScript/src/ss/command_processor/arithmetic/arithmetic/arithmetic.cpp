@@ -456,7 +456,7 @@ namespace ss {
                 double d;
                 
                 if (j < unary_count) {
-                    uao* u = (uao *)aov[j];
+                    unary_arithmetic_operator* u = (unary_arithmetic_operator *)aov[j];
                     
                     d = u->apply(value(s.top()));
                     
@@ -464,7 +464,7 @@ namespace ss {
                 } else {
                     string lhs = s.top();   s.pop();
                     
-                    bao_t* b = (bao_t *)aov[j];
+                    binary_arithmetic_operator_t* b = (binary_arithmetic_operator_t *)aov[j];
                     
                     if (j < assignment_pos) {
                         d = b->apply(value(lhs), value(s.top()));
@@ -506,122 +506,122 @@ namespace ss {
         
         aov = new operator_t*[aoc];
         
-        aov[0] = new uao("abs", [](const double rhs) { return abs(rhs); });
-        aov[1] = new uao("cbrt", [](const double rhs) { return cbrt(rhs); });
-        aov[2] = new uao("ceil", [](const double rhs) { return ceil(rhs); });
-        aov[3] = new uao("floor", [](const double rhs) { return floor(rhs); });
-        aov[4] = new uao("log", [](const double rhs) { return std::log(rhs); });
-        aov[5] = new uao("sqrt", [](const double rhs) { return sqrt(rhs); });
+        aov[0] = new unary_arithmetic_operator("abs", [](const double rhs) { return abs(rhs); });
+        aov[1] = new unary_arithmetic_operator("cbrt", [](const double rhs) { return cbrt(rhs); });
+        aov[2] = new unary_arithmetic_operator("ceil", [](const double rhs) { return ceil(rhs); });
+        aov[3] = new unary_arithmetic_operator("floor", [](const double rhs) { return floor(rhs); });
+        aov[4] = new unary_arithmetic_operator("log", [](const double rhs) { return std::log(rhs); });
+        aov[5] = new unary_arithmetic_operator("sqrt", [](const double rhs) { return sqrt(rhs); });
         //  unary
         
-        aov[unary_count = 6] = new bao("^^", [](const double lhs, const double rhs) { return pow(lhs ,rhs); });
-        aov[7] = new bao("*", [](const double lhs, const double rhs) { return lhs * rhs; });
-        aov[8] = new bao("/", [](const double lhs, const double rhs) { return lhs / rhs; });
-        aov[9] = new bao("%", [](const double lhs, const double rhs) { return fmod(lhs, rhs); });
-        aov[additive_pos = 10] = new bao("+", [](const double lhs, const double rhs) { return lhs + rhs; });
-        aov[11] = new bao("-", [](const double lhs, const double rhs) { return lhs - rhs; });
+        aov[unary_count = 6] = new binary_arithmetic_operator("^^", [](const double lhs, const double rhs) { return pow(lhs ,rhs); });
+        aov[7] = new binary_arithmetic_operator("*", [](const double lhs, const double rhs) { return lhs * rhs; });
+        aov[8] = new binary_arithmetic_operator("/", [](const double lhs, const double rhs) { return lhs / rhs; });
+        aov[9] = new binary_arithmetic_operator("%", [](const double lhs, const double rhs) { return fmod(lhs, rhs); });
+        aov[additive_pos = 10] = new binary_arithmetic_operator("+", [](const double lhs, const double rhs) { return lhs + rhs; });
+        aov[11] = new binary_arithmetic_operator("-", [](const double lhs, const double rhs) { return lhs - rhs; });
         //  arithmetic
         
-        aov[12] = new bbao(">>", [](const double lhs, const double rhs) {
+        aov[12] = new bitwise_binary_arithmetic_operator(">>", [](const double lhs, const double rhs) {
             return (int)lhs << (int)rhs;
         });
         
-        aov[13] = new bbao("<<", [](const double lhs, const double rhs) {
+        aov[13] = new bitwise_binary_arithmetic_operator("<<", [](const double lhs, const double rhs) {
             return (int)lhs >> (int)rhs;
         });
         //  bitwise
         
-        aov[14] = new bao("max", [](const double lhs, const double rhs) { return lhs > rhs ? lhs : rhs; });
-        aov[15] = new bao("min", [](const double lhs, const double rhs) { return lhs < rhs ? lhs : rhs; });
+        aov[14] = new binary_arithmetic_operator("max", [](const double lhs, const double rhs) { return lhs > rhs ? lhs : rhs; });
+        aov[15] = new binary_arithmetic_operator("min", [](const double lhs, const double rhs) { return lhs < rhs ? lhs : rhs; });
         
-        aov[relational_pos = 16] = new bao("<=", [](const double lhs, const double rhs) { return lhs <= rhs ? 1 : 0; });
-        aov[17] = new bao(">=", [](const double lhs, const double rhs) { return lhs >= rhs ? 1 : 0; });
-        aov[18] = new bao("<", [](const double lhs, const double rhs) { return lhs < rhs ? 1 : 0; });
-        aov[19] = new bao(">", [](const double lhs, const double rhs) { return lhs > rhs ? 1 : 0; });
+        aov[relational_pos = 16] = new binary_arithmetic_operator("<=", [](const double lhs, const double rhs) { return lhs <= rhs ? 1 : 0; });
+        aov[17] = new binary_arithmetic_operator(">=", [](const double lhs, const double rhs) { return lhs >= rhs ? 1 : 0; });
+        aov[18] = new binary_arithmetic_operator("<", [](const double lhs, const double rhs) { return lhs < rhs ? 1 : 0; });
+        aov[19] = new binary_arithmetic_operator(">", [](const double lhs, const double rhs) { return lhs > rhs ? 1 : 0; });
         //  simply reordering two-tailed operators before one-tailed operators removes the need to merge later
         
-        aov[20] = new bao("==", [](const double lhs, const double rhs) { return lhs == rhs ? 1 : 0; });
-        aov[21] = new bao("!=", [](const double lhs, const double rhs) { return lhs != rhs ? 1 : 0; });
+        aov[20] = new binary_arithmetic_operator("==", [](const double lhs, const double rhs) { return lhs == rhs ? 1 : 0; });
+        aov[21] = new binary_arithmetic_operator("!=", [](const double lhs, const double rhs) { return lhs != rhs ? 1 : 0; });
         //  relational
         
-        aov[bitwise_pos = 22] = new bbao("&", [](const double lhs, const double rhs) { return (int)lhs & (int)rhs; });
-        aov[23] = new bbao("^", [](const double lhs, const double rhs) { return (int)lhs ^ (int)rhs; });
-        aov[24] = new bbao("|", [](const double lhs, const double rhs) { return (int)lhs | (int)rhs; });
+        aov[bitwise_pos = 22] = new bitwise_binary_arithmetic_operator("&", [](const double lhs, const double rhs) { return (int)lhs & (int)rhs; });
+        aov[23] = new bitwise_binary_arithmetic_operator("^", [](const double lhs, const double rhs) { return (int)lhs ^ (int)rhs; });
+        aov[24] = new bitwise_binary_arithmetic_operator("|", [](const double lhs, const double rhs) { return (int)lhs | (int)rhs; });
         //  bitwise
         
-        aov[assignment_pos = 25] = new bao("*=", [this](const double lhs, const double rhs) { return ((bao *)aov[7])->apply(lhs, rhs); });
-        aov[26] = new bao("/=", [this](const double lhs, const double rhs) { return ((bao *)aov[8])->apply(lhs, rhs);; });
-        aov[27] = new bao("%=", [this](const double lhs, const double rhs) { return ((bao *)aov[9])->apply(lhs, rhs); });
-        aov[28] = new bao("-=", [this](const double lhs, const double rhs) { return ((bao *)aov[11])->apply(lhs, rhs); });
-        aov[29] = new bbao(">>=", [this](const double lhs, const double rhs) { return ((bao *)aov[12])->apply(lhs, rhs); });
-        aov[30] = new bbao("<<=", [this](const double lhs, const double rhs) { return ((bao *)aov[13])->apply(lhs, rhs); });
-        aov[31] = new bbao("&=", [this](const double lhs, const double rhs) { return ((bao *)aov[23])->apply(lhs, rhs); });
-        aov[32] = new bbao("^=", [this](const double lhs, const double rhs) { return ((bao *)aov[24])->apply(lhs, rhs); });
-        aov[33] = new bbao("|=", [this](const double lhs, const double rhs) { return ((bao *)aov[assignment_pos])->apply(lhs, rhs); });
-        aov[34] = new bao("+=", [this](const double lhs, const double rhs) { return ((bao *)aov[10])->apply(lhs, rhs); });
-        aov[35] = new bao("=", [](const double lhs, const double rhs) { return rhs; });
+        aov[assignment_pos = 25] = new binary_arithmetic_operator("*=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[7])->apply(lhs, rhs); });
+        aov[26] = new binary_arithmetic_operator("/=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[8])->apply(lhs, rhs);; });
+        aov[27] = new binary_arithmetic_operator("%=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[9])->apply(lhs, rhs); });
+        aov[28] = new binary_arithmetic_operator("-=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[11])->apply(lhs, rhs); });
+        aov[29] = new bitwise_binary_arithmetic_operator(">>=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[12])->apply(lhs, rhs); });
+        aov[30] = new bitwise_binary_arithmetic_operator("<<=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[13])->apply(lhs, rhs); });
+        aov[31] = new bitwise_binary_arithmetic_operator("&=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[23])->apply(lhs, rhs); });
+        aov[32] = new bitwise_binary_arithmetic_operator("^=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[24])->apply(lhs, rhs); });
+        aov[33] = new bitwise_binary_arithmetic_operator("|=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[assignment_pos])->apply(lhs, rhs); });
+        aov[34] = new binary_arithmetic_operator("+=", [this](const double lhs, const double rhs) { return ((binary_arithmetic_operator *)aov[10])->apply(lhs, rhs); });
+        aov[35] = new binary_arithmetic_operator("=", [](const double lhs, const double rhs) { return rhs; });
         //  binary
         
-        baov = new bao_t**[9];
+        baov = new binary_arithmetic_operator_t**[9];
         
         //  requires corresponding size matrix
                 
         baoc[0] = 1;
-        baov[0] = new bao_t*[baoc[0]];
-        baov[0][0] = (bao_t *)aov[6];        //  pow
+        baov[0] = new binary_arithmetic_operator_t*[baoc[0]];
+        baov[0][0] = (binary_arithmetic_operator_t *)aov[6];        //  pow
         
         baoc[1] = 3;
-        baov[1] = new bao_t*[baoc[1]];
-        baov[1][0] = (bao_t *)aov[7];        //  *
-        baov[1][1] = (bao_t *)aov[8];        //  /
-        baov[1][2] = (bao_t *)aov[9];        //  %
+        baov[1] = new binary_arithmetic_operator_t*[baoc[1]];
+        baov[1][0] = (binary_arithmetic_operator_t *)aov[7];        //  *
+        baov[1][1] = (binary_arithmetic_operator_t *)aov[8];        //  /
+        baov[1][2] = (binary_arithmetic_operator_t *)aov[9];        //  %
         
         baoc[2] = 2;
-        baov[2] = new bao_t*[baoc[2]];
-        baov[2][0] = (bao_t *)aov[10];       //  +
-        baov[2][1] = (bao_t *)aov[11];       //  -
+        baov[2] = new binary_arithmetic_operator_t*[baoc[2]];
+        baov[2][0] = (binary_arithmetic_operator_t *)aov[10];       //  +
+        baov[2][1] = (binary_arithmetic_operator_t *)aov[11];       //  -
         
         baoc[3] = 2;
-        baov[3] = new bao_t*[baoc[3]];
-        baov[3][0] = (bao_t *)aov[12];       //  >>
-        baov[3][1] = (bao_t *)aov[13];       //  <<
+        baov[3] = new binary_arithmetic_operator_t*[baoc[3]];
+        baov[3][0] = (binary_arithmetic_operator_t *)aov[12];       //  >>
+        baov[3][1] = (binary_arithmetic_operator_t *)aov[13];       //  <<
         
         baoc[4] = 2;
-        baov[4] = new bao_t*[baoc[4]];
-        baov[4][0] = (bao_t *)aov[14];       //  max
-        baov[4][1] = (bao_t *)aov[15];       //  min
+        baov[4] = new binary_arithmetic_operator_t*[baoc[4]];
+        baov[4][0] = (binary_arithmetic_operator_t *)aov[14];       //  max
+        baov[4][1] = (binary_arithmetic_operator_t *)aov[15];       //  min
         
         baoc[5] = 4;
-        baov[5] = new bao_t*[baoc[5]];
-        baov[5][0] = (bao_t *)aov[16];       //  <=
-        baov[5][1] = (bao_t *)aov[17];       //  >=
-        baov[5][2] = (bao_t *)aov[18];       //  <
-        baov[5][3] = (bao_t *)aov[19];       //  >
+        baov[5] = new binary_arithmetic_operator_t*[baoc[5]];
+        baov[5][0] = (binary_arithmetic_operator_t *)aov[16];       //  <=
+        baov[5][1] = (binary_arithmetic_operator_t *)aov[17];       //  >=
+        baov[5][2] = (binary_arithmetic_operator_t *)aov[18];       //  <
+        baov[5][3] = (binary_arithmetic_operator_t *)aov[19];       //  >
         
         baoc[6] = 2;
-        baov[6] = new bao_t*[baoc[6]];
-        baov[6][0] = (bao_t *)aov[20];       //  ==
-        baov[6][1] = (bao_t *)aov[21];       //  !=
+        baov[6] = new binary_arithmetic_operator_t*[baoc[6]];
+        baov[6][0] = (binary_arithmetic_operator_t *)aov[20];       //  ==
+        baov[6][1] = (binary_arithmetic_operator_t *)aov[21];       //  !=
         
         baoc[7] = 3;
-        baov[7] = new bao_t*[baoc[7]];
-        baov[7][0] = (bao_t *)aov[22];       //  &
-        baov[7][1] = (bao_t *)aov[23];       //  ^
-        baov[7][2] = (bao_t *)aov[24];       //  |
+        baov[7] = new binary_arithmetic_operator_t*[baoc[7]];
+        baov[7][0] = (binary_arithmetic_operator_t *)aov[22];       //  &
+        baov[7][1] = (binary_arithmetic_operator_t *)aov[23];       //  ^
+        baov[7][2] = (binary_arithmetic_operator_t *)aov[24];       //  |
         
         baoc[8] = 11;
-        baov[8] = new bao_t*[baoc[8]];
-        baov[8][0] = (bao_t *)aov[25];       //  *=
-        baov[8][1] = (bao_t *)aov[26];       //  /=
-        baov[8][2] = (bao_t *)aov[27];       //  %=
-        baov[8][3] = (bao_t *)aov[28];       //  +=
-        baov[8][4] = (bao_t *)aov[29];       //  -=
-        baov[8][5] = (bao_t *)aov[30];       //  >>=
-        baov[8][6] = (bao_t *)aov[31];       //  <<=
-        baov[8][7] = (bao_t *)aov[32];       //  &=
-        baov[8][8] = (bao_t *)aov[33];       //  ^=
-        baov[8][9] = (bao_t *)aov[34];       //  |=
-        baov[8][10] = (bao_t *)aov[35];      //  =
+        baov[8] = new binary_arithmetic_operator_t*[baoc[8]];
+        baov[8][0] = (binary_arithmetic_operator_t *)aov[25];       //  *=
+        baov[8][1] = (binary_arithmetic_operator_t *)aov[26];       //  /=
+        baov[8][2] = (binary_arithmetic_operator_t *)aov[27];       //  %=
+        baov[8][3] = (binary_arithmetic_operator_t *)aov[28];       //  +=
+        baov[8][4] = (binary_arithmetic_operator_t *)aov[29];       //  -=
+        baov[8][5] = (binary_arithmetic_operator_t *)aov[30];       //  >>=
+        baov[8][6] = (binary_arithmetic_operator_t *)aov[31];       //  <<=
+        baov[8][7] = (binary_arithmetic_operator_t *)aov[32];       //  &=
+        baov[8][8] = (binary_arithmetic_operator_t *)aov[33];       //  ^=
+        baov[8][9] = (binary_arithmetic_operator_t *)aov[34];       //  |=
+        baov[8][10] = (binary_arithmetic_operator_t *)aov[35];      //  =
     }
 
     bool arithmetic::is_defined(const string key) const {
