@@ -50,6 +50,12 @@ namespace ss {
             unsupported_error("set_level()");
         }
         
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void set_paused() {
+            unsupported_error("set_paused()");
+        }
+        // End Enhancement 1
+        
         void set_paused(const bool value) { }
     };
 }

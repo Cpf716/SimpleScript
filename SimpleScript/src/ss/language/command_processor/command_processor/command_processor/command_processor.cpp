@@ -181,6 +181,10 @@ namespace ss {
     }
 
     string command_processor::call(const string key, const size_t argc, string* argv) {
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        this->_is_paused.store(false);
+        // End Enhancement 1
+
         this->mutex.lock();
         
         int pos = this->io_function(key);
@@ -420,6 +424,9 @@ namespace ss {
                                 } else
                                     argv[k++] = evaluate(operands.pop());
                             }
+                            // Begin Enhancement 1 - Thread safety - 2025-01-22
+                            this->_is_paused.store(false);
+                            // End Enhancement 1
                             
                             this->mutex.lock();
                             
@@ -12202,6 +12209,12 @@ namespace ss {
         return i != n;
     }
 
+    // Begin Enhancement 1 - Thread safety - 2025-01-22
+    bool command_processor::is_paused() const {
+        return this->_is_paused.load();
+    }
+    // End Enhancement 1
+
     void command_processor::kill() {
         this->mutex.lock();
         
@@ -13334,7 +13347,17 @@ namespace ss {
             swap(functionv[i], functionv[i - 1]);
     }
 
+    // Begin Enhancement 1 - Thread safety - 2025-01-22
+    void command_processor::set_paused() {
+        this->_is_paused.store(true);
+    }
+    // End Enhancement 1
+
     void command_processor::set_paused(const bool value) {
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        this->_is_paused.store(false);
+        // End Enhancement 1
+        
         this->mutex.lock();
         
         ss::stack<function_t*>* _stack = new ss::stack<function_t*>();

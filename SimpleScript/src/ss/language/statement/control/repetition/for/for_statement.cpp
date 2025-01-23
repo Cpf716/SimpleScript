@@ -124,7 +124,9 @@ namespace ss {
         size_t pos = 0;
         
         while (true) {
-            while (this->is_paused.load());
+            // Begin Enhancement 1 - Thread safety - 2025-01-22
+            this->check_paused();
+            // End Enhancement 1
             
             size_t _state = cp->get_state();
             
@@ -150,7 +152,9 @@ namespace ss {
             this->continue_flag = false;
             
             for (size_t j = 0; j < this->statementc; ++j) {
-                while (this->is_paused.load());
+                // Begin Enhancement 1 - Thread safety - 2025-01-22
+                this->check_paused();
+                // End Enhancement 1
                 
                 this->statementv[j]->execute(cp);
                 

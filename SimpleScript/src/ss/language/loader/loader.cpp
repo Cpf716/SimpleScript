@@ -18,9 +18,6 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    // To Do:
-    // 1) Wait for the main thread to pause
-    // 2) Block subsequent calls until the first call completes (done)
     bool call(command_processor* cp, const string key, size_t argc, string* argv) {
         loader_mutex.lock();
         
@@ -29,10 +26,11 @@ namespace ss {
         if (cp->is_defined(key)) {
             flag = true;
             
-            // NOT thread-safe
             cp->set_paused(true);
             
-            this_thread::sleep_for(milliseconds(2));
+            // Begin Enhancement 1 - Thread safety - 2025-01-22
+            while (!cp->is_paused());
+            // End Enhancement 1
         
             cp->call(key, argc, argv);
             cp->set_paused(false);

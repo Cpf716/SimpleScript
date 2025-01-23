@@ -24,6 +24,10 @@ namespace ss {
         //  MEMBER FIELDS
         
         const std::string SEPARATORS[7] = { "!", "(", ")", ",", ".", ";", "^" };
+
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        atomic<bool> _is_paused = false;
+        // End Enhancement 1
                     
         size_t additive_pos;
         size_t additive_assignment_pos;
@@ -164,6 +168,10 @@ namespace ss {
         
         bool is_mutating(const string expression) const;
         
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        bool is_paused() const;
+        // End Enhancement 1
+        
         void kill();
         
         void remove_listener(const string key);
@@ -177,6 +185,10 @@ namespace ss {
         void set_array(const string key, const size_t index, const string value);
         
         void set_function(function_t* function);
+        
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void set_paused();
+        // End Enhancement 1
         
         void set_paused(const bool value);
         

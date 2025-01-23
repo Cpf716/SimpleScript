@@ -48,6 +48,10 @@ namespace ss {
         
         virtual void set_parent(statement_t* parent) = 0;
         
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        virtual void set_paused() = 0;
+        // End Enhancement 1
+        
         virtual void set_paused(const bool value) = 0;
         
         virtual void set_return(const string value) = 0;

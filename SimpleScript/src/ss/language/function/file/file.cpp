@@ -1202,6 +1202,12 @@ namespace ss {
             this->parent->set_level(this->get_level());
     }
 
+    // Begin Enhancement 1 - Thread safety - 2025-01-22
+    void file::set_paused() {
+        this->cp->set_paused();
+    }
+    // End Enhancement 1
+
     void file::set_paused(const bool value) {
         this->is_paused.store(value);
         

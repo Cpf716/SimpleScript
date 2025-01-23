@@ -133,7 +133,9 @@ namespace ss {
             this->cp->set_state(_state);
         } else {
             for (size_t j = i; j < this->statementc; ++j) {
-                while (this->is_paused.load());
+                // Begin Enhancement 1 - Thread safety - 2025-01-22
+                this->check_paused();
+                // End Enhancement 1
                 
                 size_t _state = this->cp->get_state();
                 
@@ -197,7 +199,9 @@ namespace ss {
                 undefined_error(key);
             
             for (size_t j = this->named_casev[pos]->second; j < this->statementc; ++j) {
-                while (this->is_paused.load());
+                // Begin Enhancement 1 - Thread safety - 2025-01-22
+                this->check_paused();
+                // End Enhancement 1
                 
                 size_t state = this->cp->get_state();
                 

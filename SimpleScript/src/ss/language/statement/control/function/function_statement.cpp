@@ -281,8 +281,10 @@ namespace ss {
         }
         
         for (size_t i = 0; i < this->statementc; ++i) {
-            while (this->is_paused.load());
-            
+            // Begin Enhancement 1 - Thread safety - 2025-01-22
+            this->check_paused();
+            // End Enhancement 1
+
             this->statementv[i]->execute(this->cp);
 
             if (this->return_flag.load())
@@ -341,6 +343,12 @@ namespace ss {
     void function_statement::set_level(const size_t level) {
         this->parent->set_level(level);
     }
+
+   // Begin Enhancement 1 - Thread safety - 2025-01-22
+    void function_statement::set_paused() {
+        this->parent->set_paused();
+    }
+    // End Enhancement 1
 
     void function_statement::set_paused(const bool value) {
         this->is_paused.store(value);

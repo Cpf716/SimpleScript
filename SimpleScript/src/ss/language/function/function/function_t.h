@@ -55,6 +55,10 @@ namespace ss {
         
         virtual void set_level(const size_t level) = 0;
         
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        virtual void set_paused() = 0;
+        // End Enhancement 1
+        
         virtual void set_paused(const bool value) = 0;
     };
 }

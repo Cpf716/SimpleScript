@@ -55,6 +55,16 @@ namespace ss {
         return false;
     }
 
+    // Begin Enhancement 1 - Thread safety - 2025-01-22
+    void file_statement::check_paused() {
+        if (this->is_paused.load()) {
+            this->parent->set_paused();
+
+            while (this->is_paused.load());
+        }
+    }
+    // End Enhancement 1
+
     bool file_statement::compare(const statement_type value) const {
         unsupported_error("compare()");
         return false;
@@ -78,8 +88,10 @@ namespace ss {
         this->return_flag.store(false);
         
         for (size_t i = 0; i < statementc; ++i) {
-            while (this->is_paused.load());
-            
+            // Begin Enhancement 1 - Thread safety - 2025-01-22
+            this->check_paused();
+            // End Enhancement 1
+
             this->statementv[i]->execute(cp);
             
             if (this->return_flag.load())
@@ -124,6 +136,12 @@ namespace ss {
     void file_statement::set_parent(statement_t* parent) {
         unsupported_error("set_parent()");
     }
+
+    // Begin Enhancement 1 - Thread safety - 2025-01-22
+    void file_statement::set_paused() {
+        this->parent->set_paused();
+    }
+    // End Enhancement 1
 
     void file_statement::set_paused(const bool value) {
         this->is_paused.store(value);
