@@ -10,8 +10,6 @@
 namespace ss {
     //  NON-MEMBER FIELDS
 
-    std::atomic<bool> _is_running = true;
-
     size_t filec = 0;
     std::vector<std::tuple<int, std::fstream*, size_t>> filev;
 
@@ -49,7 +47,7 @@ namespace ss {
         std::ifstream file("/tmp/" + _filename);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::ostringstream ss;
         
@@ -70,7 +68,7 @@ namespace ss {
         file.open(abspath);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         dst.push_back(src);
         
@@ -118,7 +116,7 @@ namespace ss {
         std::get<1>(filev[i])->close();
         
         if (std::get<1>(filev[i])->fail())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
 
         delete std::get<1>(filev[i]);
 
@@ -138,10 +136,10 @@ namespace ss {
             file->open(src);
             
             if (!file->is_open())
-                throw file_system_exception(strerror(errno));
+                throw file_system_exception(std::to_string(errno));
         }
         
-        filev.push_back(std::tuple<int, std::fstream*, size_t>(filec, file, 0));
+        filev.push_back({ filec, file, 0 });
         
         return (int)filec++;
     }
@@ -168,7 +166,7 @@ namespace ss {
         std::ifstream file(abspath);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::ostringstream ss;
         
@@ -204,7 +202,7 @@ namespace ss {
         file.open(abspath);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::ostringstream ss;
         
@@ -217,16 +215,12 @@ namespace ss {
         return !ss.str().empty();
     }
 
-    bool is_running() {
-        return _is_running.load();
-    }
-
-    void mkdirs(const std::string src) {
+    void mkdirs(const std::string file_path) {
 #if DEBUG_LEVEL
         assert(src.length());
 #endif
-        std::string dst[src.length() + 1];
-        size_t len = split(dst, src, "/");
+        std::string dst[file_path.length() + 1];
+        size_t len = split(dst, file_path, "/");
         
         for (size_t i = 0; i < len - 1; ++i)
             swap(dst[i], dst[i + 1]);
@@ -245,7 +239,7 @@ namespace ss {
                     throw file_system_exception(ss.str() + " is not a directory");
                 
             } else if (mkdir(ss.str().c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH ))
-                throw file_system_exception(strerror(errno));
+                throw file_system_exception(std::to_string(errno));
             
             file.close();
         }
@@ -258,16 +252,13 @@ namespace ss {
             return null();
         
         while (true) {
-            if (!is_running())
-                return null();
-            
             std::get<1>(filev[i])->seekg(0, std::ios::end);
             
             long tellg = std::get<2>(filev[i]);
             long _tellg = std::get<1>(filev[i])->tellg();
             
             if (std::get<1>(filev[i])->fail())
-                throw file_system_exception(strerror(errno));
+                throw file_system_exception(std::to_string(errno));
             
             if (tellg < _tellg) {
                 size_t len = _tellg - tellg;
@@ -280,7 +271,7 @@ namespace ss {
                 }
                 
                 if (std::get<1>(filev[i])->fail())
-                    throw file_system_exception(strerror(errno));
+                    throw file_system_exception(std::to_string(errno));
                 
                 str[len] = '\0';
                 
@@ -302,7 +293,7 @@ namespace ss {
         file.open(src);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::ostringstream ss;
         
@@ -328,7 +319,7 @@ namespace ss {
         std::ifstream file("/tmp/" + _filename);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::ostringstream ss;
         
@@ -349,7 +340,7 @@ namespace ss {
         file.open(abspath);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::string line;
         while (getline(file, line))
@@ -384,7 +375,7 @@ namespace ss {
         std::ifstream file("/tmp/" + _filename);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::ostringstream ss;
         
@@ -405,7 +396,7 @@ namespace ss {
         file.open(abspath);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         std::string line;
         while (getline(file, line))
@@ -446,11 +437,7 @@ namespace ss {
         
         for (size_t i = 0; i < dst.size(); ++i)
             if (remove(dst[i].c_str()))
-                throw file_system_exception(strerror(errno));
-    }
-
-    void set_is_running(const bool is_running) {
-        _is_running.store(is_running);
+                throw file_system_exception(std::to_string(errno));
     }
 
     std::string uuid() {
@@ -488,7 +475,7 @@ namespace ss {
         (* std::get<1>(filev[i])).flush();
         
         if (std::get<1>(filev[i])->fail())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
 
         std::get<2>(filev[i]) = std::get<1>(filev[i])->tellg();
 
@@ -504,17 +491,17 @@ namespace ss {
         file.open(dst);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         file << src;
         
         if (file.fail())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         file.close();
         
         if (file.fail())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
         
         return src.length();
     }

@@ -6,32 +6,37 @@
 include("/Library/Application Support/SimpleScript/example/socket/tcp/util/client.txt")
 include((dir = "@/datetime/") + "isoString")
 include(dir + "parseTime")
-include("@/search/string/replace")
 
-func onExit(_)
+include("@/search/string/replace")
+include("@/search/string/trim")
+
+func onExit(signum)
     echo "Are you sure? (y/N) "
     
-    const ans = (input() ?? "")
-    
-    return toLower ans === "y"
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
 end func
 
 func main()
-    while 1
-        sfd = client(8082)
+    while true
+        fileDescriptor = client(8082)
         
         echo "Connected...\n"
 
-        while 1
-            res = null
-            if !(res = recv(sfd))
+        while true
+            response = null
+            
+            if !(result = response(fileDescriptor))
                 break
             end if
             
-            echo "[{}] {}" format array(replace(isoString(parseTime(local())), "T", " "), res)
+            
+            echo "\n[{}]\n" format replace(ISOString(parseTime(local())), "T", " ")
+            echo result + "\n"
         end while
         
-        closeTcp(sfd)
+        closeTCP(fileDescriptor)
 
         echo "Disconnected.\n"
     end while

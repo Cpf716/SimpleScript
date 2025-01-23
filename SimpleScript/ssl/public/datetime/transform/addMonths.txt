@@ -10,14 +10,14 @@ func main()
 
     timestamp = ((argv row 0) slice 1, (argv cell 0, 0))
 
-    if subtypeOf timestamp !== "int"
-        typeExcept(subtypeOf timestamp, "int")
+    if subtypeOf timestamp !== "integer"
+        typeExcept(subtypeOf timestamp, "integer")
     end if
 
     months = ((argv row 1) slice 1, (argv cell 1, 0))
 
-    if subtypeOf months !== "int"
-        typeExcept(subtypeOf months, "int")
+    if subtypeOf months !== "integer"
+        typeExcept(subtypeOf months, "integer")
     end if
 
     timestamp += months * 2592000

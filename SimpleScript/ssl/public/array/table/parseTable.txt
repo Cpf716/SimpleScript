@@ -6,7 +6,7 @@
 include("@/uuid")
 include("fileSystem")
 
-if typeOf SEP === undefined
+if typeOf SEP === null
     define SEP ","
 end if
 

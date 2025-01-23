@@ -6,8 +6,8 @@
 n = 0
 stopwatch = start()
 
-func onMessage(workerId, message)
-    echo "Worker {} returned in {} s.\n" format array(workerId + 1, lap(stopwatch))
+func onMessage(message)
+    echo "Worker returned in {} s.\n" format lap(stopwatch)
     n += 1
 end func
 
@@ -19,5 +19,3 @@ end for
 while n < p
     continue
 end while
-
-return ""

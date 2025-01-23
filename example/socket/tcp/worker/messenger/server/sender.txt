@@ -1,0 +1,89 @@
+//  Author: Corey Ferguson
+//  Date:   September 21, 2023
+//  File:   sender.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
+include((dir = "@/datetime/") + "ISOString")
+include(dir + "parseTime")
+
+include("@/search/string/split")
+
+func onExit(signum)
+    if isConnected
+        echo "\nAre you sure? (y/N)\n"
+        echo "Press return, then answer..."
+        
+        if toLower (input() ?? "") === "y"
+            exit
+        end if
+    else
+        exit
+    end if
+end func
+
+func onMessage(message)
+    if !message
+        if isConnected
+            isConnected = false
+            
+            echo "\nDisconnected.\n"
+            echo "Press return to continue...\n"
+        end if
+        
+        return
+    end if
+    
+    echo "\n{}\n" format split(ISOString(parseTime(local())), "T").1
+    echo " {}\n" format message
+    
+    worker("/Library/Application Support/SimpleScript/example/socket/tcp/worker/messenger/receiver.txt", first connections)
+end func
+
+func main()
+    fileDescriptor = server(1)
+
+    array connections = null
+    
+    isConnected = false
+
+    while true
+        while !(connections = poll(fileDescriptor))
+            sleep(1_000)
+        end while
+        
+        echo "Connected...\n"
+        
+        isConnected = true
+        
+        worker("/Library/Application Support/SimpleScript/example/socket/tcp/worker/messenger/receiver.txt", first connections)
+        
+        while true
+            echo "> "
+        
+            response = null
+            
+            while isConnected && !(response = string(input() ?? ""))
+                continue
+            end while
+        
+            if !isConnected
+                break
+            end if
+            
+            try
+                send(first connections, response)
+            catch err
+                throw errorMessage(err)
+            end try
+        end while
+
+        try
+            closeTCP(first connections)
+        catch err
+            throw errorMessage(err)
+        end try
+    end while
+end func
+
+main()

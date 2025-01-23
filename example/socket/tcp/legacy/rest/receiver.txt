@@ -1,0 +1,453 @@
+//  Author: Corey Ferguson
+//  Date:   November 16, 2023
+//  File:   receiver.txt
+//
+
+include((dir = "/Library/Application Support/SimpleScript/example/socket/") + "tcp/util/client.txt")
+include(dir + "config.txt")
+include("@/array/table/parseTable")
+include((dir = "@/number/") + "padDecimal")
+include(dir + "precision")
+include("@/search/string/padEnd")
+
+config()
+
+//  FUNCTIONS
+
+func onExit(signum)
+    echo "\n\n"
+    echo "Press return to continue...\n"
+    exit
+end func
+
+func int()
+    while true
+        val = input()
+        
+        if subtypeOf val == "integer"
+            return val
+        end if
+    end while
+end func
+
+func main()
+    if nrows(argv) >= 2
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+    
+
+    array port = PORT
+
+    if nrows(argv) === 1
+        port = (argv row 0) slice 1
+        
+        if subtypeOf array(...port) !== "integer"
+            typeExcept(subtypeOf array(...port), "integer")
+        end if
+        
+        if port < 0
+            rangeExcept(string(port))
+        end if
+    end if
+    
+    echo "\n"
+
+    while true
+        
+    
+        echo "|   x   |   MUSIC LIBRARY   |\n"
+        echo "|   -   |   --------------- |\n"
+        echo "|   1   |   Library         |\n"
+        echo "|   2   |   Artists         |\n"
+        echo "|   3   |   Albums          |\n"
+        echo "|   4   |   Songs           |\n"
+        echo "|   0   |   < Exit          |\n"
+        echo ">   "
+
+        num = 0
+
+        while true
+            num = int()
+            
+            if num >= 0 && num < 5
+                break
+            end if
+        end while
+        
+        echo "\n"
+        
+        if !num
+            break
+        end if
+        
+        req = "/api/"
+        
+        if num === 1
+            req += "getLibrary"
+            /*
+        
+        else if num === 2
+            echo "|   x   |   MUSIC LIBRARY    |\n"
+            echo "|   -   |   ---------------- |\n"
+            echo "|   1   |   Get Artists      |\n"
+            echo "|   2   |   Find Artists     |\n"
+            echo "|   3   |   Add Artist       |\n"
+            echo "|   4   |   Remove Artist    |\n"
+            echo "|   0   |   < Exit           |\n"
+            echo ">   "
+            
+            while true
+                num = int()
+            
+                if num >= 0 && num < 5
+                    break
+                end if
+            end while
+            
+            echo "\n"
+            
+            if !num
+                continue
+            end if
+            
+            if num === 1
+                req += "getArtists"
+            
+            else if num === 2
+                echo "Pattern:\t"
+                
+                pattern = input()
+                
+                echo "\n"
+                
+                req += "findArtists?pattern={}" format pattern
+            else if num === 3
+                echo "Artist Name:"
+                
+                artistName = string(input() ?? "")
+                
+                echo "\n"
+                
+                req += "addArtist?artistName={}" format artistName
+            else
+                echo "Artist ID:\t"
+                
+                artistId = 0
+                while (artistId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req += "removeArtist?artistId={}" format artistId
+            end if
+        else if num === 3
+            echo "|   x   |   MUSIC LIBRARY   |\n"
+            echo "|   -   |   --------------- |\n"
+            echo "|   1   |   Get Albums      |\n"
+            echo "|   2   |   Find Albums     |\n"
+            echo "|   3   |   Add Album       |\n"
+            echo "|   4   |   Remove Album    |\n"
+            echo "|   0   |   < Exit          |\n"
+            echo ">   "
+            
+            while true
+                num = int()
+            
+                if num >= 0 && num < 5
+                    break
+                end if
+            end while
+            
+            echo "\n"
+            
+            if !num
+                continue
+            end if
+            
+            if num === 1
+                req += "getAlbums"
+                
+            else if num === 2
+                echo "Pattern:\t"
+                
+                pattern = input()
+                
+                echo "\n"
+                
+                req += "findAlbums?pattern={}" format pattern
+            else if num === 3
+                echo "Artist ID:\t"
+                
+                artistId = 0
+                while (artistId = int()) < 1
+                    continue
+                end while
+                
+                echo "Album Year:\t"
+                
+                albumYear = 0
+                while (albumYear = int()) < 1970
+                    continue
+                end while
+                
+                echo "Album Name:\t"
+                
+                albumName = string(input() ?? "")
+                
+                echo "\n"
+                
+                req += "addAlbum?artistId={}&albumYear={}&albumName={}" format array(artistId, albumYear, albumName)
+            else
+                echo "Album ID:\t"
+                
+                albumId = 0
+                while (albumId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req += "removeAlbum?albumId={}" format albumId
+            end if
+        else
+            echo "|   x   |   MUSIC LIBRARY   |\n"
+            echo "|   -   |   --------------- |\n"
+            echo "|   1   |   Get Songs       |\n"
+            echo "|   2   |   Find Songs      |\n"
+            echo "|   3   |   Add Song        |\n"
+            echo "|   4   |   Remove Song     |\n"
+            echo "|   5   |   Play Song       |\n"
+            echo "|   6   |   Clear Plays     |\n"
+            echo "|   0   |   < Exit          |\n"
+            echo ">   "
+            
+            while true
+                num = int()
+            
+                if num >= 0 && num < 7
+                    break
+                end if
+            end while
+            
+            echo "\n"
+            
+            if !num
+                continue
+            end if
+            
+            if num === 1
+                req += "getSongs"
+            else if num === 2
+                echo "Pattern:\t"
+                
+                pattern = input()
+                
+                echo "\n"
+                
+                req += "findSongs?pattern={}" format pattern
+            else if num === 3
+                echo "Album ID:\t"
+                
+                albumId = 0
+                while (albumId = int()) < 1
+                    continue
+                end while
+                
+                echo "Position:\t"
+                
+                position = -1
+                while ((position = int()) < 0)
+                    continue
+                end while
+                
+                echo "Song Title:\t"
+                
+                songTitle = string(input() ?? "")
+                
+                echo "\n"
+                
+                req += "addSong?albumId={}&position={}&songTitle={}" format array(albumId, position, songTitle)
+            else if num === 4
+                echo "Song ID:\t"
+                
+                songId = 0
+                while (songId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req += "removeSong?songId={}" format songId
+            else if num === 5
+                echo "Song ID:\t"
+                
+                songId = 0
+                while (songId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req += "playSong?songId={}" format songId
+            else
+                echo "Song ID:\t"
+                
+                songId = 0
+                while (songId = int()) < 1
+                    continue
+                end while
+                    
+                echo "\n"
+                
+                req += "clearPlays?songId={}" format songId
+            end if
+                */
+        end if
+        
+        stopwatch = start()
+        sfd = client(port)
+        
+        if sfd === -1
+            continue
+        end if
+
+        send(sfd, req)
+
+        array res = null
+        
+        try
+            res = recv(sfd, 30)
+        catch errno
+            if ERRNOs().err === "ECONNREFUSED"
+                echo "Connection to the server timed out.\n\n"
+                closeTcp(sfd)
+                continue
+            end if
+            
+            throw errorMessage(err)
+        end try
+        
+        try
+            closeTcp(sfd)
+        catch errno
+            throw errorMessage(err)
+        end try
+        
+        if !res
+            echo "Connection to the server timed out.\n\n"
+            continue
+        end if
+        
+        dif = precision(stop(stopwatch), 2)
+        res = parseTable(res, SEP)
+        
+        handled = false
+        
+        if (count res - 1) / first res === 1
+            array pair = ((res row 0) slice 1, (res cell 0, 0))
+            
+            if count pair === 1
+                assert subtypeOf first pair === "integer"
+                
+                num = first pair
+                
+                echo "Updated {} row{}\n" format array(num, (num === 1 ? "" : "s"))
+                
+                handled = true
+            else if count pair === 2
+                if first pair === "error"
+                    echo "ERROR:\t{}\n" format last pair
+                    
+                    handled = true
+                end if
+            end if
+        end if
+        
+        if handled
+            echo "\n"
+        else
+            array cols = array(first res - 1)
+        
+            for i = 0; i < count cols; i += 1
+                array arr = res col i + 1
+                
+                arr = (arr map val, count string(val ?? ""))
+                cols.i = (arr aggregate val, first val max last val)
+            end for
+            
+            echo "|\t"
+            
+            for i = 0; i < count cols; i += 1
+                echo "{}\t|\t" format padEnd(string((res cell 0, i + 1)), cols.i, " ")
+            end for
+            
+            echo "\n"
+            echo "|\t"
+            
+            for i = 0; i < count cols; i += 1
+                array arr = array(cols.i)
+                
+                arr = arr fill "-"
+            
+                echo "{}\t|\t" format (arr join "")
+            end for
+            
+            echo "\n"
+        
+            for i = 1; i < (count res - 1) / first res; i += 1
+                echo "|\t"
+            
+                for j = 1; j <= (res cell i, 0); j += 1
+                    val = (res cell i, j)
+                    
+                    if val === null
+                        val = "null"
+                    end if
+                
+                    echo "{}\t|\t" format padEnd(string(val), cols.(j - 1), " ")
+                end for
+                
+                echo "\n"
+            end for
+            
+            echo "\n"
+        
+            num = (count res - 1) / first res
+            
+            echo (num === 1 ? "No results" : (string(num - 1) + " Result") + (num === 2 ? "" : "s")) + " "
+        end if
+        
+        echo "({} s)\n" format padDecimal(dif, 2)
+        echo "\n"
+        echo "Export? (Y/n):\t"
+        
+        ans = string(input() ?? "")
+        
+        echo "\n"
+        
+        if count ans === 1 && toUpper ans === "Y"
+            filename = "/Users/{}/Downloads/Export" format USER
+            ext = ".csv"
+        
+            i = 1
+            if exists(filename + ext)
+                while exists(("{} ({})" format array(filename, i)) + ext)
+                    i += 1
+                end while
+                
+                write(("{} ({})" format array(filename, i)) + ext, res, SEP)
+            else
+                write(filename + ext, res, SEP)
+            end if
+            
+            echo ("{} ({})" format array(filename, i)) + "\n"
+            echo "\n"
+        end if
+    end while
+    
+    return ""
+    
+end func
+
+return main()

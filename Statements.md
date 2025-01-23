@@ -4,11 +4,11 @@
 
 #### echo : any
 
-#### define : symbol, any
+#### define : key, any
 
-#### suppress : symbol
+#### suppress : key
 
-#### sleep : int
+<!--#### sleep : int-->
 
 ### Jump
 
@@ -28,7 +28,7 @@
 
 ### Function
 
-#### func-end func : symbol
+#### func-end func : key
 
 func foobar<br>
 &nbsp;&nbsp;&nbsp;&nbsp;echo ""<br>
@@ -36,7 +36,7 @@ end func
 
 ### Jump
 
-#### try-catch-end try : symbol
+#### try-catch-end try : key
 
 try<br>
 &nbsp;&nbsp;&nbsp;&nbsp;throw ""<br>

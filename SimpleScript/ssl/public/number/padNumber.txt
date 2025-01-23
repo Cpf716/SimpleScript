@@ -17,7 +17,7 @@ func main()
     num = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf num !== "number"
-        typeExcept(typeOf num, "double")
+        typeExcept(typeOf num, "number")
     end if
 
     padStr = ","
@@ -25,8 +25,8 @@ func main()
     if nrows(argv) === 2
         padStr = ((argv row 1) slice 1, (argv cell 1, 0))
         
-        if subtypeOf padStr !== "char"
-            typeExcept(subtypeOf padStr, "char")
+        if subtypeOf padStr !== "character"
+            typeExcept(subtypeOf padStr, "character")
         end if
     end if
 

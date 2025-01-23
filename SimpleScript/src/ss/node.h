@@ -21,7 +21,7 @@ namespace ss {
     public:
         //  CONSTRUCTORS
         
-        node(const T data, node* parent) {
+        node(const T data = null(), node* parent = NULL) {
             this->_data = data;
             this->_parent = parent;
             

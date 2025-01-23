@@ -5,47 +5,45 @@
 
 include("/Library/Application Support/SimpleScript/example/socket/tcp/util/client.txt")
 
-connected = false
+isConnected = false
 
-func onExit(_)
+func onExit(signum)
     echo "Are you sure? (y/N)\n"
     echo "Press return, then answer..."
     
     if toLower (input() ?? "") === "y"
-        connected = false
-    
-        return true
+        isConnected = false
+        exit
     end if
-    
-    return false
 end func
 
 func main()
-    while 1
-        sfd = client(8080)
+    while true
+        fileDescriptor = client(8080)
         
         echo "Connected...\n"
         
-        connected = true
+        isConnected = true
         
-        listen(sfd, 8082)
+        listen(fileDescriptor, 8082)
 
-        while 1
+        while true
             echo "> "
         
-            req = null
-            while connected && !(req = string(input() ?? ""))
+            request = null
+            
+            while isConnected && !(request = string(input() ?? ""))
                 continue
             end while
 
-            if req === "exit" || send(sfd, req) <= 0
+            if send(fileDescriptor, request) <= 0
                 break
             end if
         end while
         
-        closeTcp(sfd)
+        closeTCP(fileDescriptor)
         
-        connected = false
+        isConnected = false
         
         echo "Disconnected.\n"
     end while

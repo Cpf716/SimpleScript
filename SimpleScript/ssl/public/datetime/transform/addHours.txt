@@ -12,14 +12,14 @@ func main()
 
     timestamp = ((argv row 0) slice 1, (argv cell 0, 0))
 
-    if subtypeOf timestamp !== "int"
-        typeExcept(subtypeOf timestamp, "int")
+    if subtypeOf timestamp !== "integer"
+        typeExcept(subtypeOf timestamp, "integer")
     end if
 
     hours = ((argv row 1) slice 1, (argv cell 1, 0))
 
-    if subtypeOf hours !== "int"
-        typeExcept(subtypeOf hours, "int")
+    if subtypeOf hours !== "integer"
+        typeExcept(subtypeOf hours, "integer")
     end if
 
     timestamp += hours * 3600

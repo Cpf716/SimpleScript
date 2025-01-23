@@ -12,8 +12,8 @@ func main()
 
     a = (argv row 0) slice 1
 
-    if subtypeOf a !== "int"
-        typeExcept(subtypeOf a, "int")
+    if subtypeOf a !== "integer"
+        typeExcept(subtypeOf a, "integer")
     end if
 
     func `factorial`(a, b)

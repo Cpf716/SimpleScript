@@ -11,11 +11,11 @@
 #include "exception.h"
 
 namespace ss {
-    class file_system_exception: public exception {
+    class file_system_exception: public ::exception {
     public:
         //  CONSTRUCTORS
         
-        file_system_exception(const std::string message) : exception(message) { }
+        file_system_exception(const std::string message) : ::exception(message) { }
     };
 }
 

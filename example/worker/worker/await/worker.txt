@@ -6,7 +6,7 @@
 func main()
     stopwatch = start()
 
-    setTimeoutSync(rand() % 3_000)
+    sleep(rand() % 3_000)
     
     return stop(stopwatch)
 end func

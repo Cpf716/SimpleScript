@@ -6,8 +6,8 @@
 include("@/exception/expectExcept")
 
 func main()
-    if (count argv - 1) / first argv !== 2
-        expectExcept("2 argument(s), got {}" format (count argv - 1) / first argv)
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
 
     a = ((argv row 0) slice 1, (argv cell 0, 0))

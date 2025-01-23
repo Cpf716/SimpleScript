@@ -8,7 +8,7 @@
 #ifndef stack_h
 #define stack_h
 
-#include "common.h"
+#include "functions.h"
 
 using namespace std;
 

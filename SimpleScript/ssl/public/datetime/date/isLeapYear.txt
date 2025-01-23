@@ -12,8 +12,8 @@ func main()
 
     year = (argv row 0) slice 1
 
-    if subtypeOf year !== "int"
-        typeExcept(subtypeOf year, "int")
+    if subtypeOf year !== "integer"
+        typeExcept(subtypeOf year, "integer")
     end if
 
     if year < 1970

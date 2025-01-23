@@ -16,8 +16,8 @@ func main()
     
     timestamp = (argv row 0) slice 1
     
-    if subtypeOf timestamp !== "int"
-        typeExcept(subtypeOf timestamp, "int")
+    if subtypeOf timestamp !== "integer"
+        typeExcept(subtypeOf timestamp, "integer")
     end if
     
     if timestamp < 0

@@ -30,7 +30,7 @@ func main()
     
     weekday = weekdays() indexOf (weekdays() find val, startsWith(val, first arr))
 
-    return weekday === -1 ? undefined : weekday
+    return weekday === -1 ? null : weekday
 end func
 
 return main()

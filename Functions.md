@@ -36,20 +36,20 @@ Postcondition:  returns `1` if `src` is a file; otherwise returns `0`
 Precondition:   `num >= 0`<br>
 Postcondition:  returns the major number from `num`
 
-#### `makeDir(src: string): undefined`
+#### `makeDir(src: string): null`
 
 Precondition:   `src`<br>
-Postcondition:  creates directory `src`; returns `undefined`, otherwise throws an exception if an error occurs
+Postcondition:  creates directory `src`; returns `null`, otherwise throws an exception if an error occurs
 
 #### `minor(num: int): int`
 
 Precondition:   `num >= 0`<br>
 Postcondition:  returns the minor number from `num`
 
-#### `move(old: string, new: string): undefined`
+#### `move(old: string, new: string): null`
 
 Precondition: `old && new`<br>
-Postcondition:  renames file or directory `old` to `new`; returns `undefined`, otherwise throws an exception if an error occurs
+Postcondition:  renames file or directory `old` to `new`; returns `null`, otherwise throws an exception if an error occurs
 
 #### `readFile(filedes: int): string`
 
@@ -65,7 +65,7 @@ Postcondition:  returns data read from the file at `filename`, otherwise throws 
 #### `remove(filename: string): int`
 
 Precondition:   `filename`<br>
-Postcondition:  removes the file or directory at `filename`; returns `undefined`, otherwise throws an exception if an error occurs
+Postcondition:  removes the file or directory at `filename`; returns `null`, otherwise throws an exception if an error occurs
 
 #### `stat(filename: string): dictionary`
 
@@ -77,7 +77,7 @@ Postcondition:  returns information on the file or directory at `filename`
 Precondition:   `data`<br>
 Postcondition:  writes `data` to file; returns the number of bytes written, otherwise returns `-1` if no such file exists or throws an exeption if an error occurs
 
-#### `write(filename: string, data: array | string, sep: string = ""): undefined`
+#### `write(filename: string, data: array | string, sep: string = ""): null`
 
 Precondition:   `filename && data !== null && sep !== null`<br>
 Postcondition:  writes `data` to file; returns the number of bytes written, otherwise throws an exception if an error occurs
@@ -99,7 +99,7 @@ Postcondition:  returns `0` upon successful closure of the MySQL connection `con
 #### `preparedQuery(con: int, sql: string, ...args): table`
 
 Precondition:   `sql`<br>
-Postcondition:  returns the result set of a prepared query, otherwise returns `undefined` if no such connection exists or throws an exception if an error occurs
+Postcondition:  returns the result set of a prepared query, otherwise returns `null` if no such connection exists or throws an exception if an error occurs
 
 #### `preparedUpdate(con: int, sql: string, ...args): int`
 
@@ -109,7 +109,7 @@ Postcondition:  returns the number of rows updated by a prepared update, otherwi
 #### `query(con: int, sql: string): table`
 
 Precondition:   `sql`<br>
-Postcondition:  returns the result set of query `sql`, otherwise returns `undefined` if no such connection exists or throws an exception if an error occurs
+Postcondition:  returns the result set of query `sql`, otherwise returns `null` if no such connection exists or throws an exception if an error occurs
 
 #### `setSchema(con: int, schema: string): int`
 
@@ -149,12 +149,12 @@ Postcondition:  returns an array of file descriptors identifying clients of the 
 #### `recv(fildes: int, timeout: int = 0): string`
 
 Precondition:   none<br>
-Postcondition:  returns data received from the socket `fildes`, otherwise returns `undefined` if disconnected or throws an exception if an error occurs (blocking)
+Postcondition:  returns data received from the socket `fildes`, otherwise returns `null` if disconnected or throws an exception if an error occurs (blocking)
 
 #### `recvFrom(fildes: int, timeout: int = 0): string`
 
 Precondition:   none<br>
-Postcondition:  returns data received from the socket `fildes`, otherwise returns `undefined` if disconnected or throws an exception if an error occurs (blocking)
+Postcondition:  returns data received from the socket `fildes`, otherwise returns `null` if disconnected or throws an exception if an error occurs (blocking)
 
 #### `send(fildes: int, data: string): int`
 
@@ -238,7 +238,7 @@ Postcondition:  starts a new stopwatch and returns its descriptor
 Precondition:   none<br>
 Postcondition:  stops the stopwatch; returns its time (seconds), otherwise returns `-1` if no such stopwatch exists
 
-#### `worker(filename: string, ...args): undefined`
+#### `worker(filename: string, ...args): null`
 
 Precondition:   `filename`<br>
-Postcondition:  starts a worker thread from the file at `filename` and passes `args` to it; returns `undefined`
+Postcondition:  starts a worker thread from the file at `filename` and passes `args` to it; returns `null`

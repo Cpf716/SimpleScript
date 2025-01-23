@@ -8,24 +8,28 @@
 include("@/array/table/getPref")
 include("fileSystem")
 
-if typeOf SEP === undefined
+if typeOf SEP === null
     define SEP ","
 end if
 
-array data = readFile("/Library/Application Support/SimpleScript/example/prefs.csv", SEP)
+array data = readFile("/Library/Application Support/SimpleScript/example/env.csv", SEP)
 
 if count data === 1
     return
 end if
 
-if typeOf FILENAME === undefined
+if typeOf FILENAME === null
     define FILENAME getPref(data, "filename")
 end if
 
-if typeOf PORT === undefined
-    define PORT getPref(data, "port")
+if typeOf PORT === null
+    port = getPref(data, "port")
+    
+    assert subtypeOf port === "integer" && port >= 0
+    
+    define PORT port
 end if
 
-if typeOf USER === undefined
+if typeOf USER === null
     define USER getPref(data, "user")
 end if

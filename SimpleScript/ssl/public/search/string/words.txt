@@ -31,7 +31,7 @@ func main()
     _arr.(arr.0) = 1
 
     for i = 1; i < count arr; i += 1
-        if _arr.(arr.i) === undefined
+        if _arr.(arr.i) === null
             _arr.(arr.i) = 1
         else
             _arr.(arr.i) += 1

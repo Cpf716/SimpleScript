@@ -1,0 +1,9 @@
+worker("/Library/Application Support/SimpleScript/example/worker/test/__worker.txt")
+
+func onMessage(message)
+  echo string(message) + "\n"
+end func
+
+while true
+  continue
+end while

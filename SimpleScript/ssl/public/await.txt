@@ -5,37 +5,34 @@
 
 include("@/exception/expectExcept")
 
-func onMessage(message)
-    _message = message
+array value = null, flag = true
 
-    sync = false
+func onMessage(message)
+    value = message, flag = false
 end func
 
 func main()
-    if (count argv - 1) / first argv !== 1
-        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv))
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format (nrows(argv)))
     end if
     
-    array args = (argv row 0) slice 1
+    array params = (argv row 0) slice 1
     
-    if typeOf first args !== "string"
-        typeExcept(typeOf first args, "string")
+    if typeOf first params !== "string"
+        typeExcept(typeOf first params, "string")
     end if
     
-    if first args === null
+    if first params === null
         throw "null"
     end if
     
-    array _message = null
-    var sync = true
+    worker(...params)
     
-    worker(...args)
-    
-    while sync
+    while flag
         continue
     end while
     
-    return _message
+    return value
 end func
 
 return main()

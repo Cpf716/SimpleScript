@@ -8,44 +8,40 @@ include("@/socket/constants/ERRNOs")
 include("socket")
 
 func `client`(timeout)
-    for var i = 0; i < timeout; i += 1
+    for i = 0; i < timeout; i += 1
         try
-            return tcpClient("127.0.0.1", port)
-        catch errno
-            if ERRNOs().errno !== "ECONNREFUSED"
-                throw ERRNOs().errno
+            return TCPClient(localhost, port)
+        catch err
+            if ERRNOs().err !== "ECONNREFUSED"
+                throw errorMessage(err)
             end if
         end try
     
-        sleep 1_000
+        sleep(1_000)
     end for
     
     return -1
 end func
 
 func main()
-    if nrows(argv) >= 2
+    if nrows(argv) !== 1
         expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
     port = (argv row 0) slice 1
     
-    if subtypeOf port !== "int"
-        typeExcept(subtypeOf port, "int")
-    end if
-    
-    if port < 0
-        rangeExcept(string(port))
+    if subtypeOf port !== "integer"
+        typeExcept(subtypeOf port, "integer")
     end if
 
-    sfd = `client`(10)
+    fileDescriptor = `client`(10)
     
-    if sfd === -1
+    if fileDescriptor === -1
         echo "Connecting...\n"
         
-        sfd = `client`(20)
+        fileDescriptor = `client`(20)
         
-        if sfd === -1
+        if fileDescriptor === -1
             echo "Connection to the server timed out.\n\n"
             echo "Press return to continue..."
             
@@ -57,7 +53,7 @@ func main()
         end if
     end if
     
-    return sfd
+    return fileDescriptor
 end func
 
 return main()

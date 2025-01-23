@@ -12,8 +12,8 @@ func main()
     
     `nrows` = ((argv row 0) slice 1, (argv cell 0, 0))
     
-    if subtypeOf `nrows` !== "int"
-        typeExcept(subtypeOf `nrows`, "int")
+    if subtypeOf `nrows` !== "integer"
+        typeExcept(subtypeOf `nrows`, "integer")
     end if
     
     if `nrows` < 0
@@ -22,8 +22,8 @@ func main()
     
     ncols = ((argv row 1) slice 1, (argv cell 1, 0))
     
-    if subtypeOf ncols !== "int"
-        typeExcept(subtypeOf ncols, "int")
+    if subtypeOf ncols !== "integer"
+        typeExcept(subtypeOf ncols, "integer")
     end if
     
     if ncols < 0

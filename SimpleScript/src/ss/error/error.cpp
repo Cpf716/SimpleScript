@@ -51,7 +51,7 @@ namespace ss {
     }
 
     void undefined_error(const std::string key) {
-        throw error(key + " is undefined");
+        throw error(key + " is not defined");
     }
 
     void unsupported_error(const std::string subject) {

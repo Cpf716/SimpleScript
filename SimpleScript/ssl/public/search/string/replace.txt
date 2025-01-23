@@ -20,13 +20,13 @@ func main()
         throw "null"
     end if
 
-    pat = ((argv row 1) slice 1, (argv cell 1, 0))
+    pattern = ((argv row 1) slice 1, (argv cell 1, 0))
 
-    if typeOf pat !== "string"
-        typeExcept(typeOf pat, "string")
+    if typeOf pattern !== "string"
+        typeExcept(typeOf pattern, "string")
     end if
 
-    if pat === null
+    if pattern === null
         throw "null"
     end if
 
@@ -41,19 +41,19 @@ func main()
     end if
 
     i = 0
-    for ; i <= count text - count pat; i += 1
+    for ; i <= count text - count pattern; i += 1
         j = 0
-        while j < count pat && text.(i + j) === pat.j
+        while j < count pattern && text.(i + j) === pattern.j
             j += 1
         end while
         
-        if j === count pat
+        if j === count pattern
             break
         end if
     end for
 
-    if i !== count text - count pat + 1
-        return (text slice 0, i) + newPat + (text substr i + count pat)
+    if i !== count text - count pattern + 1
+        return (text slice 0, i) + newPat + (text substr i + count pattern)
     end if
 
     return text

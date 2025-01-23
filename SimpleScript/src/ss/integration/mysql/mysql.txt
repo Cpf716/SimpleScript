@@ -1,0 +1,33 @@
+include("mysql")
+
+pool = createPool("localhost", "root", array(...array("password", "root"), ...array("schema", "musicLibrary")))
+
+connection = getConnection(pool)
+
+result = query(connection, "select * from musicLibrary.songs")
+
+for i = 0; i < (count result - 1) / first result; i += 1
+    for j = 0; j < first result; j += 1
+        echo string((result cell i, j)) + "\t"
+    end for
+    
+    echo "\n"
+end for
+
+release(connection)
+closePool(pool)
+
+/*
+connection = connect("localhost", "root", array(...array("password", "root"), ...array("schema", "musicLibrary")))
+
+result = query(connection, "select * from musicLibrary.songs")
+
+for i = 0; i < (count result - 1) / first result; i += 1
+    for j = 0; j < first result; j += 1
+        echo string((result cell i, j)) + "\t"
+    end for
+    
+    echo "\n"
+end for
+
+closeConnection(connection)

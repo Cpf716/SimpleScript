@@ -6,8 +6,8 @@
 include("@/sort/sort")
 
 func main()
-    if (count argv - 1) / first argv !== 1
-        expectExcept("1 argument(s), got {}" format (count argv - 1) / first argv)
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
     array arr = (argv row 0) slice 1

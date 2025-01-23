@@ -7,22 +7,22 @@ include((dir = "@/math/stat/") + "deviation")
 include(dir + "mean")
 
 func main()
-    if (count argv - 1) / first argv === 0
+    if nrows(argv) === 0
         expectExcept("1 argument(s), got 0")
     end if
     
-    if (count argv - 1) / first argv >= 3
-        expectExcept("1 argument(s), got {}" format (count argv - 1) / first argv)
+    if nrows(argv) >= 3
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
     
     array arr = ((argv row 0) slice 1, (argv cell 0, 0))
     array num = 1
     
-    if (count argv - 1) / first argv === 2
+    if nrows(argv) === 2
         num = ((argv row 1) slice 1, (argv cell 1, 0))
         
         if typeOf num !== "number"
-            typeExcept(typeOf num, "double")
+            typeExcept(typeOf num, "number")
         end if
         
         if num < 0

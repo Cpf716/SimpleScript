@@ -1,0 +1,74 @@
+//  Author: Corey Ferguson
+//  Date:   September 21, 2023
+//  File:   sender.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/client.txt")
+include((dir = "@/datetime/") + "ISOString")
+include(dir + "parseTime")
+
+include("@/search/string/split")
+
+func onExit(signum)
+    echo "\nAre you sure? (y/N)\n"
+    echo "Press return, then answer..."
+    
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
+end func
+
+func onMessage(message)
+    if !message
+        isConnected = false
+    
+        echo "\nDisconnected.\n"
+        echo "Press return to continue...\n"
+        return
+    end if
+
+    echo "\n{}\n" format split(ISOString(parseTime(local())), "T").1
+    echo " {}\n" format message
+    
+    worker("/Library/Application Support/SimpleScript/example/socket/tcp/worker/messenger/receiver.txt", fileDescriptor)
+end func
+
+func main()
+    while true
+        fileDescriptor = client(8080)
+        
+        echo "Connected...\n"
+        
+        isConnected = true
+        
+        worker("/Library/Application Support/SimpleScript/example/socket/tcp/worker/messenger/receiver.txt", fileDescriptor)
+
+        while true
+            echo "> "
+        
+            request = null
+            
+            while isConnected && !(request = string(input() ?? ""))
+                continue
+            end while
+
+            if !isConnected
+                break
+            end if
+            
+            try
+                send(fileDescriptor, request)
+            catch err
+                throw errorMessage(err)
+            end try
+        end while
+        
+        try
+            closeTCP(fileDescriptor)
+        catch err
+            throw errorMessage(err)
+        end try
+    end while
+end func
+
+main()

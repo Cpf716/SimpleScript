@@ -12,7 +12,7 @@ config()
 //  FUNCTIONS
 
 func main()
-    if nrows(argv) >= 2
+    if nrows(argv) > 1
         expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
@@ -21,8 +21,8 @@ func main()
     if nrows(argv) === 1
         port = (argv row 0) slice 1
         
-        if subtypeOf array(...port) !== "int"
-            typeExcept(subtypeOf array(...port), "int")
+        if subtypeOf array(...port) !== "integer"
+            typeExcept(subtypeOf array(...port), "integer")
         end if
         
         if port < 0
@@ -32,19 +32,19 @@ func main()
     
     echo "\n"
     
-    while 1
-        sfd = client(port)
+    while true
+        fileDescriptor = client(port)
         
-        if sfd === -1
+        if fileDescriptor === -1
             continue
         end if
 
-        array req = null
+        array response = null
         
         try
-            req = recv(sfd, 30)
-        catch errno
-            if ERRNOs().errno === "EBADF"
+            response = recv(fileDescriptor)
+        catch err
+            if ERRNOs().err === "EBADF"
                 echo "Connection to the server timed out.\n\n"
                 echo "Press return to continue..."
                 
@@ -53,26 +53,26 @@ func main()
                 echo "\n"
                 
                 try
-                    closeTcp(sfd)
-                catch errno
-                    throw ERRNOs().errno
+                    closeTCP(fileDescriptor)
+                catch err
+                    throw errorMessage(err)
                 end try
                 
                 continue
             end if
             
-            throw ERRNOs().errno
+            throw errorMessage(err)
         end try
         
         try
-            closeTcp(sfd)
-        catch errno
-            throw ERRNOs().errno
+            closeTCP(fileDescriptor)
+        catch err
+            throw errorMessage(err)
         end try
         
-        if !req
+        if !response
             echo "Connection to the server timed out.\n\n"
-            echo "Press return  to continue..."
+            echo "Press return to continue..."
             
             input()
             
@@ -80,39 +80,35 @@ func main()
             
             continue
         end if
-        
-        req = parseTable(req)
 
-        for i = 0; i < (count req - 1) / first req; i += 1
-            for j = 1; j <= (req cell i, 0); j += 1
-                echo "{}\t" format (req cell i, j)
+        response = parseTable(response)
+
+        for i = 0; i < (count response - 1) / first response; i += 1
+            for j = 1; j <= (response cell i, 0); j += 1
+                echo "{}\t" format (response cell i, j)
             end for
             
             echo "\n"
         end for
-        
-        echo "\n"
-        echo "Export? (Y/n):\t"
-        
-        ans = string(input() ?? "")
-        
-        if toUpper ans === "Y"
+
+        echo "\nExport? (Y/n):\t"
+
+        if toUpper (input() ?? "") === "Y"
             filename = "/Users/{}/Downloads/Export" format USER
-            ext = ".csv"
-        
-            if exists(filename + ext)
+            fileExtension = ".csv"
+
+            if exists(filename + fileExtension)
                 i = 1
-                while exists((filename + " ({})" format i) + ext)
+                while exists((filename + " ({})" format i) + fileExtension)
                     i += 1
                 end while
                 
-                write((filename + " ({})" format i) + ext, req, SEP)
+                write((filename + " ({})" format i) + fileExtension, response, SEP)
             else
-                write(filename + ext, req, SEP)
+                write(filename + fileExtension, response, SEP)
             end if
         end if
-        
-        return ""
+        return
     end while
 end func
 

@@ -7,61 +7,61 @@ include("/Library/Application Support/SimpleScript/example/socket/tcp/util/serve
 
 //  FUNCTIONS
 
-cfdc = 0
-
-func onExit(_)
-    if cfdc
-        echo "\n"
-        echo "Are you sure? (y/N) "
+func onExit(signum)
+    if connectionc
+        echo "\nAre you sure? (y/N) "
     
-        const ans = (input() ?? "")
-    
-        return toLower ans === "y"
+        if toLower (input() ?? "") === "y"
+            exit
+        end if
+    else
+      exit
     end if
-    
-    return true
 end func
 
 func main()
-    sfd = server(1024)
+    fileDescriptor = server(1024)
     
-    array cfdv = null
+    connectionc = 0;
+        array connectionv = null
 
-    while 1
-        if !(cfdv = poll(sfd))
-            if cfdc
-                cfdc = 0
+    while true
+        if !(connectionv = poll(fileDescriptor))
+            if connectionc
+                connectionc = 0
+                
                 echo "Disconnected.\t(0)\n"
             end if
-        
             continue
         end if
         
-        if cfdc < count cfdv
-            echo "Connected...\t({})\n" format count cfdv
-        else if cfdc > count cfdv
-            echo "Disconnected.\t({})\n" format count cfdv
+        if connectionc < count connectionv
+            echo "Connected...\t({})\n" format count connectionv
+        else if connectionc > count connectionv
+            echo "Disconnected.\t({})\n" format count connectionv
         end if
         
-        cfdc = count cfdv
+        connectionc = count connectionv
         
-        for cfd in cfdv
+        for fileDescriptor in connectionv
             try
-                send(cfd, gmt())
-            catch errno
+                send(fileDescriptor, gmt())
+            catch err
                 try
-                    closeTcp(cfd)
-                catch errno
-                    throw ERRNOs().errno
+                    closeTCP(fileDescriptor)
+                catch err
+                    throw errorMessage(err)
                 end try
                 
-                if ERRNOs().errno !== "EPIPE"
-                    echo ERRNOs().errno
+                /*
+                if ERRNOs().err !== "EPIPE"
+                    echo ERRNOs().err
                 end if
+                */
             end try
         end for
         
-        sleep 1_000
+        sleep(1_000)
     end while
 end func
 

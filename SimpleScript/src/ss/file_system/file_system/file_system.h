@@ -13,6 +13,8 @@
 #include <sys/stat.h>       //  mkdir
 
 namespace ss {
+    // NON-MEMBER FUNCTIONS
+
     std::string basename(const std::string src);
 
     int file_close(const int src);
@@ -25,8 +27,6 @@ namespace ss {
 
     bool is_file(const std::string src);
 
-    bool is_running();
-
     void mkdirs(const std::string src);
 
     std::string read(const int src);
@@ -38,8 +38,6 @@ namespace ss {
     void read_dirs(std::vector<std::string>& dst, const std::string src);
 
     void remove_all(const std::string src);
-
-    void set_is_running(const bool is_running);
 
     std::string uuid();
 

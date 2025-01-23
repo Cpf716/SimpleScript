@@ -12,64 +12,50 @@ using namespace ss;
 //  NON-MEMBER FIELDS
 
 command_processor cp;
-
-vector<size_t> timeoutv;
-
-int find_timeout(const size_t key, const size_t beg = 0, const size_t end = timeoutv.size()) {
-    if (beg == end)
-        return -1;
-    
-    size_t len = floor((end - beg) / 2);
-    
-    if (timeoutv[beg + len] == key)
-        return (int)(beg + len);
-    
-    if (timeoutv[beg + len] > key)
-        return find_timeout(key, beg, beg + len);
-    
-    return find_timeout(key, beg + len + 1, end);
-}
+bool              is_running = true;
+mutex             main_mutex;
+vector<int>       timeouts;
 
 //  NON-MEMBER FUNCTIONS
 
-void set_interval(int interval) {
-    size_t id = timeoutv[timeoutv.size() - 1];
+int find_timeout(const size_t key, const size_t begin = 0, const size_t end = timeouts.size()) {
+    if (begin == end)
+        return -1;
     
-    while (true) {
-        this_thread::sleep_for(milliseconds(interval));
-        
-        if (find_timeout(id) == -1)
-            return;
-        
-        call(&cp, "onInterval");
-    }
+    size_t len = floor((end - begin) / 2);
+    
+    if (timeouts[begin + len] == key)
+        return (int)(begin + len);
+    
+    if (timeouts[begin + len] > key)
+        return find_timeout(key, begin, begin + len);
+    
+    return find_timeout(key, begin + len + 1, end);
 }
 
-void set_timeout(int timeout) {
-    size_t id = timeoutv[timeoutv.size() - 1];
+void clear_timeout(string timeout) {
+    main_mutex.lock();
     
-    this_thread::sleep_for(milliseconds(timeout));
+    int pos = find_timeout(stoi(timeout));
     
-    int pos = find_timeout(id);
-    if (pos == -1)
-        return;
+    if (pos != -1)
+        timeouts.erase(timeouts.begin() + pos);
     
-    timeoutv.erase(timeoutv.begin() + pos);
-    
-    call(&cp, "onTimeout");
+    main_mutex.unlock();
 }
 
 void signal_handler(int signum) {
     thread([signum]() {
-        if (!call(&cp, "onExit", 1, (string[]) { to_string(signum) })) {
-            middleware::socket_close();
-            
-            set_is_running(false);
-            
-            cp.kill();
-            
-            logger_write("^C\n");
-        }
+        if (call(&cp, "onExit", 1, (string[]) { to_string(signum) }))
+            return;
+        
+        ss::integration::socket_close();
+        
+        is_running = false;
+        
+        cp.kill();
+        
+        logger_write("^C\n");
     }).detach();
 }
 
@@ -81,51 +67,98 @@ int main(int argc, char* argv[]) {
     load_preferences();
     load(&cp);
     
-    subscribe(offinterval, [&](const string* value) {
-        int pos = find_timeout(stoi(value[0]));
-        if (pos != -1)
-            timeoutv.erase(timeoutv.begin() + pos);
+    subscribe(clear_interval_t, [&](const string* value) {
+        clear_timeout(value[0]);
     });
     
-    subscribe(offtimeout, [&](const string* value) {
-        int pos = find_timeout(stoi(value[0]));
-        if (pos != -1)
-            timeoutv.erase(timeoutv.begin() + pos);
+    subscribe(clear_timeout_t, [&](const string* value) {
+        clear_timeout(value[0]);
     });
     
-    subscribe(oninterval, [&](const string* value) {
-        timeoutv.push_back(stoi(value[0]));
+    subscribe(set_interval_t, [&](const string* value) {
+        main_mutex.lock();
         
-        thread(set_interval, stoi(value[1])).detach();
+        int interval = stoi(value[0]);
+        
+        timeouts.push_back(interval);
+        main_mutex.unlock();
+        
+        thread([interval](const int duration) {
+            while (true) {
+                this_thread::sleep_for(milliseconds(duration));
+                
+                main_mutex.lock();
+                
+                int pos = find_timeout(interval);
+                
+                main_mutex.unlock();
+                
+                if (pos == -1)
+                    return;
+                
+                call(&cp, "onInterval");
+            }
+        }, stoi(value[1])).detach();
     });
     
-    subscribe(ontimeout, [&](const string* value) {
-        timeoutv.push_back(stoi(value[0]));
+    subscribe(set_timeout_t, [&](const string* value) {
+        main_mutex.lock();
         
-        thread(set_timeout, stoi(value[1])).detach();
+        int timeout = stoi(value[0]);
+        
+        timeouts.push_back(timeout);
+        main_mutex.unlock();
+        
+        thread([timeout](int duration) {
+            this_thread::sleep_for(milliseconds(duration));
+            
+            main_mutex.lock();
+            
+            int pos = find_timeout(timeout);
+            
+            if (pos == -1) {
+                main_mutex.unlock();
+                
+                return;
+            }
+            
+            timeouts.erase(timeouts.begin() + pos);
+            main_mutex.unlock();
+            
+            call(&cp, "onTimeout");
+        }, stoi(value[1])).detach();
     });
     
     //  build
-    
-    string filename = argc == 1 ? get_base_dir() + get_main() : decode_raw(raw(argv[1]));
-    file* target = NULL;
     
     logger_write("Building...\n");
     
     time_point<steady_clock> beg = steady_clock::now();;
     
-    node<string>* root = new node<string>(null(), NULL);
-    target = new file(filename, root, &cp);
-     
-    root->close();
+    node<string>* parent = new node<string>();
+    file*         target = NULL;
     
-    double seconds = duration<double>(steady_clock::now() - beg).count();
+    try {
+        string filename = argc == 1 ? get_base_dir() + get_main() :
+            decode_raw(raw(argv[1]));
+        
+        target = new file(filename, parent, &cp);
+    } catch (error& e) {
+        parent->close();
+        
+        throw e;
+    }
     
-    logger_write("Done in " + to_string(seconds) + " s.\n");
+    parent->close();
     
-    //  run
+    // exit
+    target->subscribe([]() {
+        ss::integration::socket_close();
+    });
     
-    logger_write("Running...\n");
+    double res = duration<double>(steady_clock::now() - beg).count();
+    
+    logger_write("Done in " + to_string(res) + " s.\nRunning...\n");
     
     beg = steady_clock::now();
     
@@ -140,7 +173,7 @@ int main(int argc, char* argv[]) {
             
             target->call(sizeof(_argv) / sizeof(_argv[0]), _argv);
             
-        } catch (ss::exception& e) {
+        } catch (::exception& e) {
             ostringstream ss;
             
             ss << "EXCEPTION: " << e.what() << endl;
@@ -151,7 +184,7 @@ int main(int argc, char* argv[]) {
             logger_write(ss.str());
         }
     } catch (error& e) {
-        if (is_running()) {
+        if (is_running) {
             ostringstream ss;
             
             ss << "ERROR: " << e.what() << endl;
@@ -163,11 +196,9 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    seconds = duration<double>(steady_clock::now() - beg).count();
+    res = duration<double>(steady_clock::now() - beg).count();
   
-    logger_write(to_string(seconds) + " s.\n");
-    
-    //  deinitialize
+    logger_write("Done in " + to_string(res) + " s.\n");
     
     target->close();
     

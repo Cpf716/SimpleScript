@@ -1,0 +1,14 @@
+number = 0
+stopwatch = start()
+
+func onMessage(value)
+    echo "Worker {} completed in {} s.\n" format array(number += 1, lap(stopwatch))
+end func
+
+for i = 0; i < 10; i += 1
+    worker("/Users/coreyferguson/SimpleScript/example/worker/worker/worker2.txt")
+end for
+
+while true
+    continue
+end while

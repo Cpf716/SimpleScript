@@ -6,8 +6,8 @@
 include("@/exception/rangeExcept")
 
 func main()
-    if (count argv - 1) / first argv !== 2
-        expectExcept("2 argument(s), got {}" format (count argv - 1) / first argv)
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
 
     array arr = ((argv row 0) slice 1, (argv cell 0, 0))
@@ -18,8 +18,8 @@ func main()
 
     idx = ((argv row 1) slice 1, (argv cell 1, 0))
 
-    if subtypeOf idx !== "int"
-        typeExcept(subtypeOf idx, "int")
+    if subtypeOf idx !== "integer"
+        typeExcept(subtypeOf idx, "integer")
     end if
 
     if idx < 0 || idx >= first arr

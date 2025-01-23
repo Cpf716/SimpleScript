@@ -13,8 +13,8 @@ func main()
 
     beg = ((argv row 1) slice 1, (argv cell 1, 0))
     
-    if subtypeOf beg !== "int"
-        typeExcept(subtypeOf beg, "int")
+    if subtypeOf beg !== "integer"
+        typeExcept(subtypeOf beg, "integer")
     end if
     
     if beg < 0 || beg > count arr
@@ -23,8 +23,8 @@ func main()
     
     end = ((argv row 2) slice 1, (argv cell 2, 0))
     
-    if subtypeOf end !== "int"
-        typeExcept(subtypeOf end, "int")
+    if subtypeOf end !== "integer"
+        typeExcept(subtypeOf end, "integer")
     end if
     
     if end < beg || end > count arr

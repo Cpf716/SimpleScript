@@ -6,39 +6,37 @@
 include("/Library/Application Support/SimpleScript/example/data/socket/file-transfer/unit_3_test_data.csv", "")
 include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
 
-config()
-
 //  FUNCTIONS
 
-func onExit(_)
+func onExit(signum)
     echo "Are you sure? (y/N) "
 
-    const ans = (input() ?? "")
-
-    return toLower ans === "y"
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
 end func
 
 func main()
-    sfd = server(1024)
+    fileDescriptor = server(1024)
 
-    array cfdv = null
+    array connections = null
     
-    while 1
-        while !(cfdv = poll(sfd))
+    while true
+        while !(connections = poll(fileDescriptor))
             continue
         end while
         
-        for cfd in cfdv
+        for fileDescriptor in connections
             try
-                send(cfd, unit_3_test_data)
-            catch errno
-                echo ERRNOs().errno + "\n"
+                send(fileDescriptor, unit_3_test_data)
+            catch err
+                echo errorMessage(err) + "\n"
             end try
             
             try
-                closeTcp(cfd)
-            catch errno
-                throw ERRNOs().errno
+                closeTCP(fileDescriptor)
+            catch err
+                throw errorMessage(err)
             end try
         end for
     end while

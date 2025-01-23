@@ -14,13 +14,13 @@ func main()
     x = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if typeOf x !== "number"
-        typeExcept(typeOf x, "double")
+        typeExcept(typeOf x, "number")
     end if
     
     y = ((argv row 1) slice 1, (argv cell 1, 0))
     
-    if subtypeOf y !== "int"
-        typeExcept(subtypeOf y, "int")
+    if subtypeOf y !== "integer"
+        typeExcept(subtypeOf y, "integer")
     end if
     
     if y < 0

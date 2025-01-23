@@ -5,17 +5,18 @@
 
 include((dir = "/Library/Application Support/SimpleScript/example/socket/") + "tcp/util/client.txt")
 include(dir + "config.txt")
-include((dir = "@/datetime/") + "parseTime")
-include(dir + "isoString")
+include((dir = "@/datetime/") + "ISOString")
+include(dir + "parseTime")
 
-//  config()
+include("@/search/string/trim")
+include("@/search/string/replace")
 
-PORT = 8080
+config()
 
 //  FUNCTIONS
 
 func main()
-    if nrows(argv) >= 2
+    if nrows(argv) > 1
         expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
@@ -24,8 +25,8 @@ func main()
     if nrows(argv) === 1
         port = (argv row 0) slice 1
         
-        if subtypeOf array(...port) !== "int"
-            typeExcept(subtypeOf array(...port), "int")
+        if subtypeOf array(...port) !== "integer"
+            typeExcept(subtypeOf array(...port), "integer")
         end if
         
         if port < 0
@@ -33,44 +34,41 @@ func main()
         end if
     end if
 
-    while 1
-        sfd = client(port)
+    while true
+        fileDescriptor = client(port)
         
-        if sfd === -1
+        if fileDescriptor === -1
             continue
         end if
 
-        while 1
-            req = null
+        while true
+            response = null
             
             try
-                req = recv(sfd, 30)
-                
-            catch errno
-                if ERRNOs().errno === "EBADF"
+                response = recv(fileDescriptor, 30)
+            catch err
+                if ERRNOs().err === "EBADF"
                     break
                 end if
                 
-                throw ERRNOs().errno
+                throw errorMessage(err)
             end try
             
-            if !req
+            if !response
                 break
             end if
             
-            array arr = split(req, "\n")
-            
-            for str in arr
-                if count str
-                    echo "{}\n" format isoString(parseTime(str))
+            for result in split(response, "\n")
+                if count result
+                    echo replace(ISOString(parseTime(trim(result))), "T", " ") + "\n"
                 end if
             end for
         end while
         
         try
-            closeTcp(sfd)
-        catch errno
-            throw ERRNOs().errno
+            closeTCP(fileDescriptor)
+        catch err
+            throw errorMessage(err)
         end try
         
         echo "\n"

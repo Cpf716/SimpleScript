@@ -7,28 +7,28 @@ include("@/array/table/encode")
 include("@/uuid")
 include("fileSystem")
 
-if typeOf SEP === undefined
+if typeOf SEP === null
     define SEP "\t"
 end if
 
 //  FUNCTIONS
 
 func main()
-    if (count argv - 1) / first argv !== 1
-        expectExcept("1 argument(s), got {}" format (count argv - 1) / first argv)
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    array arr = (argv row 0) slice 1
+    array tab = (argv row 0) slice 1
 
-    if subtypeOf arr !== "table"
-        typeExcept(subtypeOf arr, "table")
+    if subtypeOf tab !== "table"
+        typeExcept(subtypeOf tab, "table")
     end if
 
     filename = "/tmp/" + uuid()
     
-    arr = encode(arr)
+    tab = encode(tab)
 
-    write(filename, arr, SEP)
+    write(filename, tab, SEP)
 
     str = readFile(filename)
 

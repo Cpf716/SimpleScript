@@ -4,7 +4,7 @@
 //
 
 func main()
-    sleep rand() % 1_000
+    sleep(rand() % 1_000)
 end func
 
 main()

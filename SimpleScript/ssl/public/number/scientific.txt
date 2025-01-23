@@ -13,7 +13,7 @@ func main()
     num = (argv row 1) slice 1
     
     if typeOf num !== "number"
-        typeExcept(typeOf num, "double")
+        typeExcept(typeOf num, "number")
     end if
     
     sign = num / abs num

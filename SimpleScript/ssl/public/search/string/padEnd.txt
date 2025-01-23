@@ -22,8 +22,8 @@ func main()
 
     tgtLen = ((argv row 1) slice 1, (argv cell 1, 0))
 
-    if subtypeOf tgtLen !== "int"
-        typeExcept(subtypeOf tgtLen, "int")
+    if subtypeOf tgtLen !== "integer"
+        typeExcept(subtypeOf tgtLen, "integer")
     end if
 
     if tgtLen < 0

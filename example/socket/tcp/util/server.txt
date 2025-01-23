@@ -11,50 +11,30 @@ include("socket")
 config()
 
 func main()
-    if !nrows(argv)
+    if nrows(argv) !== 1
         expectExcept("1 argument(s), got 0")
-    end if
-    
-    if nrows(argv) >= 3
-        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
     
     backlog = ((argv row 0) slice 1, (argv cell 0, 0))
     
-    if subtypeOf backlog !== "int"
-        typeExcept(subtypeOf backlog, "int")
-    end if
-    
-    if backlog < 0
-        rangeExcept(string(backlog))
-    end if
-    
-    array verbose = true
-    
-    if nrows(argv) === 2
-        verbose = ((argv row 1) slice 1, (argv cell 1, 0))
-        
-        if typeOf array(...verbose) !== "number"
-            typeExcept(typeOf array(...verbose), "number")
-        end if
+    if subtypeOf backlog !== "integer"
+        typeExcept(subtypeOf backlog, "integer")
     end if
     
     port = PORT
     
-    while 1
+    while true
         try
-            sfd = tcpServer(port, backlog)
+            fileDescriptor = TCPServer(port, backlog)
                 
-            if verbose
-                echo "Server listening on port {}...\n" format port
-            end if
+            echo "Server listening on port {}...\n" format port
             
-            return sfd
-        catch errno
-            if ERRNOs().errno === "EADDRINUSE"
+            return fileDescriptor
+        catch fileDescriptor
+            if ERRNOs().fileDescriptor === "EADDRINUSE"
                 port += 1
             else
-                throw ERRNOs().errno
+                throw ERRNOs().fileDescriptor
             end if
         end try
     end while

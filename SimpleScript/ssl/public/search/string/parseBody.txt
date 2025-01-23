@@ -7,7 +7,7 @@ include("@/array/table/parseTable")
 include((dir = "@/search/string/") + "split")
 include(dir + "trim")
 
-if typeOf SEP === undefined
+if typeOf SEP === null
     define SEP ","
 end if
 

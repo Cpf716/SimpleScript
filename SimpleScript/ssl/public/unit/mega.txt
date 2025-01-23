@@ -12,8 +12,8 @@ func main()
     
     num = (argv row 0) slice 1
     
-    if typeOf num !== "int"
-        typeExcept(typeOf num, "int")
+    if typeOf num !== "integer"
+        typeExcept(typeOf num, "integer")
     end if
 
     return num / 10^^6

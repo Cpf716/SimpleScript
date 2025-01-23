@@ -1,0 +1,20 @@
+// Author:   Corey Ferguson
+// Date:     June 5, 2024
+// File:     tail.txt
+//
+
+include("fileSystem")
+
+func onExit(signum)
+    echo "\nAre you sure? (y/N) "
+    
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
+end func
+
+fd = file("/tmp/server.log")
+
+while true
+  echo readFile(fd)
+end while

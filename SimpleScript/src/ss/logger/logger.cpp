@@ -14,7 +14,7 @@ namespace ss {
         file.close();
         
         if (file.fail())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
     }
 
     void logger_open(const std::string filename) {
@@ -24,7 +24,7 @@ namespace ss {
         file.open(filename);
         
         if (!file.is_open())
-            throw file_system_exception(strerror(errno));
+            throw file_system_exception(std::to_string(errno));
     }
 
     void logger_write(const std::string message) {

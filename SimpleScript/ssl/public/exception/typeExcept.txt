@@ -3,8 +3,6 @@
 //  File:   typeExcept.txt
 //
 
-include("@/array/table/nrows")
-
 if nrows(argv) !== 2
     throw "Expected 2 argument(s), got {}" format nrows(argv)
 end if

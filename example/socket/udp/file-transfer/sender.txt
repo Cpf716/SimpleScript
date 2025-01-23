@@ -1,6 +1,6 @@
-//  Author: Corey Ferguson
-//  Date:   May 4, 2024
-//  File:   sender.txt
+// Author: Corey Ferguson
+// Date:   May 4, 2024
+// File:   sender.txt
 //
 
 include("/Library/Application Support/SimpleScript/example/data/socket/file-transfer/unit_3_test_data.csv", "")
@@ -10,50 +10,49 @@ include("socket")
 
 config()
 
-assert typeOf PORT !== undefined
+// FIELDS
 
-//  FIELDS
+port = PORT
 
-sfd = -1, port = PORT
+// FUNCTIONS
 
-//  FUNCTIONS
-
-func onExit(_)
+func onExit(signum)
     echo "Are you sure? (y/N) "
     
-    const ans = (input() ?? "")
-    
-    return toLower ans === "y"
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
 end func
 
 func main()
+    fileDescriptor = -1
+
     while true
         try
-            sfd = udpServer(port)
+            fileDescriptor = UDPServer(port)
                     
             echo "Server listening on port {}...\n" format port
-            
             break
-        catch errno
-            if ERRNOs().errno === "EADDRINUSE"
+        catch err
+            if ERRNOs().err === "EADDRINUSE"
                 port += 1
             else
-                throw ERRNOs().errno
+                throw errorMessage(err)
             end if
         end try
     end while
     
     while true
         try
-            recvFrom(sfd)
-        catch errno
-            throw ERRNOs().errno
+            recvFrom(fileDescriptor, 30)
+        catch err
+            throw errorMessage(err)
         end try
         
         try
-            sendTo(sfd, unit_3_test_data)
-        catch errno
-            throw ERRNOs().errno
+            sendTo(fileDescriptor, unit_3_test_data)
+        catch err
+            throw errorMessage(err)
         end try
     end while
 end func
