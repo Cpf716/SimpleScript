@@ -1,0 +1,35 @@
+// Begin Enhancement 1-1 - Thread safety - 2025-01-23
+include("mysql")
+include("socket")
+
+func onExit(signum)
+    echo "Are you sure? (y/N) "
+    
+    if toLower(input() ?? "") === "y"
+        exit
+    end if
+end func
+
+port = 8080
+    pool = createPool("localhost", "root", array(...array("password", "root"), ...array("schema", "musicLibrary")))
+    fileDescriptor = TCPServer(port, 1024)
+
+echo "Server listening in port {}...\n" format port
+
+array connections = null
+
+// suppress connections
+
+while true
+    while !(connections = poll(fileDescriptor))
+        continue
+    end while
+
+    for value in connections
+       worker("/Users/coreyferguson/SimpleScript/example/socket/REST/requestWorker.txt", value, pool)
+    end for
+end while
+
+closePool(pool)
+closeTCP(fileDescriptor)
+// End Enhancement 1-1

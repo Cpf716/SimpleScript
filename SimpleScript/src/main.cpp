@@ -12,6 +12,9 @@ using namespace ss;
 //  NON-MEMBER FIELDS
 
 command_processor cp;
+// Begin Enhancement 1-1 - Thread safety - 2025-01-23
+loader            _loader(&cp);
+// End Enhancement 1-1
 bool              is_running = true;
 mutex             main_mutex;
 vector<int>       timeouts;
@@ -46,7 +49,9 @@ void clear_timeout(string timeout) {
 
 void signal_handler(int signum) {
     thread([signum]() {
-        if (call(&cp, "onExit", 1, (string[]) { to_string(signum) }))
+        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+        if (_loader.call(&cp, "onExit", 1, (string[]) { to_string(signum) }))
+        // End Enhancement 1-1
             return;
         
         ss::integration::socket_close();
@@ -65,7 +70,6 @@ int main(int argc, char* argv[]) {
     signal(SIGTERM, signal_handler);
     
     load_preferences();
-    load(&cp);
     
     subscribe(clear_interval_t, [&](const string* value) {
         clear_timeout(value[0]);
@@ -96,7 +100,9 @@ int main(int argc, char* argv[]) {
                 if (pos == -1)
                     return;
                 
-                call(&cp, "onInterval");
+                // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+                _loader.call(&cp, "onInterval");
+                // End Enhancement 1-1
             }
         }, stoi(value[1])).detach();
     });
@@ -125,7 +131,9 @@ int main(int argc, char* argv[]) {
             timeouts.erase(timeouts.begin() + pos);
             main_mutex.unlock();
             
-            call(&cp, "onTimeout");
+            // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+            _loader.call(&cp, "onTimeout");
+            // End Enhancement 1-1
         }, stoi(value[1])).detach();
     });
     
@@ -142,7 +150,9 @@ int main(int argc, char* argv[]) {
         string filename = argc == 1 ? get_base_dir() + get_main() :
             decode_raw(raw(argv[1]));
         
-        target = new file(filename, parent, &cp);
+        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+        target = new file(filename, parent, &cp, &_loader);
+        // End Enhancement 1-1
     } catch (error& e) {
         parent->close();
         
@@ -201,6 +211,4 @@ int main(int argc, char* argv[]) {
     logger_write("Done in " + to_string(res) + " s.\n");
     
     target->close();
-    
-    unload();
 }

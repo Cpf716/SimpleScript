@@ -12,13 +12,25 @@
 #include "mysql.h"
 
 namespace ss {
-    //  NON-MEMBER FUNCTIONS
+    // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+    // TYPEDEFS
+    
+    struct mysql_loader {
+        // MEMBER FIELDS
+        
+        vector<function_t*> value;
+        
+        // CONSTRUCTORS
+        
+        mysql_loader();
+        
+        ~mysql_loader();
+        
+        // MEMBER FUNCTIONS
 
-    void load_mysql();
-
-    void set_mysql(command_processor* cp);
-
-    void unload_mysql();
+        void set_value(command_processor* cp);
+    };
+    // End Enhancement 1-1
 }
 
 #endif /* mysql_loader_h */
