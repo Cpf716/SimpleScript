@@ -8,16 +8,14 @@
 #include "mysql_loader.h"
 
 namespace ss {
-    // NON-MEMBER FIELDS
-
-    // NON-MEMBER FUNCTIONS
-
     // Begin Enhancement 1-1 - Thread safety - 2025-01-23
     // CONSTRUCTORS
 
-    mysql_loader::mysql_loader() {
+    mysql_loader::mysql_loader(const bool flag) {
         if (this->value.size())
             return;
+        
+        this->flag = flag;
         
         this->value.push_back(new ss::function("closeConnection", [](const size_t argc, const string* argv) {
             if (argc != 1)
@@ -220,13 +218,8 @@ namespace ss {
     }
 
     mysql_loader::~mysql_loader() {
-    void set_mysql(command_processor* cp) {
-        for (size_t i = 0; i < mysqlv.size(); ++i)
-            cp->set_function(mysqlv[i]);
-    }
-
-    void unload_mysql() {
-        ::integration::mysql_close();
+        if (this->flag)
+            ::integration::mysql_close();
         
         for (size_t i = 0; i < this->value.size(); ++i)
             this->value[i]->close();
@@ -234,7 +227,7 @@ namespace ss {
 
     // MEMBER FUNCTIONS
 
-    void mysql_loader::set_value(command_processor* cp) {
+    void mysql_loader::bind(command_processor* cp) {
         for (size_t i = 0; i < this->value.size(); ++i)
             cp->set_function(this->value[i]);
     }

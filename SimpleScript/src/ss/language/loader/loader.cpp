@@ -13,16 +13,51 @@ namespace ss {
     size_t                                                             callbackc = 0;
     vector<tuple<size_t, event_t, std::function<void(const string*)>>> callbackv;
     mutex                                                              loader_mutex;
-    size_t                                                             timeoutc = 0;
-    size_t                                                             workerc = 0;
+    atomic<size_t>                                                     timeoutc = 0;
 
     //  NON-MEMBER FUNCTIONS
+
+    void send_message(const event_t type, const string* value) {
+        loader_mutex.lock();
+        
+        for (size_t i = 0; i < callbackv.size(); ++i)
+            if (std::get<1>(callbackv[i]) == type)
+                std::get<2>(callbackv[i])(value);
+        
+        loader_mutex.unlock();
+    }
+
+    size_t subscribe(const event_t event, const std::function<void(const string*)> callback) {
+        loader_mutex.lock();
+        
+        callbackv.push_back({ callbackc, event, callback });
+        
+        size_t value = callbackc++;
+        
+        loader_mutex.unlock();
+        
+        return value;
+    }
+
+    void unsubscribe(const size_t subscription) {
+        loader_mutex.lock();
+        
+        size_t i = 0;
+        while (i < callbackv.size() && std::get<0>(callbackv[i]) != subscription)
+            ++i;
+        
+        if (i != callbackv.size())
+            callbackv.erase(callbackv.begin() + i);
+        
+        loader_mutex.unlock();
+    }
 
     // Begin Enhancement 1-1 - Thread safety - 2025-01-23
     // CONSTRUCTORS
 
-    loader::loader(command_processor* cp) {
-        load_system(cp);
+    loader::loader(command_processor* cp, const bool flag) {
+       this->_system_loader = new system_loader(cp);
+        this->flag = flag;
         
         // array
         cp->set_function(new ss::function(to_string(array_t), [](const size_t argc, string* argv) {
@@ -85,18 +120,26 @@ namespace ss {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
-            send_message(set_interval_t, (string[]){ std::to_string(timeoutc), std::to_string(get_int(argv[0])) });
+            send_message(set_interval_t, (string[]){ std::to_string(timeoutc.load()), std::to_string(get_int(argv[0])) });
             
-            return std::to_string(timeoutc++);
+            size_t value = timeoutc.load();
+            
+            timeoutc.store(value + 1);
+            
+            return std::to_string(value);
         }));
         
         cp->set_function(new ss::function("setTimeout", [cp](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
-            send_message(set_timeout_t, (string[]){ std::to_string(timeoutc), std::to_string(get_int(argv[0])) });
+            send_message(set_timeout_t, (string[]){ std::to_string(timeoutc.load()), std::to_string(get_int(argv[0])) });
             
-            return std::to_string(timeoutc++);
+            size_t value = timeoutc.load();
+            
+            timeoutc.store(value + 1);
+            
+            return std::to_string(value);
         }));
         
         cp->set_function(new ss::function("sleep", [cp](const size_t argc, string* argv) {
@@ -130,19 +173,19 @@ namespace ss {
             
             node<string>*      parent = new node<string>(null(), NULL);;
             file*              target = NULL;
-            command_processor* _cp = new command_processor();
-            struct loader*     loader = new struct loader(_cp);
+            command_processor* cp = new command_processor();
+            struct loader*     loader = new struct loader(cp);
             
             try {
                 string filename = decode_raw(argv[0]);
                 
-                target = new file(filename, parent, _cp, loader);
+                target = new file(filename, parent, cp, loader);
                 
             } catch (error& e) {
                 parent->close();
                 
                 delete loader;
-                delete _cp;
+                delete cp;
                 throw e;
             }
             
@@ -159,6 +202,7 @@ namespace ss {
                 bool   flag = true;
                 
                 try {
+                    // Segfault here
                     result = target->call(_argc, _argv);
                     
                 } catch (error& e) {
@@ -168,12 +212,13 @@ namespace ss {
                 }
                 
                 delete[] _argv;
-                delete _cp;
+                delete cp;
                 
                 target->close();
                 
-                if (flag)
+                if (flag) {
                     loader->call(cp, "onMessage", 1, (string[]){ result });
+                }
                 
                 delete loader;
             }).detach();
@@ -185,10 +230,22 @@ namespace ss {
     }
 
     loader::~loader() {
-        unload_socket();
-        unload_file_system();
+        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
         
-        logger_close();
+       if (this->_system_loader != NULL)
+           delete this->_system_loader;
+        
+       if (this->_socket_loader != NULL)
+           delete this->_socket_loader;
+        
+       if (this->_mysql_loader != NULL)
+           delete this->_mysql_loader;
+        
+       if (this->_file_system_loader != NULL)
+           delete this->_file_system_loader;
+        End Enhancement 1-1
+        
+       logger_close();
     }
 
     // MEMNBER FUNCTIONS
@@ -216,8 +273,28 @@ namespace ss {
         return flag;
     }
 
-    void loader::set_mysql(command_processor* cp) {
-        _mysql_loader.set_value(cp);
+    void loader::get_file_system() {
+        this->_file_system_loader = new file_system_loader(this->flag);
+    }
+
+    void loader::bind_file_system(command_processor* cp) {
+        this->_file_system_loader->bind(cp);
+    }
+
+    void loader::get_mysql() {
+        this->_mysql_loader = new mysql_loader(this->flag);
+    }
+
+    void loader::bind_mysql(command_processor* cp) {
+        this->_mysql_loader->bind(cp);
+    }
+
+    void loader::get_socket() {
+        this->_socket_loader = new socket_loader(this->flag);
+    }
+
+    void loader::bind_socket(command_processor* cp) {
+        this->_socket_loader->bind(cp);
     }
     // End Enhancement 1-1
 }

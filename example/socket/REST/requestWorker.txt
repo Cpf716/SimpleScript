@@ -1,7 +1,7 @@
 // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+include("@/array/table/stringify")
 include("mysql")
 include("socket")
-include("@/array/table/stringify")
 
 fileDescriptor = (argv row 0) slice 1
     pool = (argv row 1) slice 1

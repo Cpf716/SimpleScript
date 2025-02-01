@@ -3,8 +3,11 @@
 //  File:   worker_1.txt
 //
 
+echo "Hello, world!\n"
+/*
 func main()
     return
+    sleep(rand() % 3_000)
 end func
 
 main()

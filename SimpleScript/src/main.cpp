@@ -48,20 +48,20 @@ void clear_timeout(string timeout) {
 }
 
 void signal_handler(int signum) {
-    thread([signum]() {
-        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-        if (_loader.call(&cp, "onExit", 1, (string[]) { to_string(signum) }))
-        // End Enhancement 1-1
-            return;
-        
-        ss::integration::socket_close();
-        
-        is_running = false;
-        
-        cp.kill();
-        
-        logger_write("^C\n");
-    }).detach();
+   thread([signum]() {
+       // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+       if (_loader.call(&cp, "onExit", 1, (string[]) { to_string(signum) }))
+       // End Enhancement 1-1
+           return;
+       
+       ss::integration::socket_close();
+       
+       is_running = false;
+       
+       cp.kill();
+       
+       logger_write("^C\n");
+   }).detach();
 }
 
 int main(int argc, char* argv[]) {
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
                     return;
                 
                 // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-                _loader.call(&cp, "onInterval");
+               _loader.call(&cp, "onInterval");
                 // End Enhancement 1-1
             }
         }, stoi(value[1])).detach();
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
             main_mutex.unlock();
             
             // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-            _loader.call(&cp, "onTimeout");
+           _loader.call(&cp, "onTimeout");
             // End Enhancement 1-1
         }, stoi(value[1])).detach();
     });
@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
             decode_raw(raw(argv[1]));
         
         // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-        target = new file(filename, parent, &cp, &_loader);
+       target = new file(filename, parent, &cp, &_loader);
         // End Enhancement 1-1
     } catch (error& e) {
         parent->close();

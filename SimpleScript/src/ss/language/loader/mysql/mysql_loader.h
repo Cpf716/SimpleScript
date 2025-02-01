@@ -8,27 +8,25 @@
 #ifndef mysql_loader_h
 #define mysql_loader_h
 
-#include "command_processor.h"
 #include "mysql.h"
+#include "loader_t.h"
 
 namespace ss {
     // Begin Enhancement 1-1 - Thread safety - 2025-01-23
     // TYPEDEFS
     
-    struct mysql_loader {
-        // MEMBER FIELDS
-        
-        vector<function_t*> value;
-        
+    struct mysql_loader: public loader_t {
         // CONSTRUCTORS
         
-        mysql_loader();
+        mysql_loader(const bool flag = false);
         
         ~mysql_loader();
         
         // MEMBER FUNCTIONS
 
-        void set_value(command_processor* cp);
+        void bind(command_processor* cp);
+    private:
+        bool flag = false;
     };
     // End Enhancement 1-1
 }

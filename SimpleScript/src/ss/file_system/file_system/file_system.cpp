@@ -12,6 +12,7 @@ namespace ss {
 
     size_t filec = 0;
     std::vector<std::tuple<int, std::fstream*, size_t>> filev;
+    std::mutex                                          file_system_mutex;
 
     //  NON-MEMBER FUNCTIONS
 
@@ -109,18 +110,29 @@ namespace ss {
     }
 
     int file_close(const int src) {
-        int i = find_file(src);
-        if (i == -1)
-            return -1;
-
-        std::get<1>(filev[i])->close();
+        file_system_mutex.lock();
         
-        if (std::get<1>(filev[i])->fail())
+        int pos = find_file(src);
+        
+        if (pos == -1) {
+            file_system_mutex.unlock();
+            
+            return -1;
+        }
+
+        std::get<1>(filev[pos])->close();
+        
+        if (std::get<1>(filev[pos])->fail()) {
+            file_system_mutex.unlock();
+            
             throw file_system_exception(std::to_string(errno));
+        }
 
-        delete std::get<1>(filev[i]);
+        delete std::get<1>(filev[pos]);
 
-        filev.erase(filev.begin() + i);
+        filev.erase(filev.begin() + pos);
+        
+        file_system_mutex.unlock();
         
         return 0;
     }
@@ -139,9 +151,16 @@ namespace ss {
                 throw file_system_exception(std::to_string(errno));
         }
         
-        filev.push_back({ filec, file, 0 });
+        file_system_mutex.lock();
         
-        return (int)filec++;
+        int value = (int)filec;
+        
+        filev.push_back({ value, file, 0 });
+        filec++;
+        
+        file_system_mutex.unlock();
+        
+        return value;
     }
 
     void file_system_close() {
@@ -246,39 +265,53 @@ namespace ss {
     }
 
     std::string read(const int src) {
-        int i = find_file(src);
+        file_system_mutex.lock();
         
-        if (i == -1)
+        int pos = find_file(src);
+        
+        if (pos == -1) {
+            file_system_mutex.unlock();
+            
             return null();
+        }
         
         while (true) {
-            std::get<1>(filev[i])->seekg(0, std::ios::end);
+            std::get<1>(filev[pos])->seekg(0, std::ios::end);
             
-            long tellg = std::get<2>(filev[i]);
-            long _tellg = std::get<1>(filev[i])->tellg();
+            long tellg = std::get<2>(filev[pos]);
+            long _tellg = std::get<1>(filev[pos])->tellg();
             
-            if (std::get<1>(filev[i])->fail())
+            if (std::get<1>(filev[pos])->fail()) {
+                file_system_mutex.unlock();
+                
                 throw file_system_exception(std::to_string(errno));
+            }
             
             if (tellg < _tellg) {
                 size_t len = _tellg - tellg;
                 char str[len + 1];
                 
                 for (size_t j = 0; j < len; ++j) {
-                    std::get<1>(filev[i])->seekg(j + tellg, std::ios::beg);
+                    std::get<1>(filev[pos])->seekg(j + tellg, std::ios::beg);
                     
-                    str[j] = std::get<1>(filev[i])->get();
+                    str[j] = std::get<1>(filev[pos])->get();
                 }
                 
-                if (std::get<1>(filev[i])->fail())
+                if (std::get<1>(filev[pos])->fail()) {
+                    file_system_mutex.unlock();
+                    
                     throw file_system_exception(std::to_string(errno));
+                }
                 
                 str[len] = '\0';
                 
-                std::get<2>(filev[i]) = _tellg;
+                std::get<2>(filev[pos]) = _tellg;
+                
+                file_system_mutex.unlock();
                 
                 return std::string(str);
-            }
+            } else
+                file_system_mutex.unlock();
         }
         
         return null();
@@ -466,18 +499,28 @@ namespace ss {
     }
 
     int write(const int dst, const std::string src) {
-        int i = find_file(dst);
-
-        if (i == -1)
-            return -1;
-
-        (* std::get<1>(filev[i])) << src;
-        (* std::get<1>(filev[i])).flush();
+        file_system_mutex.lock();
         
-        if (std::get<1>(filev[i])->fail())
-            throw file_system_exception(std::to_string(errno));
+        int pos = find_file(dst);
 
-        std::get<2>(filev[i]) = std::get<1>(filev[i])->tellg();
+        if (pos == -1) {
+            file_system_mutex.unlock();
+            
+            return -1;
+        }
+
+        (* std::get<1>(filev[pos])) << src;
+        (* std::get<1>(filev[pos])).flush();
+        
+        if (std::get<1>(filev[pos])->fail()) {
+            file_system_mutex.unlock();
+            
+            throw file_system_exception(std::to_string(errno));
+        }
+
+        std::get<2>(filev[pos]) = std::get<1>(filev[pos])->tellg();
+        
+        file_system_mutex.unlock();
 
         return (int)src.length();
     }

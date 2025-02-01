@@ -8,14 +8,27 @@
 #ifndef file_system_loader_h
 #define file_system_loader_h
 
-#include "command_processor.h"
+#include "loader_t.h"
 
 namespace ss {
-    void load_file_system();
+    
+    // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+    // TYPEDEFS
 
-    void set_file_system(command_processor* cp);
-
-    void unload_file_system();
+    struct file_system_loader: public loader_t {
+        // CONSTRUCTORS
+        
+        file_system_loader(const bool flag = false);
+        
+        ~file_system_loader();
+        
+        // MEMBER FUNCTIONS
+        
+        void bind(command_processor* cp);
+    private:
+        bool flag = false;
+    };
+    // End Enhancement 1-1
 }
 
 #endif /* file_system_loader_h */

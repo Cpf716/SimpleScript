@@ -1,3 +1,4 @@
+/*
 include("@/datetime/ISOString")
 include("@/datetime/parseTime")
 
@@ -19,3 +20,19 @@ res = recv(connection)
 echo res + "\n"
 
 closeTCP(connection)
+*/
+
+/*
+func onTimeout()
+    exit
+end func
+
+setTimeout(rand() % 3_000)
+
+while true
+    continue
+end while
+*/
+
+// Segfault here
+include("@/sort/sort")

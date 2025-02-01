@@ -75,7 +75,7 @@ namespace ss {
         //  CONSTRUCTORS
         
         // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-        file(const string filename, node<string>* parent, command_processor* cp, struct loader* loader);
+       file(const string filename, node<string>* parent, command_processor* cp, struct loader* loader);
         // End Enhancement 1-1
         
         void close();

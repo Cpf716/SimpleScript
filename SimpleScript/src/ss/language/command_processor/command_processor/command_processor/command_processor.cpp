@@ -3643,6 +3643,7 @@ namespace ss {
     }
 
     size_t command_processor::get_state() {
+        // Segfault
         if (is_pow(statec, 2)) {
             //  resize numbers
             size_t* _state_numberv = new size_t[statec * 2];

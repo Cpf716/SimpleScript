@@ -3,6 +3,7 @@
 //  File:   sender.txt
 //
 
+// Segfault here
 include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
 
 //  FUNCTIONS

@@ -3,7 +3,7 @@
 //  File:   main.txt
 //
 
-        stopwatch = start()
+stopwatch = start()
 
 func onMessage(workerId, message)
     echo "Worker {} returned in {} s.\n" format array(workerId + 1, lap(stopwatch))
