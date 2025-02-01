@@ -10,30 +10,29 @@
 namespace ss {
     // NON-MEMBER FIELDS
 
+    vector<function_t*> mysqlv;
+
     // NON-MEMBER FUNCTIONS
 
-    // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-    // CONSTRUCTORS
-
-    mysql_loader::mysql_loader() {
-        if (this->value.size())
+    void load_mysql() {
+        if (mysqlv.size())
             return;
         
-        this->value.push_back(new ss::function("closeConnection", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("closeConnection", [](const size_t argc, const string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
             return std::to_string(::integration::mysql_close(get_int(argv[0])));
         }));
         
-        this->value.push_back(new ss::function("closePool", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("closePool", [](const size_t argc, const string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
         
             return std::to_string(::integration::mysql_close_pool(get_int(argv[0])));
         }));
         
-        this->value.push_back(new ss::function("connect", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("connect", [](const size_t argc, const string* argv) {
             if (argc < 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -58,7 +57,7 @@ namespace ss {
             return std::to_string(::integration::mysql_connect(host_user[0], host_user[1], options));
         }));
         
-        this->value.push_back(new ss::function("createPool", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("createPool", [](const size_t argc, const string* argv) {
             if (argc < 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -83,14 +82,14 @@ namespace ss {
             return std::to_string(::integration::mysql_create_pool(host_user[0], host_user[1], options));
         }));
         
-        this->value.push_back(new ss::function("getConnection", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("getConnection", [](const size_t argc, const string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
             return std::to_string(::integration::mysql_get_connection(get_int(argv[0])));
         }));
         
-        this->value.push_back(new ss::function("preparedQuery", [](size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("preparedQuery", [](size_t argc, const string* argv) {
             if (argc < 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -135,7 +134,7 @@ namespace ss {
             return stringify(arr);
         }));
         
-        this->value.push_back(new ss::function("preparedUpdate", [](size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("preparedUpdate", [](size_t argc, const string* argv) {
             if (argc < 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -158,7 +157,7 @@ namespace ss {
             return std::to_string(::integration::mysql_prepared_update(connection, sql, valuec, valuev));
         }));
         
-        this->value.push_back(new ss::function("query", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("query", [](const size_t argc, const string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -189,14 +188,14 @@ namespace ss {
             return stringify(arr);
         }));
         
-        this->value.push_back(new ss::function("release", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("release", [](const size_t argc, const string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
             return std::to_string(::integration::mysql_release(get_int(argv[0])));
         }));
         
-        this->value.push_back(new ss::function("setSchema", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("setSchema", [](const size_t argc, const string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -206,7 +205,7 @@ namespace ss {
             return std::to_string(::integration::mysql_set_schema(connection, schema));
         }));
         
-        this->value.push_back(new ss::function("update", [](const size_t argc, const string* argv) {
+        mysqlv.push_back(new ss::function("update", [](const size_t argc, const string* argv) {
             if (argc != 2)
                 expect_error("2 argument(s), got " + std::to_string(argc));
             
@@ -216,10 +215,9 @@ namespace ss {
             return std::to_string(::integration::mysql_update(connection, sql));
         }));
         
-        this->value.shrink_to_fit();
+        mysqlv.shrink_to_fit();
     }
 
-    mysql_loader::~mysql_loader() {
     void set_mysql(command_processor* cp) {
         for (size_t i = 0; i < mysqlv.size(); ++i)
             cp->set_function(mysqlv[i]);
@@ -228,15 +226,7 @@ namespace ss {
     void unload_mysql() {
         ::integration::mysql_close();
         
-        for (size_t i = 0; i < this->value.size(); ++i)
-            this->value[i]->close();
+        for (size_t i = 0; i < mysqlv.size(); ++i)
+            mysqlv[i]->close();
     }
-
-    // MEMBER FUNCTIONS
-
-    void mysql_loader::set_value(command_processor* cp) {
-        for (size_t i = 0; i < this->value.size(); ++i)
-            cp->set_function(this->value[i]);
-    }
-    // End Enhancement 1-1
 }

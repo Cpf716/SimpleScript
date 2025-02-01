@@ -27,9 +27,6 @@
 #include "function_statement.h"
 #include "goto_statement.h"
 #include "if_statement.h"
-// Begin Enhancement 1-1 - Thread safety - 2025-01-23
-#include "loader.h"
-// End Enhancement 1-1
 #include "mysql_loader.h"
 #include "node.h"
 #include "return_statement.h"
@@ -49,16 +46,14 @@ namespace ss {
     class file: public function_t {
         //  MEMBER FIELDS
 
-        std::function<void(void)>    cb;
-        command_processor*           cp = NULL;
-        bool                         file_system_flag = false;
-        size_t                       filec = 0;
-        pair<file*, bool>**          filev = NULL;
-        string                       filename;
-        size_t                       level = 0;
-        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-        struct loader*               loader = NULL;
-        // End Enhancement 1-1
+        std::function<void(void)>   cb;
+        command_processor*          cp = NULL;
+        bool                        file_system_flag = false;
+
+        size_t                      filec = 0;
+        pair<file*, bool>**         filev = NULL;
+        string                      filename;
+        size_t                      level = 0;
         bool                         mysql_flag = false;
         function_t*                  parent = NULL;
         atomic<bool>                 is_paused;
@@ -74,9 +69,7 @@ namespace ss {
     public:
         //  CONSTRUCTORS
         
-        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-        file(const string filename, node<string>* parent, command_processor* cp, struct loader* loader);
-        // End Enhancement 1-1
+        file(const string filename, node<string>* parent, command_processor* cp);
         
         void close();
         

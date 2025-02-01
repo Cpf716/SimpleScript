@@ -8,11 +8,29 @@
 #include "system_loader.h"
 
 namespace ss {
-    // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-    // CONSTRUCTORS
+    //  NON-MEMBER FIELDS
 
-    system_loader::system_loader(command_processor* cp) {
-        /*
+    int                                         stopwatchc = 0;
+    vector<pair<int, time_point<steady_clock>>> stopwatchv;
+
+    int find_stopwatch(const int key, const size_t begin = 0, const size_t end = stopwatchv.size()) {
+        if (begin == end)
+            return -1;
+        
+        size_t len = floor((end - begin) / 2);
+        
+        if (stopwatchv[begin + len].first == key)
+            return (int)(begin + len);
+        
+        if (stopwatchv[begin + len].first > key)
+            return find_stopwatch(key, begin, begin + len);
+        
+        return find_stopwatch(key, begin + len + 1, end);
+    }
+
+    //  NON-MEMBER FUNCTIONS
+
+    void load_system(command_processor* cp) {
         cp->set_function(new ss::function("cmd", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
@@ -52,16 +70,16 @@ namespace ss {
             return raw(item);
         }));
         
-        cp->set_function(new ss::function("lap", [this](const size_t argc, string* argv) {
+        cp->set_function(new ss::function("lap", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
-            int pos = this->find_stopwatch(get_int(argv[0]));
+            int pos = find_stopwatch(get_int(argv[0]));
             
             if (pos == -1)
                 return std::to_string(-1);
             
-            double res = duration<double>(steady_clock::now() - this->stopwatchv[pos].second).count();
+            double res = duration<double>(steady_clock::now() - stopwatchv[pos].second).count();
             
             return encode(res);
         }));
@@ -87,54 +105,31 @@ namespace ss {
             return std::to_string(uid(gen));
         }));
         
-        cp->set_function(new ss::function("start", [this](const size_t argc, string* argv) {
+        cp->set_function(new ss::function("start", [](const size_t argc, string* argv) {
             if (argc != 0)
                 expect_error("0 argument(s), got " + std::to_string(argc));
             
-            int pos = this->stopwatchc++;
+            int pos = stopwatchc++;
             
-            this->stopwatchv.push_back({ pos, steady_clock::now() });
+            stopwatchv.push_back({ pos, steady_clock::now() });
             
             return std::to_string(pos);
         }));
         
-        cp->set_function(new ss::function("stop", [this](const size_t argc, string* argv) {
+        cp->set_function(new ss::function("stop", [](const size_t argc, string* argv) {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
-            int pos = this->find_stopwatch(get_int(argv[0]));
+            int pos = find_stopwatch(get_int(argv[0]));
             
             if (pos == -1)
                 return std::to_string(-1);
             
-            double res = duration<double>(steady_clock::now() - this->stopwatchv[pos].second).count();
+            double res = duration<double>(steady_clock::now() - stopwatchv[pos].second).count();
             
-            this->stopwatchv.erase(this->stopwatchv.begin() + pos);
+            stopwatchv.erase(stopwatchv.begin() + pos);
             
             return encode(res);
         }));
-         */
     }
-
-    // MEMBER FUNCTIONS
-
-    int system_loader::find_stopwatch(const int key) {
-        return this->find_stopwatch(key, 0, this->stopwatchv.size());
-    }
-
-    int system_loader::find_stopwatch(const int key, const size_t begin, const size_t end) {
-        if (begin == end)
-            return -1;
-        
-        size_t len = floor((end - begin) / 2);
-        
-        if (stopwatchv[begin + len].first == key)
-            return (int)(begin + len);
-        
-        if (stopwatchv[begin + len].first > key)
-            return find_stopwatch(key, begin, begin + len);
-        
-        return find_stopwatch(key, begin + len + 1, end);
-    }
-    // End Enhancement 1-1
 }

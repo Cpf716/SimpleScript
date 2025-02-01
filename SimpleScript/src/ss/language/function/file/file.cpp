@@ -10,18 +10,12 @@
 namespace ss {
     //  CONSTRUCTORS
 
-    // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-    file::file(const string filename, node<string>* parent, command_processor* cp, struct loader* loader) {
-    // End Enhancement 1-1
+    file::file(const string filename, node<string>* parent, command_processor* cp) {
 #if DEBUG_LEVEL
         assert(filename.length());
         assert(parent != NULL);
         assert(cp != NULL);
 #endif
-        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-        this->loader = loader;
-        // End Enhancement 1-1
-        
         ifstream file;
         
         file.open(filename);
@@ -335,9 +329,7 @@ namespace ss {
                             logger_write("'mysql' is defined\n");
                         }
                     } else {
-                        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-                        this->loader->set_mysql(this->cp);
-                        // End Enhancement 1-1
+                        load_mysql();
                         
                         this->mysql_flag = true;
                     }
@@ -453,9 +445,7 @@ namespace ss {
                     
                     cp->set_state();
                     
-                    // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-                    ::file* _file = new ::file(dst[j], node, this->cp, this->loader);
-                    // End Enhancement 1-1
+                    ::file* _file = new ::file(dst[j], node, cp);
                     
                     _file->parent = this;
                     
@@ -468,9 +458,7 @@ namespace ss {
                     }
                     
                     if (this->filev[this->filec]->first->mysql_flag && !this->mysql_flag) {
-                        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-                        this->loader->set_mysql(this->cp);
-                        // End Enhancement 1-1
+                        load_mysql();
                         
                         this->mysql_flag = true;
                     }
@@ -1127,9 +1115,7 @@ namespace ss {
             set_file_system(cp);
         
         if (this->mysql_flag)
-            // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-            this->loader->set_mysql(this->cp);
-            // End Enhancement 1-1
+            set_mysql(cp);
         
         if (this->socket_flag)
             set_socket(cp);

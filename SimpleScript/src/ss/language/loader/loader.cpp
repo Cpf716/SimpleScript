@@ -18,10 +18,30 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    // Begin Enhancement 1-1 - Thread safety - 2025-01-23
-    // CONSTRUCTORS
+    bool call(command_processor* cp, const string key, size_t argc, string* argv) {
+        loader_mutex.lock();
+        
+        bool flag = false;
+        
+        if (cp->is_defined(key)) {
+            flag = true;
+            
+            cp->set_paused(true);
+            
+            // Begin Enhancement 1 - Thread safety - 2025-01-22
+            while (!cp->is_paused());
+            // End Enhancement 1
+        
+            cp->call(key, argc, argv);
+            cp->set_paused(false);
+        }
+        
+        loader_mutex.unlock();
+        
+        return flag;
+    }
 
-    loader::loader(command_processor* cp) {
+    void load(command_processor* cp) {
         load_system(cp);
         
         // array
@@ -46,6 +66,7 @@ namespace ss {
             
             return stringify(argc, argv);
         }));
+        
         
         cp->set_function(new ss::function("clearInterval", [](const size_t argc, string* argv) {
             if (argc != 1)
@@ -124,24 +145,24 @@ namespace ss {
             return encode(argv[0]);
         }));
         
-        cp->set_function(new ss::function("worker", [&](const size_t argc, const string* argv) {
+        cp->set_function(new ss::function("worker", [cp](const size_t argc, const string* argv) {
             if (!argc)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
             node<string>*      parent = new node<string>(null(), NULL);;
             file*              target = NULL;
             command_processor* _cp = new command_processor();
-            struct loader*     loader = new struct loader(_cp);
+            
+            load(_cp);
             
             try {
                 string filename = decode_raw(argv[0]);
                 
-                target = new file(filename, parent, _cp, loader);
+                target = new file(filename, parent, _cp);
                 
             } catch (error& e) {
                 parent->close();
                 
-                delete loader;
                 delete _cp;
                 throw e;
             }
@@ -154,7 +175,7 @@ namespace ss {
             for (size_t i = 0; i < _argc; ++i)
                 _argv[i] = argv[i + 1];
             
-            thread([&]() {
+            thread([_cp, _argc, _argv, cp, target]() {
                 string result;
                 bool   flag = true;
                 
@@ -173,9 +194,7 @@ namespace ss {
                 target->close();
                 
                 if (flag)
-                    loader->call(cp, "onMessage", 1, (string[]){ result });
-                
-                delete loader;
+                    call(cp, "onMessage", 1, (string[]){ result });
             }).detach();
             
             return null();
@@ -184,40 +203,33 @@ namespace ss {
         cp->save_state();
     }
 
-    loader::~loader() {
+    void send_message(const event_t type, const string* value) {
+        for (size_t i = 0; i < callbackv.size(); ++i)
+            if (std::get<1>(callbackv[i]) == type)
+                std::get<2>(callbackv[i])(value);
+    }
+
+    size_t subscribe(const event_t event, const std::function<void(const string*)> callback) {
+        callbackv.push_back({ callbackc, event, callback });
+        
+        return callbackc++;
+    }
+
+    void unload() {
         unload_socket();
+        unload_mysql();
         unload_file_system();
         
         logger_close();
     }
 
-    // MEMNBER FUNCTIONS
 
-    bool loader::call(command_processor* cp, const string key, size_t argc, string* argv) {
-        this->mutex.lock();
+    void unsubscribe(const size_t subscription) {
+        size_t i = 0;
+        while (i < callbackv.size() && std::get<0>(callbackv[i]) != subscription)
+            ++i;
         
-        bool flag = false;
-        
-        if (cp->is_defined(key)) {
-            flag = true;
-            
-            cp->set_paused(true);
-            
-            // Begin Enhancement 1 - Thread safety - 2025-01-22
-            while (!cp->is_paused());
-            // End Enhancement 1
-        
-            cp->call(key, argc, argv);
-            cp->set_paused(false);
-        }
-        
-        this->mutex.unlock();
-        
-        return flag;
+        if (i != callbackv.size())
+            callbackv.erase(callbackv.begin() + i);
     }
-
-    void loader::set_mysql(command_processor* cp) {
-        _mysql_loader.set_value(cp);
-    }
-    // End Enhancement 1-1
 }
