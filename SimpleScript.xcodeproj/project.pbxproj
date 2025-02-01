@@ -55,6 +55,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		9C07FA8F2D41F54F005936F7 /* server.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = server.txt; sourceTree = "<group>"; };
+		9C07FA932D41F676005936F7 /* requestWorker.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = requestWorker.txt; sourceTree = "<group>"; };
+		9C07FA942D41F9BC005936F7 /* client.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = client.txt; sourceTree = "<group>"; };
+		9C07FA952D42235B005936F7 /* loader_t.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = loader_t.h; sourceTree = "<group>"; };
 		9C0A92052ABFFB5B007493D0 /* sender.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = sender.txt; sourceTree = "<group>"; };
 		9C0A92062ABFFB63007493D0 /* receiver.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = receiver.txt; sourceTree = "<group>"; };
 		9C0B9F162AA1026D0082568B /* meridianTime.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = meridianTime.txt; sourceTree = "<group>"; };
@@ -127,6 +131,7 @@
 		9C38E34F2BD5097E00825E45 /* preferences.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = preferences.cpp; sourceTree = "<group>"; };
 		9C3DC9EF2AC8981E0014F28A /* exception.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = exception.h; sourceTree = "<group>"; };
 		9C3DC9F02AC898290014F28A /* exception.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = exception.cpp; sourceTree = "<group>"; };
+		9C40976E2D4DA1F600882A82 /* test.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = test.cpp; sourceTree = "<group>"; };
 		9C46099B2AC4908A0091AECC /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		9C4609A02AC4B97F0091AECC /* Operators.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Operators.md; sourceTree = "<group>"; };
 		9C4609A22AC4BB110091AECC /* Functions.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Functions.md; sourceTree = "<group>"; };
@@ -317,6 +322,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9C07FA8E2D41F543005936F7 /* REST */ = {
+			isa = PBXGroup;
+			children = (
+				9C07FA942D41F9BC005936F7 /* client.txt */,
+				9C07FA932D41F676005936F7 /* requestWorker.txt */,
+				9C07FA8F2D41F54F005936F7 /* server.txt */,
+			);
+			path = REST;
+			sourceTree = "<group>";
+		};
 		9C0A92042ABFFB51007493D0 /* rest */ = {
 			isa = PBXGroup;
 			children = (
@@ -377,6 +392,7 @@
 		9C1246962ABE360C00692A3B /* socket */ = {
 			isa = PBXGroup;
 			children = (
+				9C07FA8E2D41F543005936F7 /* REST */,
 				9CBC00CB2B3B31B00068D167 /* config.txt */,
 				9C5294612BE61CE800A8A293 /* tcp */,
 				9C5294622BE61D1200A8A293 /* udp */,
@@ -673,6 +689,7 @@
 		9C52945E2BE3523B00A8A293 /* loader */ = {
 			isa = PBXGroup;
 			children = (
+				9C07FA952D42235B005936F7 /* loader_t.h */,
 				9C5294672BE6290100A8A293 /* file_system */,
 				9C5294732BE631AD00A8A293 /* system */,
 				9C52946F2BE62D5F00A8A293 /* socket */,
@@ -1302,6 +1319,7 @@
 		9CC49D8D2A296AAF00ABB949 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				9C40976E2D4DA1F600882A82 /* test.cpp */,
 				9CC3BA7A2D1350EB00FEF0D5 /* test.txt */,
 				9C3DC9EE2AC898110014F28A /* exception */,
 				9C63BF0029F1DE3A008C46ED /* main.cpp */,

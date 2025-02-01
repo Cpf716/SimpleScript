@@ -230,7 +230,7 @@ namespace ss {
     }
 
     loader::~loader() {
-        // Begin Enhancement 1-1 - Thread safety - 2025-01-23
+       // Begin Enhancement 1-1 - Thread safety - 2025-01-23
         
        if (this->_system_loader != NULL)
            delete this->_system_loader;
@@ -243,7 +243,7 @@ namespace ss {
         
        if (this->_file_system_loader != NULL)
            delete this->_file_system_loader;
-        End Enhancement 1-1
+       // End Enhancement 1-1
         
        logger_close();
     }
