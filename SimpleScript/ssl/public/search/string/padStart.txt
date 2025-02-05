@@ -3,16 +3,14 @@
 //  File:   padStart.txt
 //
 
-include("@/exception/expectExcept")
 include("@/exception/rangeExcept")
-include("@/string")
 
-func main
-    if nrows(argv) !== 4
-        throw expectExcept("3 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 3
+        throw expectExcept("3 argument(s), got {}" format nrows(argv))
     end if
 
-    text = ((argv row 1) slice 1, argv cell 1, 0)
+    text = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf text !== "string"
         typeExcept(typeOf text, "string")
@@ -22,17 +20,17 @@ func main
         throw "null"
     end if
 
-    tgtLen = ((argv row 2) slice 1, argv cell 2, 0)
+    tgtLen = ((argv row 1) slice 1, (argv cell 1, 0))
 
-    if subtypeOf tgtLen !== "int"
-        typeExcept(subtypeOf tgtLen, "int")
+    if subtypeOf tgtLen !== "integer"
+        typeExcept(subtypeOf tgtLen, "integer")
     end if
 
     if tgtLen < 0
         rangeExcept(string(tgtLen))
     end if
 
-    padStr = ((argv row 3) slice 1, argv cell 3, 0)
+    padStr = ((argv row 2) slice 1, (argv cell 2, 0))
 
     if typeOf padStr !== "string"
         typeExcept(typeOf padStr, "string")

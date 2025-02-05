@@ -1,0 +1,22 @@
+//  Author: Corey Ferguson
+//  Date:   June 9, 2024
+//  File:   mega.txt
+//
+
+include("@/exception/expectExcept")
+
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+    
+    num = (argv row 0) slice 1
+    
+    if typeOf num !== "integer"
+        typeExcept(typeOf num, "integer")
+    end if
+
+    return num / 10^^6
+end func()
+
+return main()

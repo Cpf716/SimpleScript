@@ -1,0 +1,45 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   sender.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/data/socket/file-transfer/unit_3_test_data.csv", "")
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
+
+//  FUNCTIONS
+
+func onExit(signum)
+    echo "Are you sure? (y/N) "
+
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
+end func
+
+func main()
+    fileDescriptor = server(1024)
+
+    array connections = null
+    
+    while true
+        while !(connections = poll(fileDescriptor))
+            continue
+        end while
+        
+        for fileDescriptor in connections
+            try
+                send(fileDescriptor, unit_3_test_data)
+            catch err
+                echo error(err) + "\n"
+            end try
+            
+            try
+                closeTCP(fileDescriptor)
+            catch err
+                throw error(err)
+            end try
+        end for
+    end while
+end func
+
+main()

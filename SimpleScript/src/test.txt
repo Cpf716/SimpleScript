@@ -1,0 +1,5 @@
+// echo system("pwd") + "\n"
+
+// sleep(10_000)
+
+throw "Hello, world!"

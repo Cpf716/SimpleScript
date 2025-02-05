@@ -22,8 +22,8 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    void defined_error(const std::string symbol) {
-        throw error(symbol + " is defined");
+    void defined_error(const std::string key) {
+        throw error(key + " is defined");
     }
 
     void expect_error(const std::string subject) {
@@ -46,12 +46,12 @@ namespace ss {
         throw error("Cannot convert from " + lhs + " to " + rhs);
     }
 
-    void write_error(const std::string symbol) {
-        throw error(symbol + " is read-only");
+    void write_error(const std::string key) {
+        throw error(key + " is read-only");
     }
 
-    void undefined_error(const std::string symbol) {
-        throw error(symbol + " is undefined");
+    void undefined_error(const std::string key) {
+        throw error(key + " is not defined");
     }
 
     void unsupported_error(const std::string subject) {

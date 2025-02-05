@@ -5,12 +5,12 @@
 
 include("@/search/string/tokens")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    filename = (argv row 1) slice 1
+    filename = (argv row 0) slice 1
 
     if typeOf filename !== "string"
         typeExcept(typeOf filename, "string")
@@ -20,7 +20,7 @@ func main
         throw "null"
     end if
 
-    array arr = read(filename)
+    array arr = readFile(filename)
 
     arr = tokens(arr)
 
@@ -30,8 +30,8 @@ func main
 
     _arr.(arr.0) = 1
 
-    for i = 1, i < count arr, i += 1
-        if _arr.(arr.i) === undefined
+    for i = 1; i < count arr; i += 1
+        if _arr.(arr.i) === null
             _arr.(arr.i) = 1
         else
             _arr.(arr.i) += 1

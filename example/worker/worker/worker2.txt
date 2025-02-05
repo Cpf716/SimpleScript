@@ -1,0 +1,6 @@
+func main()
+    sleep(rand() % 10)
+    // return
+end func
+
+return main()

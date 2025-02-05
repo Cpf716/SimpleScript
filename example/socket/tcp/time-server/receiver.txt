@@ -1,0 +1,85 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   receiver.txt
+//
+
+include((dir = "/Library/Application Support/SimpleScript/example/socket/") + "tcp/util/client.txt")
+// include(dir + "config.txt")
+include((dir = "@/datetime/") + "ISOString")
+include(dir + "parseTime")
+
+include("@/search/string/trim")
+include("@/search/string/replace")
+
+include("@/array/table/getProperty")
+
+// config()
+
+//  FUNCTIONS
+
+func main()
+    if nrows(argv) > 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+
+    array port = getProperty(env, "port")
+
+    if nrows(argv) === 1
+        port = (argv row 0) slice 1
+        
+        if subtypeOf array(...port) !== "integer"
+            typeExcept(subtypeOf array(...port), "integer")
+        end if
+        
+        if port < 0
+            rangeExcept(string(port))
+        end if
+    end if
+
+    while true
+        fileDescriptor = client(port)
+        
+        if fileDescriptor === -1
+            continue
+        end if
+
+        while true
+            response = null
+            
+            try
+                response = recv(fileDescriptor, 30)
+            catch err
+                if ERRNOs().err === "EBADF"
+                    break
+                end if
+                
+                throw error(err)
+            end try
+            
+            if !response
+                break
+            end if
+            
+            for result in split(response, "\n")
+                try
+                    if count result
+                        echo replace(ISOString(parseTime(trim(result))), "T", " ") + "\n"
+                    end if
+                catch err
+                    echo err + "\n"
+                    break
+                end try
+            end for
+        end while
+        
+        try
+            closeTCP(fileDescriptor)
+        catch err
+            throw error(err)
+        end try
+        
+        echo "\n"
+    end while
+end func
+
+main()

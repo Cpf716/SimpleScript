@@ -1,0 +1,19 @@
+//  Author: Corey Ferguson
+//  Date:   June 12, 2024
+//  File:   main.txt
+//
+
+include("@/await")
+include("@/number/precision")
+
+func `main`()
+    echo "Waiting...\n"
+    
+    num = await("/Users/coreyferguson/SimpleScript/example/worker/worker/await/worker.txt")
+    
+    echo "Worker returned in {} s.\n" format precision(num, 2)
+
+    return ""
+end func
+
+return `main`()

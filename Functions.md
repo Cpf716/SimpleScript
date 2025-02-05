@@ -2,167 +2,243 @@
 
 ## Functions
 
-### Environment
-
-#### array(num: int): array | null
-#### array(argv: any...): array
-
-Precondition:   `num >= 1`<br>
-Postcondition:  returns an array of null values with count `num`
-
-#### gmt(): string
-
-Precondition:   none<br>
-Postcondition:  returns the current GMT time string
-
-#### input(): number | string
-
-Precondition:   none<br>
-Postcondition:  returns a number or string from stdin
-
-#### lap(): double
-
-Precondition:   none<br>
-Postcondition:  returns the stopwatch time (seconds)
-
-#### local(): string
-
-Precondition:   none<br>
-Postcondition:  returns the current local time string
-
-#### rand(): int
-
-Precondition:   none<br>
-Postcondition:  returns a pseudorandom, unsigned integer
-
-#### start(): int
-
-Precondition:   none<br>
-Postcondition:  starts a new stopwatch and returns its descriptor
-
-#### stop(sw: int): double
-
-Precondition:   `sw >= 0`<br>
-Postcondition:  stops the stopwatch; returns its time (seconds)
-
 <!-- -->
 
 ### File System
 
-#### closeFile(filedes: int): string
+#### `closeFile(filedes: int): int`
 
-Precondition:   `fildes >= 0`<br>
-Postcondition:  closes file; returns undefined
+Precondition:   none<br>
+Postcondition:  closes file; returns `0` on success, otherwise returns `-1` if no such file exists or throws an exception if an error occurs 
 
-#### delete(filename: string): int
+#### `exists(src: string): int`
 
-Precondition:   `count filename > 0`<br>
-Postcondition:  returns 1 if the file at `filename` is removed, otherwise returns 0
+Precondition:   `src`<br>
+Postcondition:  returns `1` if a file or directory exists at `src`, otherwise returns `0`
 
-#### exists(filename: string): int
+#### `file(filename: string): int`
 
-Precondition:   `count filename > 0`<br>
-Postcondition:  returns 1 if a file exists at `filename`, otherwise returns 0
+Precondition:   `filename`<br>
+Postcondition:  opens a file at `filename`; returns its file descriptor, otherwise throws an exception if an error occurs
 
-#### file(filename: string): int
+#### `isDir(src: string): int`
 
-Precondition:   `filename !== null && count filename`<br>
-Postcondition:  opens a new file at `filename`; returns its file descriptor, otherwise returns -1
+Precondition:   `src`<br>
+Postcondition:  returns `1` if `src` is a directory; otherwise returns `0`
 
-#### read(filename: string): string
-#### read(filename: string, type: string): string | table
+#### `isFile(src: string): int`
 
-Precondition:   `count filename > 0 && array("csv", "tsv", "txt") contains type`<br>
-Postcondition:  returns data read from the file at `filename`, otherwise returns `undefined` if the file does not exist
+Precondition:   `src`<br>
+Postcondition:  returns `1` if `src` is a file; otherwise returns `0`
 
-#### rename(old: string, new: string): string
+#### `major(num: int): int`
 
-Precondition: `old !== null && count old && new !== 0 && count new`<br>
-Postcondition:  renames file `old` to `new`; returns undefined
+Precondition:   `num >= 0`<br>
+Postcondition:  returns the major number from `num`
 
-#### write(filedes: int, data: string): string
-#### write(filename: string, data: string): string
-#### write(filename: string, data: any, type: string): string
+#### `makeDir(src: string): null`
 
-Precondition:   `(filedes >= 0 || count filename > 0) && ((typeOf data === "string" && data !== null) || typeOf data !== "string" && array("csv", "tsv") contains type)`<br>
-Postcondition:  writes `data` to file; returns `undefined`
+Precondition:   `src`<br>
+Postcondition:  creates directory `src`; returns `null`, otherwise throws an exception if an error occurs
+
+#### `minor(num: int): int`
+
+Precondition:   `num >= 0`<br>
+Postcondition:  returns the minor number from `num`
+
+#### `move(old: string, new: string): null`
+
+Precondition: `old && new`<br>
+Postcondition:  renames file or directory `old` to `new`; returns `null`, otherwise throws an exception if an error occurs
+
+#### `readFile(filedes: int): string`
+
+Precondition:   none<br>
+Postcondition:  reads file; returns its new contents, otherwise returns `null` if no such file exists 
+
+#### `readFile(filename: string): string`
+#### `readFile(filename: string, sep: string): string | table`
+
+Precondition:   `filename && sep !== null`<br>
+Postcondition:  returns data read from the file at `filename`, otherwise throws an exception if an error occurs
+
+#### `remove(filename: string): int`
+
+Precondition:   `filename`<br>
+Postcondition:  removes the file or directory at `filename`; returns `null`, otherwise throws an exception if an error occurs
+
+#### `stat(filename: string): dictionary`
+
+Precondition:   `filename`<br>
+Postcondition:  returns information on the file or directory at `filename`
+
+#### `write(filedes: int, data: string): int`
+
+Precondition:   `data`<br>
+Postcondition:  writes `data` to file; returns the number of bytes written, otherwise returns `-1` if no such file exists or throws an exeption if an error occurs
+
+#### `write(filename: string, data: array | string, sep: string = ""): null`
+
+Precondition:   `filename && data !== null && sep !== null`<br>
+Postcondition:  writes `data` to file; returns the number of bytes written, otherwise throws an exception if an error occurs
 
 <!-- -->
 
-### Sockets
+### MySQL
 
-#### client(src: string, port: int): int
-#### client(src: string, port: int, timeout: int): int
+#### `connect(host: string, usr: string, pwd: string = ""): int`
 
-Precondition:   `count src > 0 && port >= 0 && timeout >= 0`<br>
-Postcondition:  returns a file descriptor identifying the server at `src` and `port`, otherwise returns -1 if the connection failed or throws socket_exception if an error occurs
+Precondition:   `host && usr && pwd !== null`<br>
+Postcondition:  returns the descriptor of the MySQL connection to `hostName`, otherwise throws an exception if an error occurs
 
-#### closeSocket(fildes: int): int
+#### `closeConnection(con: int): int`
 
-Precondition:   `fildes >= 0`<br>
-Postcondition:  returns 0 upon successful closure of the socket `fildes`, otherwise returns -1 if no such socket exists or throws socket_exception if an error occurs
+Precondition:   none<br>
+Postcondition:  returns `0` upon successful closure of the MySQL connection `con`, otherwise returns `-1` if no such connection exists or throws an exception if an error occurs
 
-#### listen(fildes: int, port: int): int
+#### `preparedQuery(con: int, sql: string, ...args): table`
 
-Precondition:   `fildes >= 0 && port >= 0`<br>
-Postcondition:  listens to messages received by the socket `fildes` and forwards them to `port`; returns the file descriptor identifying the listener, otherwise throws socket_exception if an error occurs
+Precondition:   `sql`<br>
+Postcondition:  returns the result set of a prepared query, otherwise returns `null` if no such connection exists or throws an exception if an error occurs
 
-#### poll(fildes: int): array | null
+#### `preparedUpdate(con: int, sql: string, ...args): int`
 
-Precondition:   `fildes >= 0`<br>
-Postcondition:  returns an array of file descriptors identifying clients of the server `fildes`, otherwise returns `null` if the server has no clients or an error occurs
+Precondition:   `sql`<br>
+Postcondition:  returns the number of rows updated by a prepared update, otherwise returns `-1` if no such connection exists or throws an exception if an error occurs
 
-#### recv(fildes: int): string
-#### recv(fildes: int, timeout: int): string
+#### `query(con: int, sql: string): table`
 
-Precondition:   `fildes >= 0 && timeout >= 0`<br>
-Postcondition:  returns data received from the socket `fildes`, otherwise returns `undefined` if disconnected or an error occurs (blocking)
+Precondition:   `sql`<br>
+Postcondition:  returns the result set of query `sql`, otherwise returns `null` if no such connection exists or throws an exception if an error occurs
 
-#### send(fildes: int, data: string): int
+#### `setSchema(con: int, schema: string): int`
 
-Precondition:   `fildes >= 0 && count data > 0`<br>
-Postcondition:  returns the number of bytes sent to the socket `fildes`, otherwise returns 0 if disconnected or -1 if an error occurs
+Precondition:   `schema`<br>
+Postcondition:  sets the schema for connection `con`; returns `0`, otherwise returns `-1` if no such connection exists or throws an exception if an error occurs
 
-#### server(port: int, backlog: int)
+#### `update(con: int, sql: string): int`
+
+Precondition:   `sql`<br>
+Postcondition:  returns the number of rows updated by query `sql`, otherwise returns `-1` if no such connection exists or throws an exception if an error occurs
+
+
+<!-- -->
+
+### Socket
+
+#### `closeTcp(fildes: int): int`
+
+Precondition:   none<br>
+Postcondition:  returns `0` upon successful closure of the socket `fildes`, otherwise returns `-1` if no such socket exists or throws an exception if an error occurs
+
+#### `closeUdp(fildes: int): int`
+
+Precondition:   none<br>
+Postcondition:  returns `0` upon successful closure of the socket `fildes`, otherwise returns `-1` if no such socket exists or throws an exception if an error occurs
+
+#### `listen(fildes: int, port: int): int`
+
+Precondition:   `port >= 0`<br>
+Postcondition:  listens to messages received by the socket `fildes` and forwards them to `port`; returns `0` on success, otherwise returns `-1` if no such socket exists or throws an exception if an error occurs
+
+#### `poll(fildes: int): array | null`
+
+Precondition:   none<br>
+Postcondition:  returns an array of file descriptors identifying clients of the server `fildes`, otherwise returns `null` if no such socket exists, the server has no clients, or an error occurs
+
+#### `recv(fildes: int, timeout: int = 0): string`
+
+Precondition:   none<br>
+Postcondition:  returns data received from the socket `fildes`, otherwise returns `null` if disconnected or throws an exception if an error occurs (blocking)
+
+#### `recvFrom(fildes: int, timeout: int = 0): string`
+
+Precondition:   none<br>
+Postcondition:  returns data received from the socket `fildes`, otherwise returns `null` if disconnected or throws an exception if an error occurs (blocking)
+
+#### `send(fildes: int, data: string): int`
+
+Precondition:   `data`<br>
+Postcondition:  returns the number of bytes sent to the socket `fildes`, otherwise returns `0` if disconnected or throws an exception if an error occurs
+
+#### `sendTo(fildes: int, data: string): int`
+
+Precondition:   none<br>
+Postcondition:  returns the number of bytes sent to the socket `fildes`, otherwise returns `0` if disconnected or throws an exception if an error occurs
+
+#### `tcpClient(src: string, port: int): int`
+
+Precondition:   `src && port >= 0`<br>
+Postcondition:  returns a file descriptor identifying the server at `src` and `port`, otherwise throws an exception if an error occurs
+
+#### `tcpServer(port: int, backlog: int)`
 
 Precondition:   `port >= 0 && backlog >= 0`<br>
-Postcondition:  starts a server at `port` with the capacity of `backlog`; returns the file descriptor identifying the server, otherwise throws socket_exception if an error occurs
+Postcondition:  starts a TCP server at `port` with capacity `backlog`; returns its file descriptor, otherwise throws an exception if an error occurs
 
-<!-- -->
+#### `udpClient(src: string, port: int): int`
 
-### SQL
+Precondition:   `src && port >= 0`<br>
+Postcondition:  returns a file descriptor identifying the server at `src` and `port`, otherwise throws an exception if an error occurs
 
-#### connect(host: string, usr: string, pwd: string): int
+#### `udpServer(port: int): int`
 
-Precondition:   `count host > 0 && count usr > 0 && count pwd > 0`<br>
-Postcondition:  returns the MySQL connection to `hostName` given `userName` and `password`, otherwise throws an exception if an error occurs
+Precondition:   `port >= 0`<br>
+Postcondition:  starts a UDP server at `port`; returns its file descriptor, otherwise throws an exception if an error occurs
 
-#### closeConnection(con: int): int
+### System
 
-Precondition:   `con >= 0`<br>
-Postcondition:  returns 0 upon successful closure of the MySQL connection, otherwise returns -1 or throws an exception if an error occurs
+#### `array(num: int): array | null`
 
-#### preparedQuery(con: int, sql: string, args...): table
+Precondition:   `num >= 1`<br>
+Postcondition:  returns an array of null values with count `num`
 
-Precondition:   `con >= 0 && count sql > 0`<br>
-Postcondition:  returns the result set of a prepared statement query, otherwise returns `undefined` if no such connection exists or throws an exception if an error occurs
+#### `array(...args): array`
 
-#### preparedUpdate(con: int, sql: string, args...): int
+Precondition:   none<br>
+Postcondition:  returns an array from `args`
 
-Precondition:   `con >= 0 && count sql > 0`<br>
-Postcondition:  returns the number of rows updated by a prepared statement update, otherwise returns -1 if no such connection exists or throws an exception if an error occurs
+#### `cmd(cmd: string): string`
 
-#### query(con: int, sql: string): table
+Precondition:   `cmd !== null`<br>
+Postcondition:  executes `cmd` on the host environment's command processor and returns the output
 
-Precondition:   `con >= 0 && count sql > 0`<br>
-Postcondition:  returns the result set of `sql` query, otherwise returns `undefined` if no such connection exists or throws an exception if an error occurs
+#### `gmt(): string`
 
-#### setSchema(con: int, schema: string)
+Precondition:   none<br>
+Postcondition:  returns the current GMT time string
 
-Precondition:   `con >= 0 && count schema > 0`<br>
-Postcondition:  sets the schema for connection `con`; returns 1 on success, otherwise returns 0 if no such connection exists or throws an exception if an error occurs
+#### `input(): number | string`
 
-#### update(con: int, sql: string)
+Precondition:   none<br>
+Postcondition:  returns a number or string from stdin
 
-Precondition:   `con >= 0 && count sql > 0`<br>
-Postcondition:  returns the number of rows updated by `sql` query, otherwise returns -1 if no such connection exists or throws an exception if an error occurs
+#### `lap(): double`
+
+Precondition:   none<br>
+Postcondition:  returns the stopwatch time (seconds), otherwise returns `-1` if no such stopwatch exists
+
+#### `local(): string`
+
+Precondition:   none<br>
+Postcondition:  returns the current local time string
+
+#### `rand(): int`
+
+Precondition:   none<br>
+Postcondition:  returns a pseudorandom, unsigned integer
+
+#### `start(): int`
+
+Precondition:   none<br>
+Postcondition:  starts a new stopwatch and returns its descriptor
+
+#### `stop(sw: int): double`
+
+Precondition:   none<br>
+Postcondition:  stops the stopwatch; returns its time (seconds), otherwise returns `-1` if no such stopwatch exists
+
+#### `worker(filename: string, ...args): null`
+
+Precondition:   `filename`<br>
+Postcondition:  starts a worker thread from the file at `filename` and passes `args` to it; returns `null`

@@ -3,10 +3,12 @@
 //  File:   main.txt
 //
 
-array str = "--------------- SimpleScript ---------------\n"
+array message = ""
 
-str += "  cli\t\t\tcommand line interface\n"
-str += "  <filename> <args>\tSimpleScript file\n"
-str += "  --------------------------------------------\n"
+message += "  ---- SimpleScript ----\n"
+message += "  Options:\n"
+message += "  <filename> <...argv>\n"
+message += "  ----------------------\n"
+message = message join ""
 
-return str join ""
+echo message

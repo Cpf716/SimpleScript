@@ -5,14 +5,14 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if (count argv - 1) / first argv !== 2
-        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    array arr = (argv row 1) slice 1
+    array arr = (argv row 0) slice 1
 
-    for i = 0, i < floor (count arr / 2), i += 1
+    for i = 0; i < floor (count arr / 2); i += 1
         tmp = arr.i
         
         arr.i = arr.(count arr - i - 1)

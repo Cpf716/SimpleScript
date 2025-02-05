@@ -1,0 +1,9 @@
+func onTimeout()
+  exit
+end func
+
+setTimeout(3_000)
+
+while true
+  continue
+end while

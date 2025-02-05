@@ -2,27 +2,26 @@
 //  Date:   August 8, 2023
 //  File:   build.txt
 
-include("@/exception/expectExcept")
 include("@/exception/rangeExcept")
 
-func main
-    if nrows(argv) === 1
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if !nrows(argv)
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
     
-    if nrows(argv) >= 5
-        expectExcept("3 argument(s), got {}" format (nrows(argv) - 1))
+    if nrows(argv) >= 4
+        expectExcept("3 argument(s), got {}" format nrows(argv))
     end if
     
-    array arr = ((argv row 1) slice 1, argv cell 1, 0)
+    array arr = ((argv row 0) slice 1, (argv cell 0, 0))
     
     beg = 0
     
-    if (nrows(argv) >= 2)
-        beg = ((argv row 2) slice 1, argv cell 2, 0)
+    if (nrows(argv) > 1)
+        beg = ((argv row 1) slice 1, (argv cell 1, 0))
         
-        if subtypeOf beg !== "int"
-            typeExcept(subtypeOf beg, "int")
+        if subtypeOf beg !== "integer"
+            typeExcept(subtypeOf beg, "integer")
         end if
         
         if beg < 0 || beg > count arr
@@ -30,13 +29,13 @@ func main
         end if
     end if
     
-    end = 0
+    end = count arr
     
-    if (nrows(argv) === 4)
-        end = ((argv row 3) slice 1, argv cell 3, 0)
+    if (nrows(argv) === 3)
+        end = ((argv row 2) slice 1, (argv cell 2, 0))
         
-        if subtypeOf end !== "int"
-            typeExcept(subtypeOf end, "int")
+        if subtypeOf end !== "integer"
+            typeExcept(subtypeOf end, "integer")
         end if
         
         if end < beg || end > count arr

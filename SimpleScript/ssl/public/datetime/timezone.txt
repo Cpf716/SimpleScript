@@ -3,14 +3,14 @@
 //  File:   timezone.txt
 //
 
-include((dir = "@/datetime/") + "data/timezones")
+include((dir = "@/datetime/") + "constants/timezones")
 include(dir + "date/isDaylightSavings")
 include(dir + "parseTime")
 include(dir + "transform/addHours")
 
-func main
-    if nrows(argv) !== 1
-        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv)
+        expectExcept("0 argument(s), got {}" format nrows(argv))
     end if
 
     beg = gmt(), now = parseTime(local())

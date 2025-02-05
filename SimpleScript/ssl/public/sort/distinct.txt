@@ -5,18 +5,18 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if (count argv - 1) / first argv !== 2
-        expectExcept("1 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    array arr = (argv row 1) slice 1
+    array arr = (argv row 0) slice 1
 
-    for i = 0, i < count arr - 1, i += 1
+    for i = 0; i < count arr - 1; i += 1
         j = i + 1
         while j < count arr
             if arr.i === arr.j
-                arr splice j
+                arr splice j, 1
             else
                 j += 1
             end if

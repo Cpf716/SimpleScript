@@ -1,0 +1,67 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   server.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
+
+//  FUNCTIONS
+
+func onExit(signum)
+    if connectionc
+        echo "\nAre you sure? (y/N) "
+    
+        if toLower (input() ?? "") === "y"
+            exit
+        end if
+    else
+      exit
+    end if
+end func
+
+func main()
+    const fileDescriptor = server(1024)
+    var   connectionc = 0;
+    array connectionv = null
+
+    while true
+        if !(connectionv = poll(fileDescriptor))
+            if connectionc
+                connectionc = 0
+                
+                echo "Disconnected.\t(0)\n"
+            end if
+            continue
+        end if
+        
+        if connectionc < count connectionv
+            echo "Connected...\t({})\n" format count connectionv
+        else if connectionc > count connectionv
+            echo "Disconnected.\t({})\n" format count connectionv
+        end if
+        
+        connectionc = count connectionv
+        
+        for fileDescriptor in connectionv
+            try
+                send(fileDescriptor, gmt())
+            catch err
+                try
+                    closeTCP(fileDescriptor)
+                catch err
+                    throw error(err)
+                end try
+                
+                /*
+                if ERRNOs().err !== "EPIPE"
+                    echo ERRNOs().err
+                end if
+                */
+            end try
+        end for
+        
+        sleep(1_000)
+    end while
+end func
+
+main()

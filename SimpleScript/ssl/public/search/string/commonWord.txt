@@ -6,12 +6,12 @@
 include("@/search/string/words")
 //  include("@/sort/table/sortRows")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    filename = (argv row 1) slice 1
+    filename = (argv row 0) slice 1
     
     if typeOf filename !== "string"
         typeExcept(typeOf filename, "string")
@@ -30,7 +30,7 @@ func main
     */
 
     i = 1
-    for j = 2, j < floor(count arr / 2), j += 1
+    for j = 2; j < floor(count arr / 2); j += 1
         if arr.i < arr.(j * 2 + 1)
             i = j * 2 + 1
         end if

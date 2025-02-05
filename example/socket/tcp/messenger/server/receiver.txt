@@ -1,0 +1,42 @@
+//  Author: Corey Ferguson
+//  Date:   September 21, 2023
+//  File:   receiver.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/client.txt")
+include((dir = "@/datetime/") + "isoString")
+include(dir + "parseTime")
+include("@/search/string/replace")
+
+func onExit(signum)
+    echo "Are you sure? (y/N) "
+    
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
+end func
+
+func main()
+    while true
+        fileDescriptor = client(8081)
+        
+        echo "Connected...\n"
+
+        while true
+            response = null
+            
+            if !(response = recv(fileDescriptor))
+                break
+            end if
+            
+            echo "\n[{}]\n" format replace(ISOString(parseTime(local())), "T", " ")
+            echo result + "\n"
+        end while
+        
+        closeTCP(fileDescriptor)
+
+        echo "Disconnected.\n"
+    end while
+end func
+
+main()

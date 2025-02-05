@@ -1,0 +1,59 @@
+//  Author: Corey Ferguson
+//  Date:   March 27, 2024
+//  File:   client.txt
+//
+
+include("@/exception/rangeExcept")
+include("@/socket/constants/ERRNOs")
+// include("socket")
+
+func `client`(timeout)
+    for i = 0; i < timeout; i += 1
+        try
+            return TCPClient(localhost, port)
+        catch err
+            if ERRNOs().err !== "ECONNREFUSED"
+                throw error(err)
+            end if
+        end try
+    
+        sleep(1_000)
+    end for
+    
+    return -1
+end func
+
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+
+    port = (argv row 0) slice 1
+    
+    if subtypeOf port !== "integer"
+        typeExcept(subtypeOf port, "integer")
+    end if
+
+    fileDescriptor = `client`(10)
+    
+    if fileDescriptor === -1
+        echo "Connecting...\n"
+        
+        fileDescriptor = `client`(20)
+        
+        if fileDescriptor === -1
+            echo "Connection to the server timed out.\n\n"
+            echo "Press return to continue..."
+            
+            input()
+            
+            echo "\n"
+            
+            return -1
+        end if
+    end if
+    
+    return fileDescriptor
+end func
+
+return main()

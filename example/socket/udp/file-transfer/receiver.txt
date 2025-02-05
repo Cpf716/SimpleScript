@@ -1,0 +1,116 @@
+// Author: Corey Ferguson
+// Date:   May 4, 2024
+// File:   receiver.txt
+//
+
+include("/Users/coreyferguson/SimpleScript/example/socket/config.txt")
+include("@/array/table/parseTable")
+include("@/socket/constants/ERRNOs")
+include("socket")
+
+config()
+
+// FUNCTIONS
+
+func main()
+    if nrows(argv) > 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+    
+    array port = PORT
+    
+    if nrows(argv) === 1
+        port = (argv row 0) slice 1
+        
+        if subtypeOf array(...port) !== "integer"
+            typeExcept(subtypeOf array(...port), "integer")
+        end if
+        
+        if port < 0
+            rangeExcept(string(port))
+        end if
+    end if
+    
+    echo "\n"
+
+    while true
+        fileDescriptor = -1
+    
+        try
+            fileDescriptor = UDPClient(localhost, port)
+        catch errno
+            throw error(err)
+        end try
+
+        try
+            sendTo(fileDescriptor, "")
+        catch errno
+            throw error(err)
+        end try
+        
+        array res = null
+        
+        try
+            res = recvFrom(fileDescriptor)
+        catch errno
+            if ERRNOs().err == "EBADF"
+                echo "Connection to the server timed out.\n\n"
+                echo "Press return to continue..."
+                
+                input()
+                
+                echo "\n"
+                continue
+            end if
+            
+            throw error(err)
+        end try
+        
+        try
+            closeUDP(fileDescriptor)
+        catch errno
+            throw error(err)
+        end try
+        
+        if !res
+            echo "Connection to the server timed out.\n\n"
+            echo "Press return to continue..."
+            
+            input()
+            
+            echo "\n"
+            continue
+        end if
+
+        res = parseTable(res)
+
+        for i = 0; i < (count res - 1) / first res; i += 1
+            for j = 1; j <= (res cell i, 0); j += 1
+                echo "{}\t" format (res cell i, j)
+            end for
+            
+            echo "\n"
+        end for
+
+        echo "\nExport? (Y/n):\t"
+
+        if toUpper (input() ?? "") === "Y"
+            filename = "/Users/{}/Downloads/Export" format USER
+            fileExtension = ".csv"
+
+            if exists(filename + fileExtension)
+                i = 1
+                while exists((filename + " ({})" format i) + fileExtension)
+                    i += 1
+                end while
+                
+                write((filename + " ({})" format i) + fileExtension, res, SEP)
+            else
+                write(filename + fileExtension, res, SEP)
+            end if
+        end if
+        return
+    end while
+end func
+    
+return main()

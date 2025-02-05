@@ -1,0 +1,115 @@
+//  Author: Corey Ferguson
+//  Date:   September 22, 2023
+//  File:   receiver.txt
+//
+
+include((dir = "/Library/Application Support/SimpleScript/example/socket/") + "config.txt")
+include(dir + "tcp/util/client.txt")
+include("@/array/table/parseTable")
+
+config()
+
+//  FUNCTIONS
+
+func main()
+    if nrows(argv) > 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
+    end if
+
+    array port = PORT
+
+    if nrows(argv) === 1
+        port = (argv row 0) slice 1
+        
+        if subtypeOf array(...port) !== "integer"
+            typeExcept(subtypeOf array(...port), "integer")
+        end if
+        
+        if port < 0
+            rangeExcept(string(port))
+        end if
+    end if
+    
+    echo "\n"
+    
+    while true
+        fileDescriptor = client(port)
+        
+        if fileDescriptor === -1
+            continue
+        end if
+
+        array response = null
+        
+        try
+            response = recv(fileDescriptor)
+        catch err
+            if ERRNOs().err === "EBADF"
+                echo "Connection to the server timed out.\n\n"
+                echo "Press return to continue..."
+                
+                input()
+                
+                echo "\n"
+                
+                try
+                    closeTCP(fileDescriptor)
+                catch err
+                    throw error(err)
+                end try
+                
+                continue
+            end if
+            
+            throw error(err)
+        end try
+        
+        try
+            closeTCP(fileDescriptor)
+        catch err
+            throw error(err)
+        end try
+        
+        if !response
+            echo "Connection to the server timed out.\n\n"
+            echo "Press return to continue..."
+            
+            input()
+            
+            echo "\n"
+            
+            continue
+        end if
+
+        response = parseTable(response)
+
+        for i = 0; i < (count response - 1) / first response; i += 1
+            for j = 1; j <= (response cell i, 0); j += 1
+                echo "{}\t" format (response cell i, j)
+            end for
+            
+            echo "\n"
+        end for
+
+        echo "\nExport? (Y/n):\t"
+
+        if toUpper (input() ?? "") === "Y"
+            filename = "/Users/{}/Downloads/Export" format USER
+            fileExtension = ".csv"
+
+            if exists(filename + fileExtension)
+                i = 1
+                while exists((filename + " ({})" format i) + fileExtension)
+                    i += 1
+                end while
+                
+                write((filename + " ({})" format i) + fileExtension, response, SEP)
+            else
+                write(filename + fileExtension, response, SEP)
+            end if
+        end if
+        return
+    end while
+end func
+
+return main()

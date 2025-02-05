@@ -27,7 +27,7 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    void defined_error(const std::string symbol);
+    void defined_error(const std::string key);
 
     void expect_error(const std::string subject);
 
@@ -39,11 +39,11 @@ namespace ss {
 
     void type_error(const std::string lhs, const std::string rhs);
 
-    void undefined_error(const std::string symbol);
+    void undefined_error(const std::string key);
 
     void unsupported_error(const std::string subject);
 
-    void write_error(const std::string symbol);
+    void write_error(const std::string key);
 }
 
 

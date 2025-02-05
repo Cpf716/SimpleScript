@@ -5,23 +5,29 @@
 
 include((dir = "@/math/stat/") + "deviation")
 include(dir + "mean")
-include("@/string")
 
-func main
-    if (count argv - 1) / first argv !== 3
-        expectExcept("2 argument(s), got {}" format ((count argv - 1) / first argv - 1))
+func main()
+    if nrows(argv) === 0
+        expectExcept("1 argument(s), got 0")
     end if
     
-    array arr = ((argv row 1) slice 1, (argv cell 1, 0))
-    
-    num = ((argv row 2) slice 1, (argv cell 2, 0))
-    
-    if typeOf num !== "number"
-        typeExcept(typeOf num, "number")
+    if nrows(argv) >= 3
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
     
-    if num < 0
-        rangeExcept(string(num))
+    array arr = ((argv row 0) slice 1, (argv cell 0, 0))
+    array num = 1
+    
+    if nrows(argv) === 2
+        num = ((argv row 1) slice 1, (argv cell 1, 0))
+        
+        if typeOf num !== "number"
+            typeExcept(typeOf num, "number")
+        end if
+        
+        if num < 0
+            rangeExcept(string(num))
+        end if
     end if
     
     x = mean(arr)
@@ -30,7 +36,7 @@ func main
     i = 0
     while i < count arr
         if arr.i >= x - y && arr.i <= x + y
-            arr splice i
+            arr splice i, 1
         else
             i += 1
         end if

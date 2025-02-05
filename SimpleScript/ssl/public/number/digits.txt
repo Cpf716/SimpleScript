@@ -5,15 +5,15 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    num = (argv row 1) slice 1
+    num = (argv row 0) slice 1
 
-    if subtypeOf num !== "int"
-        typeExcept(subtypeOf num, "int")
+    if subtypeOf num !== "integer"
+        typeExcept(subtypeOf num, "integer")
     end if
     
     sign = num / abs num
@@ -24,7 +24,7 @@ func main
     do while num > 0
         arr.n = num % 10
         
-        for i = n, i > 0, i -= 1
+        for i = n; i > 0; i -= 1
             tmp = arr.i
             
             arr.i = arr.(i - 1)

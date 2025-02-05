@@ -5,18 +5,18 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if nrows(argv) !== 3
-        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
 
-    text = ((argv row 1) slice 1, argv cell 1, 0)
+    text = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf text !== "string"
         typeExcept(typeOf text, "string")
     end if
 
-    pat = ((argv row 2) slice 1, argv cell 2, 0)
+    pat = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if typeOf pat !== "string"
         typeExcept(typeOf pat, "string")

@@ -1,0 +1,44 @@
+//  Author: Corey Ferguson
+//  Date:   May 1, 2024
+//  File:   table.txt
+//
+
+include("@/exception/expectExcept")
+
+func main()
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
+    end if
+    
+    `nrows` = ((argv row 0) slice 1, (argv cell 0, 0))
+    
+    if subtypeOf `nrows` !== "integer"
+        typeExcept(subtypeOf `nrows`, "integer")
+    end if
+    
+    if `nrows` < 0
+        rangeExcept(string(`nrows`))
+    end if
+    
+    ncols = ((argv row 1) slice 1, (argv cell 1, 0))
+    
+    if subtypeOf ncols !== "integer"
+        typeExcept(subtypeOf ncols, "integer")
+    end if
+    
+    if ncols < 0
+        rangeExcept(string(ncols))
+    end if
+    
+    if !`nrows`
+        return 1
+    end if
+    
+    array arr = array(`nrows` * ncols + 1)
+    
+    arr.0 = ncols + 1
+    
+    return
+end func
+
+return main()

@@ -1,6 +1,0 @@
-//  Author: Corey Ferguson
-//  Date:   March 29, 2024
-//  File:   config.txt
-//
-
-return

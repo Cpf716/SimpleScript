@@ -1,0 +1,25 @@
+func onExit(signum)
+    echo "Are you sure? (y/N) "
+    
+    if toLower(input() ?? "") === "y"
+        exit
+    end if
+end func
+
+interval = -1
+
+func onInterval()
+    echo "Hello, world!\n"
+end func
+
+func onTimeout()
+    clearInterval(interval)
+end func
+
+interval = setInterval(1_000)
+
+setTimeout(3_010)
+
+while true
+    continue
+end while

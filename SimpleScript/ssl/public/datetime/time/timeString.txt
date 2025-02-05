@@ -3,15 +3,15 @@
 //  File:   timeString.txt
 //
 
-include((dir = "@/datetime/") + "data/timezones")
+include((dir = "@/datetime/") + "constants/timezones")
 include(dir + "date/isDaylightSavings")
 include(dir + "parseTime")
 include(dir + "time/time")
 include(dir + "transform/addMinutes")
 
-func main
-    if nrows(argv) !== 1
-        expectExcept("0 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv)
+        expectExcept("0 argument(s), got {}" format nrows(argv))
     end if
 
     beg = gmt(), now = parseTime(local())
@@ -28,9 +28,9 @@ func main
     end while
 
     timezone = timezones().(i * 2)
-    timezone = (timezone === "Alaska" ? "AK", (timezone slice 0, 1)) + (timezone !== "Hawaii" && `isDaylightSavings` ? "D", "S") + "T"
+    timezone = (timezone === "Alaska" ? "AK" : (timezone slice 0, 1)) + (timezone !== "Hawaii" && `isDaylightSavings` ? "D" : "S") + "T"
     
-    timezoneOffsetString = array(" GMT", (timezoneOffset >= 0 ? "+", "-"), ("{}00") format padStart(string(abs(timezoneOffset / 60)), 2, "0")) join ""
+    timezoneOffsetString = array(" GMT", (timezoneOffset >= 0 ? "+" : "-"), ("{}00") format padStart(string(abs(timezoneOffset / 60)), 2, "0")) join ""
     
     return array(time(now), timezoneOffsetString, " ({})" format timezone) join ""
 end func

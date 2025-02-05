@@ -3,39 +3,38 @@
 //  File:   isDaylightSavings.txt
 //
 
-include((dir = "@/datetime/") + "date/parseDateComponent")
+include((dir = "@/datetime/") + "date/parseDateComp")
 include(dir + "weekday")
 include((dir += "date/") + "day")
 include(dir + "month")
 include(dir + "year")
 
-
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("Expected 1 argument(s), got {}" format nrows(argv))
     end if
+
+    timestamp = (argv row 0) slice 1
     
-    timestamp = (argv row 1) slice 1
-    
-    if subtypeOf timestamp !== "int"
-        typeExcept(subtypeOf timestamp, "int")
+    if subtypeOf timestamp !== "integer"
+        typeExcept(subtypeOf timestamp, "integer")
     end if
     
     `month` = month(timestamp)
     `day` = day(timestamp)
     
-    consume `day`
+    suppress `day`
     
     if `month` === 2
         //  March
     
         secondSunday = 1
         
-        timestamp = parseDateComponent("{}-03-01" format year(timestamp))
+        timestamp = parseDateComp("{}-03-01" format year(timestamp))
         `weekday` = weekday(timestamp)
         
         n = 0
-        while 1
+        while true
             n += !`weekday`
             
             if n === 2
@@ -54,7 +53,7 @@ func main
         
         firstSunday = 1
         
-        timestamp = parseDateComponent("{}-11-01" format year(timestamp))
+        timestamp = parseDateComp("{}-11-01" format year(timestamp))
         `weekday` = weekday(timestamp)
         
         while `weekday`

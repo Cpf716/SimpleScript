@@ -3,16 +3,16 @@
 //  File:   parseWeekday.txt
 //
 
-include("@/datetime/data/weekdays")
+include("@/datetime/constants/weekdays")
 include((dir = "@/search/string/") + "startsWith")
 include(dir + "tokens")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
     
-    dateStr = (argv row 1) slice 1
+    dateStr = (argv row 0) slice 1
     
     if typeOf dateStr !== "string"
         typeExcept(typeOf dateStr, "string")
@@ -30,7 +30,7 @@ func main
     
     weekday = weekdays() indexOf (weekdays() find val, startsWith(val, first arr))
 
-    return weekday === -1 ? undefined, weekday
+    return weekday === -1 ? null : weekday
 end func
 
 return main()

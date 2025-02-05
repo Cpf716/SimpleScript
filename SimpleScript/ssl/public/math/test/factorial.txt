@@ -11,8 +11,8 @@ end if
 
 a = (argv row 1) slice 1
 
-if subtypeOf a !== "int"
-    typeExcept(subtypeOf a, "int")
+if subtypeOf a !== "integer"
+    typeExcept(subtypeOf a, "integer")
 end if
 
 if nrows(argv) === 2

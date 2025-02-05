@@ -5,11 +5,11 @@
 
 include("@/exception/expectExcept")
 
-if nrows(argv) !== 2
-    expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+if nrows(argv) !== 1
+    expectExcept("1 argument(s), got {}" format nrows(argv))
 end if
 
-message = (argv row 1) slice 1
+message = (argv row 0) slice 1
 
 if typeOf message !== "string"
     typeExcept(typeOf message, "string")

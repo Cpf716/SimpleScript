@@ -1,0 +1,3 @@
+apiEndpoint,http://localhost
+database,host,localhost,username,root,password,root,schema,musicLibrary
+port,8080

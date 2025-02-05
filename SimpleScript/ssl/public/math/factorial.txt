@@ -5,15 +5,15 @@
 
 include("@/exception/expectExcept")
 
-func main
-    if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    a = (argv row 1) slice 1
+    a = (argv row 0) slice 1
 
-    if subtypeOf a !== "int"
-        typeExcept(subtypeOf a, "int")
+    if subtypeOf a !== "integer"
+        typeExcept(subtypeOf a, "integer")
     end if
 
     func `factorial`(a, b)

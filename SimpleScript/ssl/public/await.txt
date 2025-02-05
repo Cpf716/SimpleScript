@@ -1,0 +1,39 @@
+//  Author: Corey Ferguson
+//  Date:   June 13, 2024
+//  File:   await.txt
+//
+
+include("@/exception/expectExcept")
+
+array value = null, flag = true
+
+func onMessage(message)
+    value = message, flag = false
+end func
+
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got {}" format (nrows(argv)))
+    end if
+    
+    array params = (argv row 0) slice 1
+    
+    if typeOf first params !== "string"
+        typeExcept(typeOf first params, "string")
+    end if
+    
+    if first params === null
+        throw "null"
+    end if
+    
+    worker(...params)
+    
+    while flag
+        continue
+    end while
+    
+    return value
+end func
+
+return main()
+

@@ -1,0 +1,427 @@
+//  Author: Corey Ferguson
+//  Date:   September 24, 2023
+//  File:   sender.txt
+//
+
+include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
+include((dir = "@/datetime/") + "date/date")
+include(dir + "isoString")
+include(dir + "parseDate")
+include(dir + "parseTime")
+include((dir = "@/search/") + "array/table/getParam")
+include((dir += "string/") + "parseBody")
+include(dir + "replace")
+include("mysql")
+include("@/array/table/stringify")
+
+//  FIELDS
+
+fd = -1
+
+//  FUNCTIONS
+
+func loggerThrow(str)
+    write(fd, "ERROR:\t{}\n" format str)
+end func
+
+func loggerWrite(str)
+    write(fd, str + "\n")
+end func
+
+func onExit(signum)
+    echo "\n"
+    echo "Are you sure? (y/N) "
+
+    if toLower (input() ?? "") === "y"
+        exit
+    end if
+end func
+
+func setErrorRes(message)
+    loggerThrow(string(message))
+    
+    res = "message,{}" format message
+end func
+
+func executeQuery(sql)
+    loggerWrite("SQL:\t{}" format sql)
+    
+    return query(getConnection(pool), sql)
+end func
+
+func main()
+    if nrows(argv)
+        expectExcept("0 arugment(s), got {}" format nrows(argv))
+    end if
+
+    if exists("/tmp/server.log")
+        today = date(parseDate(local()))
+        
+        if exists("/tmp/server.{}.log" format today)
+            num = 1
+            while exists("/tmp/server.{} ({}).log" format array(today, num))
+                num += 1
+            end while
+            
+            move("/tmp/server.log", "/tmp/server.{} ({}).log" format array(today, num))
+        else
+            move("/tmp/server.log", "/tmp/server.{}.log" format today)
+        end if
+    end if
+    
+    fd = file("/tmp/server.log")
+    
+    pool = createPool("localhost", "root", array(...array("password", "root"), ...array("schema", "musicLibrary")))
+    
+    sfd = server(1024)
+
+    while true
+        array cfds = null
+        
+        suppress cfds
+        
+        while !(cfds = poll(sfd))
+            continue
+        end while
+        
+        cfd = first cfds
+        
+        array request = null
+        
+        try
+            request = recv(cfd, 1)
+        catch errno
+            if ERRNOs().err === "ECONNREFUSED"
+                closeTCP(cfd)
+                continue
+            end if
+            
+            throw error(err)
+        end try
+        
+        if !request
+            try
+                closeTCP(cfd)
+            catch errno
+                throw error(err)
+            end try
+            
+            continue
+        end if
+        
+        loggerWrite(replace(isoString(parseTime(gmt())), "T", " "))
+        loggerWrite("URL:\t{}" format first request)
+        
+        request = parseBody(first request), res = null
+        
+        if count request === 1
+            setErrorRes(400)
+        else
+            url = getParam(request, "url")
+            
+            echo url + "\n"
+            
+            if startsWith(url, "/api/")
+                switch url substr 5
+                    case "addAlbum"
+                        artistId = getParam(request, "artistId")
+                        albumYear = getParam(request, "albumYear")
+                        albumName = getParam(request, "albumName")
+                        
+                        if array(artistId, albumYear, albumName) contains null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "insert into albums(artistId, albumYear, albumName) values(?, ?, ?)"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, artistId, albumYear, albumName)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "addArtist"
+                        artistName = getParam(request, "artistName")
+                        
+                        if artistName === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "insert into artists(artistName) values(?)"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, artistName)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "addSong"
+                        albumId = getParam(request, "albumId")
+                        position = getParam(request, "position")
+                        songTitle = getParam(request, "songTitle")
+                        
+                        if array(albumId, position, songTitle) contains null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "insert into songs(artistId, albumId, position, songTitle) values((select artistId from albums where albumId = ?), ?, ?, ?)"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, albumId, albumId, position, songTitle)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "clearPlays"
+                        songId = getParam(request, "songId")
+                        
+                        if songId === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "update songs set plays = 0 where songId = ?"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, songId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "findAlbums"
+                        pattern = getParam(request, "pattern")
+                        
+                        if pattern === null
+                            setErrorRes(400)
+                        end if
+                        
+                        try
+                            con = getConnection(pool)
+                            sql = "select artists.artistId, artists.artistName, albums.albumId, albums.albumYear, albums.albumName, albums.createdDate, albums.modifiedDate from albums join artists on albums.artistId = artists.artistId where artists.artistId = ? or artists.artistName like ? or albums.albumId = ? or albums.albumYear = ? or albums.albumName like ? order by artists.artistName, albums.albumYear, albums.albumName asc"
+                        
+                            loggerWrite("SQL:\t{}" format sql)
+                            
+                            array _res = null
+                        
+                            try
+                                _res = preparedQuery(con, sql, pattern, "%" + pattern + "%", pattern, pattern, "%" + pattern + "%")
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                            
+                            res = stringify(_res)
+                        catch exc
+                            setErrorRes(exc)
+                        end try
+                        break
+                    case "findArtists"
+                        pattern = getParam(request, "pattern")
+                        
+                        if pattern === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "select artistId, artistName, createdDate, modifiedDate from artists where artists.artistId = ? or artists.artistName like ? order by artistName asc"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                                
+                                array _res = null
+                            
+                                try
+                                    _res = preparedQuery(con, sql, pattern, "%" + pattern + "%")
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                res = stringify(_res)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "findSongs"
+                        pattern = getParam(request, "pattern")
+                        
+                        if pattern === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "select artists.artistId, artists.artistName, albums.albumId, albums.albumYear, albums.albumName, songs.songId, songs.position, songs.songTitle, songs.plays, songs.createdDate, songs.modifiedDate from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId where artists.artistId = ? or artists.artistName like ? or albums.albumId = ? or albums.albumYear = ? or albums.albumName like ? or songs.songId = ? or songs.songTitle like ? order by artists.artistName, albums.albumYear, albums.albumName, songs.position asc"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                                
+                                array _res = null
+                            
+                                try
+                                    _res = preparedQuery(con, sql, pattern, "%" + pattern + "%", pattern, pattern, "%" + pattern + "%", pattern, "%" + pattern + "%")
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                                
+                                res = stringify(_res)
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "getAlbums"
+                        res = `query`("select * from albums order by albumName, albumYear asc")
+                        break
+                    case "getArtists"
+                        res = `query`("select * from artists order by artistName asc")
+                        break
+                    case "getLibrary"
+                        res = `query`("select artistName, albumYear, albumName, songTitle, plays, songs.createdDate, songs.modifiedDate from songs join albums on songs.albumId = albums.albumId join artists on albums.artistId = artists.artistId order by artistName, albumYear, albumName, position asc")
+                        break
+                    case "getSongs"
+                        try
+                            res = stringify(executeQuery("select * from songs order by songTitle asc"))
+                        catch err
+                            setErrorRes(err)
+                        end try
+                        break
+                    case "playSong"
+                        songId = getParam(request, "songId")
+                            
+                        if songId === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "select plays from songs where songId = ?"
+                                
+                                num = last preparedQuery(con, sql, songId)
+                                
+                                sql = "update songs set plays = ? + 1 where songId = ?"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                                
+                                try
+                                    res = "" + preparedUpdate(con, sql, num, songId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "removeAlbum"
+                        albumId = getParam(request, "albumId")
+                        
+                        if albumId === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "delete from albums where albumId = ?"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, albumId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "removeArtist"
+                        artistId = getParam(request, "artistId")
+                        
+                        if artistId === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "delete from artists where artistId = ?"
+                                
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, artistId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    case "removeSong"
+                        songId = getParam(request, "songId")
+                        
+                        if songId === null
+                            setErrorRes(400)
+                        else
+                            try
+                                con = getConnection(pool)
+                                sql = "delete from songs where songId = ?"
+                            
+                                loggerWrite("SQL:\t{}" format sql)
+                            
+                                try
+                                    res = "" + preparedUpdate(con, sql, songId)
+                                catch exc
+                                    setErrorRes(exc)
+                                end try
+                            catch exc
+                                setErrorRes(exc)
+                            end try
+                        end if
+                        break
+                    default
+                        setErrorRes(404)
+                        break
+                end switch
+            else
+                setErrorRes(400)
+            end if
+        end if
+        
+        try
+            send(cfd, res)
+        catch errno
+            loggerThrow(ERRNOs().err)
+        end try
+        
+        try
+            closeTCP(cfd)
+        catch errno
+            throw error(err)
+        end try
+    end while
+end func
+
+main()

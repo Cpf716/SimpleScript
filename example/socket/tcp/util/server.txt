@@ -1,0 +1,45 @@
+//  Author: Corey Ferguson
+//  Date:   March 27, 2024
+//  File:   server.txt
+//
+
+// include("/Library/Application Support/SimpleScript/example/socket/config.txt")
+include("@/exception/rangeExcept")
+include("@/socket/constants/ERRNOs")
+// include("socket")
+
+include("@/array/table/getProperty")
+
+// config()
+
+func main()
+    if nrows(argv) !== 1
+        expectExcept("1 argument(s), got 0")
+    end if
+    
+    backlog = ((argv row 0) slice 1, (argv cell 0, 0))
+    
+    if subtypeOf backlog !== "integer"
+        typeExcept(subtypeOf backlog, "integer")
+    end if
+    
+    port = getProperty(env, "port")
+    
+    while true
+        try
+            fileDescriptor = TCPServer(port, backlog)
+                
+            echo "Server listening on port {}...\n" format port
+            
+            return fileDescriptor
+        catch fileDescriptor
+            if ERRNOs().fileDescriptor === "EADDRINUSE"
+                port += 1
+            else
+                throw ERRNOs().fileDescriptor
+            end if
+        end try
+    end while
+end func
+
+return main()

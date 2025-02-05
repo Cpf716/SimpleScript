@@ -4,45 +4,44 @@
 //
 
 include("@/uuid")
+include("fileSystem")
 
-if typeOf PATTERN === "undefined"
-    define PATTERN ","
+if typeOf SEP === null
+    define SEP ","
 end if
 
-func main
-    if nrows(argv) < 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if !nrows(argv)
+        expectExcept("1 argument(s), got 0")
     end if
     
-    if nrows(argv) >= 4
-        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+    if nrows(argv) >= 3
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
     
-    str = ((argv row 1) slice 1, (argv cell 1, 0))
+    str = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if typeOf str !== "string"
         typeExcept(typeOf str, "string")
     end if
     
-    pat = PATTERN
+    array pat = SEP
     
-    if nrows(argv) === 3
-        _pat = ((argv row 2) slice 1, (argv cell 2, 0))
+    if nrows(argv) === 2
+        pat = ((argv row 1) slice 1, (argv cell 1, 0))
         
-        if typeOf pat !== "string"
-            typeExcept(typeOf pat, "string")
+        if typeOf array(...pat) !== "string"
+            typeExcept(typeOf array(...pat), "string")
         end if
-        
-        pat = _pat
     end if
 
     filename = "/tmp/" + uuid()
 
     write(filename, str)
 
-    arr = read(filename, pat)
+    arr = readFile(filename, pat)
     
-    delete(filename)
+    remove(filename)
     
     return arr
 end func

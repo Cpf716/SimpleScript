@@ -3,21 +3,21 @@
 //  File:   addYears.txt
 //
 
-func main
-    if nrows(argv) !== 3
-        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
 
-    timestamp = ((argv row 1) slice 1, argv cell 1, 0)
+    timestamp = ((argv row 0) slice 1, (argv cell 0, 0))
 
-    if subtypeOf timestamp !== "int"
-        typeExcept(subtypeOf timestamp, "int")
+    if subtypeOf timestamp !== "integer"
+        typeExcept(subtypeOf timestamp, "integer")
     end if
 
-    years = ((argv row 2) slice 1, argv cell 2, 0)
+    years = ((argv row 1) slice 1, (argv cell 1, 0))
 
-    if subtypeOf years !== "int"
-        typeExcept(subtypeOf years, "int")
+    if subtypeOf years !== "integer"
+        typeExcept(subtypeOf years, "integer")
     end if
 
     timestamp += years * 31536000

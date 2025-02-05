@@ -6,21 +6,21 @@
 include((dir = "@/exception/") + "expectExcept")
 include(dir + "rangeExcept")
 
-func main
-    if nrows(argv) !== 3
-        expectExcept("2 argument(s), got {}" format (nrows(argv) - 1))
+func main()
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
     end if
     
-    x = ((argv row 1) slice 1, (argv cell 1, 0))
+    x = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if typeOf x !== "number"
         typeExcept(typeOf x, "number")
     end if
     
-    y = ((argv row 2) slice 1, (argv cell 2, 0))
+    y = ((argv row 1) slice 1, (argv cell 1, 0))
     
-    if subtypeOf y !== "int"
-        typeExcept(subtypeOf y, "int")
+    if subtypeOf y !== "integer"
+        typeExcept(subtypeOf y, "integer")
     end if
     
     if y < 0
@@ -28,14 +28,14 @@ func main
     end if
     
     z = x - floor x
-    z *= 10 pow y
+    z *= 10^^y
     w = floor z
     
     if z - w >= 1 / 2
         z += 1
     end if
     
-    z = w / (10 pow y)
+    z = w / (10^^y)
     
     return floor x + z
 end func
