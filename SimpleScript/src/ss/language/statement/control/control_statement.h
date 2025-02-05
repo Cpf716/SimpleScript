@@ -14,6 +14,16 @@ namespace ss {
     struct control_statement: public statement_t {
         //  MEMBER FUNCTIONS
         
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void check_paused() {
+            if (this->is_paused.load()) {
+                this->parent->set_paused();
+
+                while (this->is_paused.load());
+            }
+        }
+        // End Enhancement 1
+        
         void exit() {
             this->return_flag.store(true);
             this->parent->exit();
@@ -40,6 +50,12 @@ namespace ss {
             for (size_t i = 0; i < this->statementc; ++i)
                 this->statementv[i]->set_parent(this);
         }
+        
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void set_paused() {
+            this->parent->set_paused();
+        }
+        // End Enhancement 1
         
         void set_paused(const bool value) {
             this->is_paused.store(value);

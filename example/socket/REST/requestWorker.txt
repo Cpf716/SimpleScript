@@ -1,0 +1,22 @@
+// Begin Enhancement 1-1 - Thread safety - 2025-01-23
+// include("mysql")
+// include("socket")
+include("@/array/table/stringify")
+
+fileDescriptor = (argv row 0) slice 1
+    pool = (argv row 1) slice 1
+
+request = recv(fileDescriptor, 30)
+
+if request === null
+    return
+end if
+
+try
+    send(fileDescriptor, stringify(query(getConnection(pool), "select * from songs")))
+catch err
+    send(fileDescriptor, stringify(2, 1, err))
+end try
+
+// closeTCP(fileDescriptor)
+// End Enhancement 1-1

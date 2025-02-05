@@ -59,14 +59,14 @@ func main()
             try
                 send(fileDescriptor, request)
             catch err
-                throw errorMessage(err)
+                throw error(err)
             end try
         end while
         
         try
             closeTCP(fileDescriptor)
         catch err
-            throw errorMessage(err)
+            throw error(err)
         end try
     end while
 end func

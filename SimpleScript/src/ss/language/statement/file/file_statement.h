@@ -36,6 +36,10 @@ namespace ss {
         
         bool analyze(command_processor* cp) const;
 
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void check_paused();
+        // End Enhancement 1
+
         bool compare(const statement_type value) const;
 
         string evaluate(command_processor* cp);
@@ -57,6 +61,10 @@ namespace ss {
         void set_level(const size_t level);
 
         void set_parent(statement_t* parent);
+        
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void set_paused();
+        // End Enhancement 1
         
         void set_paused(const bool value);
 

@@ -23,6 +23,7 @@ namespace ss {
     class command_processor: public logic {
         //  MEMBER FIELDS
         
+        const size_t      MAX_LOG_SNIPPETS = 5;
         const std::string SEPARATORS[7] = { "!", "(", ")", ",", ".", ";", "^" };
                     
         size_t additive_pos;
@@ -64,17 +65,17 @@ namespace ss {
         size_t unary_count;
         size_t var_pos;
         
-        size_t arrayc = 0;
+        size_t                                                       arrayc = 0;
         tuple<string, ss::array<string>, pair<bool, bool>, size_t>** arrayv = NULL;
-        
-        size_t buocc;
-        size_t* buocv = NULL;
-        binary_universal_operator*** buov = NULL;
-        
-        string expression;
-        
-        size_t functionc = 0;
-        function_t** functionv = NULL;
+        size_t                                                       buocc;
+        size_t*                                                      buocv = NULL;
+        binary_universal_operator***                                 buov = NULL;
+        vector<string>                                               expressionv;
+        size_t                                                       functionc = 0;
+        function_t**                                                 functionv = NULL;
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        atomic<bool>                                                 is_paused = false;
+        // End Enhancement 1
         
         int state = -1;
         
@@ -109,6 +110,10 @@ namespace ss {
         void get_state(const size_t state);
         
         void initialize();
+
+        // Begin Enhancement 1-1 - Thread safety - 2025-02-01
+        void interrupt(std::function<void(function_t*)> cb);
+        // End Enhancement 1-1
         
         int io_array(const string key) const;
         
@@ -178,7 +183,13 @@ namespace ss {
         
         void set_function(function_t* function);
         
-        void set_paused(const bool value);
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void set_paused();
+        // End Enhancement 1
+        
+        // Begin Enhancement 1-1 - Thread safety - 2025-02-01
+        void set_paused(const bool value, std::function<void(command_processor*)> cb = [](command_processor* cp) {});
+        // End Enhancement 1-1
         
         void set_read_only(const string key, const bool value);
         

@@ -84,7 +84,9 @@ namespace ss {
         
         try {
             for (size_t i = 0; i < this->position; ++i) {
-                while (this->is_paused.load());
+                // Begin Enhancement 1 - Thread safety - 2025-01-22
+                this->check_paused();
+                // End Enhancement 1
                 
                 this->statementv[i]->execute(cp);
                 

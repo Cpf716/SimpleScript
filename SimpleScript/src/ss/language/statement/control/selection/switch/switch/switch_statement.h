@@ -15,14 +15,11 @@ namespace ss {
     class switch_statement: public control_statement {
         //  MEMBER FIELDS
         
-        command_processor* cp = NULL;
-        
-        string expression;
-        
-        bool goto_flag;
-        
-        size_t named_casec = 0;
-        pair<string, size_t>** named_casev = NULL;
+        size_t                 casec = 0;
+        pair<string, size_t>** casev = NULL;
+        command_processor*     cp = NULL;
+        string                 expression;
+        bool                   goto_flag;
     public:
         //  CONSTRUCTORS
         

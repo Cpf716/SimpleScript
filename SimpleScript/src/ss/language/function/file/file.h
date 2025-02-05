@@ -41,19 +41,24 @@
 using namespace ss;
 
 namespace ss {
+    // TYPEDEF
+
+    enum event_type { event_kill };
+
     enum module_t { filesystem_t, mysql_t, socket_t };
 
     class file: public function_t {
         //  MEMBER FIELDS
 
-        std::function<void(void)>   cb;
-        command_processor*          cp = NULL;
-        bool                        file_system_flag = false;
-
-        size_t                      filec = 0;
-        pair<file*, bool>**         filev = NULL;
-        string                      filename;
-        size_t                      level = 0;
+        // Begin Enhancement 1-1 - Thread Safety - 2025-02-1
+        std::function<void(void)>    cb = []() {};
+        // End Enhancement 1-1
+        command_processor*           cp = NULL;
+        bool                         file_system_flag = false;
+        size_t                       filec = 0;
+        pair<file*, bool>**          filev = NULL;
+        string                       filename;
+        size_t                       level = 0;
         bool                         mysql_flag = false;
         function_t*                  parent = NULL;
         atomic<bool>                 is_paused;
@@ -87,10 +92,13 @@ namespace ss {
         
         void set_level(const size_t level);
         
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void set_paused();
+        // End Enhancement 1
+        
         void set_paused(const bool value);
         
-        // exit
-        void subscribe(std::function<void(void)> cb);
+        void subscribe(const event_type event, std::function<void(void)> cb);
     };
 }
 

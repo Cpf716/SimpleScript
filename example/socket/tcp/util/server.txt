@@ -3,12 +3,14 @@
 //  File:   server.txt
 //
 
-include("/Library/Application Support/SimpleScript/example/socket/config.txt")
+// include("/Library/Application Support/SimpleScript/example/socket/config.txt")
 include("@/exception/rangeExcept")
 include("@/socket/constants/ERRNOs")
-include("socket")
+// include("socket")
 
-config()
+include("@/array/table/getProperty")
+
+// config()
 
 func main()
     if nrows(argv) !== 1
@@ -21,7 +23,7 @@ func main()
         typeExcept(subtypeOf backlog, "integer")
     end if
     
-    port = PORT
+    port = getProperty(env, "port")
     
     while true
         try

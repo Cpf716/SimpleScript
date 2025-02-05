@@ -39,13 +39,13 @@ func main()
         try
             fileDescriptor = UDPClient(localhost, port)
         catch errno
-            throw errorMessage(err)
+            throw error(err)
         end try
 
         try
             sendTo(fileDescriptor, "")
         catch errno
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         array res = null
@@ -63,13 +63,13 @@ func main()
                 continue
             end if
             
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         try
             closeUDP(fileDescriptor)
         catch errno
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         if !res

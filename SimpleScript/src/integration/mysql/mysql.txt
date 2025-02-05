@@ -1,0 +1,22 @@
+// include("mysql")
+include("@/array/table/getProperty")
+
+func main()
+    array database = getProperty(env, "database")
+
+    pool = createPool(database."host", database."username", array(...array("password", database."password"), ...array("schema", database."schema")))
+
+    result = query(getConnection(pool), "select * from musicLibrary.songs")
+
+    for i = 0; i < nrows(result); i += 1
+        for j = 0; j < ncols(result); j += 1
+            echo string((result cell i, j)) + "\t"
+        end for
+        
+        echo "\n"
+    end for
+
+    closePool(pool)
+end func
+
+main()

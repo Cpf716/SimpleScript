@@ -59,6 +59,10 @@ namespace ss {
         
         void set_level(const size_t level);
         
+        // Begin Enhancement 1 - Thread safety - 2025-01-22
+        void set_paused();
+        // End Enhancement 1
+        
         void set_paused(const bool value);
         
         void set_return(const string value);

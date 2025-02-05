@@ -5,25 +5,29 @@
 
 //  sudo ln -s /Users/<user>/SimpleScript/example /Library/Application\ Support/SimpleScript
 
-include("@/array/table/getPref")
+include("@/array/table/getProperty")
 include("fileSystem")
 
 if typeOf SEP === null
     define SEP ","
 end if
 
-array data = readFile("/Library/Application Support/SimpleScript/example/env.csv", SEP)
+try
+    array data = readFile("/Library/Application Support/SimpleScript/example/environment", SEP)
+catch err
+    throw error(err)
+end try
 
 if count data === 1
     return
 end if
 
 if typeOf FILENAME === null
-    define FILENAME getPref(data, "filename")
+    define FILENAME getProperty(data, "filename")
 end if
 
 if typeOf PORT === null
-    port = getPref(data, "port")
+    port = getProperty(data, "port")
     
     assert subtypeOf port === "integer" && port >= 0
     
@@ -31,5 +35,5 @@ if typeOf PORT === null
 end if
 
 if typeOf USER === null
-    define USER getPref(data, "user")
+    define USER getProperty(data, "user")
 end if

@@ -4,14 +4,16 @@
 //
 
 include((dir = "/Library/Application Support/SimpleScript/example/socket/") + "tcp/util/client.txt")
-include(dir + "config.txt")
+// include(dir + "config.txt")
 include((dir = "@/datetime/") + "ISOString")
 include(dir + "parseTime")
 
 include("@/search/string/trim")
 include("@/search/string/replace")
 
-config()
+include("@/array/table/getProperty")
+
+// config()
 
 //  FUNCTIONS
 
@@ -20,7 +22,7 @@ func main()
         expectExcept("1 argument(s), got {}" format nrows(argv))
     end if
 
-    array port = PORT
+    array port = getProperty(env, "port")
 
     if nrows(argv) === 1
         port = (argv row 0) slice 1
@@ -51,7 +53,7 @@ func main()
                     break
                 end if
                 
-                throw errorMessage(err)
+                throw error(err)
             end try
             
             if !response
@@ -59,16 +61,21 @@ func main()
             end if
             
             for result in split(response, "\n")
-                if count result
-                    echo replace(ISOString(parseTime(trim(result))), "T", " ") + "\n"
-                end if
+                try
+                    if count result
+                        echo replace(ISOString(parseTime(trim(result))), "T", " ") + "\n"
+                    end if
+                catch err
+                    echo err + "\n"
+                    break
+                end try
             end for
         end while
         
         try
             closeTCP(fileDescriptor)
         catch err
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         echo "\n"

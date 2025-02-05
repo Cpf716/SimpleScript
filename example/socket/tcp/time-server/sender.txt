@@ -1,6 +1,6 @@
 //  Author: Corey Ferguson
 //  Date:   September 22, 2023
-//  File:   sender.txt
+//  File:   server.txt
 //
 
 include("/Library/Application Support/SimpleScript/example/socket/tcp/util/server.txt")
@@ -20,10 +20,9 @@ func onExit(signum)
 end func
 
 func main()
-    fileDescriptor = server(1024)
-    
-    connectionc = 0;
-        array connectionv = null
+    const fileDescriptor = server(1024)
+    var   connectionc = 0;
+    array connectionv = null
 
     while true
         if !(connectionv = poll(fileDescriptor))
@@ -50,7 +49,7 @@ func main()
                 try
                     closeTCP(fileDescriptor)
                 catch err
-                    throw errorMessage(err)
+                    throw error(err)
                 end try
                 
                 /*

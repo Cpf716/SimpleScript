@@ -11,9 +11,7 @@
 #include "command_processor.h"
 
 namespace ss {
-    void load_socket();
-
-    void set_socket(command_processor* cp);
+    void load_socket(command_processor* cp);
 
     void unload_socket();
 }

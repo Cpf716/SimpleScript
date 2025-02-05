@@ -1,0 +1,31 @@
+//  Author: Corey Ferguson
+//  Date:   May 4, 2024
+//  File:   getProperty.txt
+//
+
+include("@/exception/expectExcept")
+
+func main()
+    if nrows(argv) !== 2
+        expectExcept("2 argument(s), got {}" format nrows(argv))
+    end if
+    
+    array table = ((argv row 0) slice 1, (argv cell 0, 0))
+    
+    if subtypeOf table !== "table"
+        typeExcept(subtypeOf table, "table")
+    end if
+    
+    key = ((argv row 1) slice 1, (argv cell 1, 0))
+
+    i = 0
+    while i < nrows(table) && (table cell i, 1) !== key
+        i += 1
+    end while
+
+    if i !== nrows(table)
+        return (table row i) slice 2, (table cell i, 0) - 1
+    end if
+end func
+
+return main()

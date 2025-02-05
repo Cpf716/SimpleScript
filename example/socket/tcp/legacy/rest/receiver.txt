@@ -325,13 +325,13 @@ func main()
                 continue
             end if
             
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         try
             closeTcp(sfd)
         catch errno
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         if !res
