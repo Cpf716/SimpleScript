@@ -14,9 +14,8 @@ namespace ss {
     class echo_statement: public statement_t {
         //  MEMBER FIELDS
         
-        string expression;
-        
-        atomic<bool> return_flag = false;
+        string       expression;
+//        atomic<bool> return_flag = false;
     public:
         //  CONSTRUCTORS
         
@@ -43,6 +42,7 @@ namespace ss {
         
         string evaluate(command_processor* cp) {
             unsupported_error("evaluate()");
+            
             return null();
         }
         
@@ -60,17 +60,17 @@ namespace ss {
                 
                 size_t i;
                 for (i = 0; i < valuec - 1; ++i)
-                    ss << valuev[i] << escape(get_sep());
+                    ss << valuev[i] << escape(separator());
                 
                 ss << valuev[i];
                 
                 throw error("Unexpected token: " + ss.str());
             }
             
-            if (this->return_flag.load())
-                return null();
+//            if (this->return_flag.load())
+//                return null();
             
-            cout << (result.empty() ? "null" : escape(decode_raw(result)));
+            cout << (result.empty() ? "null" : escape(decode_raw(result))) << flush;
             
             return null();
         }
@@ -79,11 +79,12 @@ namespace ss {
         
         size_t get_level() const {
             unsupported_error("get_level()");
+            
             return 0;
         };
         
         void kill() {
-            this->return_flag.store(true);
+//            this->return_flag.store(true);
         }
         
         void set_break() {

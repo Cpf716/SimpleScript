@@ -12,8 +12,7 @@
 
 namespace ss {
     namespace integration {
-        class socket_exception: public ::exception {
-        public:
+        struct socket_exception: public ::exception {
             //  CONSTRUCTORS
             
             socket_exception(const std::string message) : ::exception(message) { }

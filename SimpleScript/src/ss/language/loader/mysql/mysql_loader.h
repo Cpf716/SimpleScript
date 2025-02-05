@@ -14,9 +14,7 @@
 namespace ss {
     //  NON-MEMBER FUNCTIONS
 
-    void load_mysql();
-
-    void set_mysql(command_processor* cp);
+    void load_mysql(command_processor* cp);
 
     void unload_mysql();
 }

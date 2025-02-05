@@ -10,10 +10,13 @@
 namespace ss {
     //  NON-MEMBER FIELDS
 
-    int                                         stopwatchc = 0;
+    // Begin Enhancement 1-1 - Thread Safety - 2025-02-05
+    mutex                                       stopwatch_mutex;
+    // End Enhancement 1-1
+    size_t                                      stopwatchc = 0;
     vector<pair<int, time_point<steady_clock>>> stopwatchv;
 
-    int find_stopwatch(const int key, const size_t begin = 0, const size_t end = stopwatchv.size()) {
+    int find_stopwatch(const size_t key, const size_t begin = 0, const size_t end = stopwatchv.size()) {
         if (begin == end)
             return -1;
         
@@ -31,24 +34,6 @@ namespace ss {
     //  NON-MEMBER FUNCTIONS
 
     void load_system(command_processor* cp) {
-        cp->set_function(new ss::function("cmd", [](const size_t argc, string* argv) {
-            if (argc != 1)
-                expect_error("1 argument(s), got " + std::to_string(argc));
-                
-            string cmd = decode_raw(get_string(argv[0]));
-            string file_path = "/tmp/" + uuid();
-            
-            cmd += " > " + file_path;
-            
-            system(cmd.c_str());
-            
-            string res = encode(read(file_path));
-        
-            remove(file_path.c_str());
-            
-            return res;
-        }));
-        
         cp->set_function(new ss::function("gmt", [](const size_t argc, string* argv) {
             if (argc)
                 expect_error("0 argument(s), got " + std::to_string(argc));
@@ -74,12 +59,21 @@ namespace ss {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
+            // Begin Enhancement 1-1 - Thread Safety - 2025-02-05
+            stopwatch_mutex.lock();
+            
             int pos = find_stopwatch(get_int(argv[0]));
             
-            if (pos == -1)
+            if (pos == -1) {
+                stopwatch_mutex.unlock();
+                
                 return std::to_string(-1);
+            }
             
             double res = duration<double>(steady_clock::now() - stopwatchv[pos].second).count();
+            
+            stopwatch_mutex.unlock();
+            // End Enhancement 1-1
             
             return encode(res);
         }));
@@ -109,9 +103,15 @@ namespace ss {
             if (argc != 0)
                 expect_error("0 argument(s), got " + std::to_string(argc));
             
-            int pos = stopwatchc++;
+            // Begin Enhancement 1-1 - Thread Safety - 2025-02-05
+            stopwatch_mutex.lock();
+            
+            size_t pos = stopwatchc++;
             
             stopwatchv.push_back({ pos, steady_clock::now() });
+
+            stopwatch_mutex.unlock();
+            // End Enhancement 1-1
             
             return std::to_string(pos);
         }));
@@ -120,16 +120,43 @@ namespace ss {
             if (argc != 1)
                 expect_error("1 argument(s), got " + std::to_string(argc));
             
+            // Begin Enhancement 1-1 - Thread Safety - 2025-02-05
+            stopwatch_mutex.lock();
+            
             int pos = find_stopwatch(get_int(argv[0]));
             
-            if (pos == -1)
+            if (pos == -1) {
+                stopwatch_mutex.unlock();
+                
                 return std::to_string(-1);
+            }
             
             double res = duration<double>(steady_clock::now() - stopwatchv[pos].second).count();
             
             stopwatchv.erase(stopwatchv.begin() + pos);
             
+            stopwatch_mutex.unlock();
+            // End Enhancement 1-1
+            
             return encode(res);
+        }));
+        
+        cp->set_function(new ss::function("system", [](const size_t argc, string* argv) {
+            if (argc != 1)
+                expect_error("1 argument(s), got " + std::to_string(argc));
+                
+            string cmd = decode_raw(get_string(argv[0]));
+            string file_path = path(temporary(), uuid());
+            
+            cmd += " > " + file_path;
+            
+            system(cmd.c_str());
+            
+            string res = encode(read(file_path));
+        
+            remove(file_path.c_str());
+            
+            return res;
         }));
     }
 }

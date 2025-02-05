@@ -8,7 +8,7 @@
 #ifndef stack_h
 #define stack_h
 
-#include "functions.h"
+#include "error.h" // error
 
 using namespace std;
 

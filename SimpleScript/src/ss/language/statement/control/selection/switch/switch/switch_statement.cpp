@@ -35,26 +35,24 @@ namespace ss {
                 defined_error(key);
             
             // initialize
-            if (this->named_casev == NULL)
-                this->named_casev = new pair<string, size_t>*[1];
+            if (this->casev == NULL)
+                this->casev = new pair<string, size_t>*[1];
+            else if (is_pow(this->casec, 2)) {
+                pair<string, size_t>** tmp = new pair<string, size_t>*[this->casec * 2];
                 
-            // resize
-            else if (is_pow(this->named_casec, 2)) {
-                pair<string, size_t>** tmp = new pair<string, size_t>*[this->named_casec * 2];
+                for (size_t j = 0; j < this->casec; ++j)
+                    tmp[j] = this->casev[j];
                 
-                for (size_t j = 0; j < this->named_casec; ++j)
-                    tmp[j] = this->named_casev[j];
+                delete[] this->casev;
                 
-                delete[] this->named_casev;
-                
-                this->named_casev = tmp;
+                this->casev = tmp;
             }
             
-            this->named_casev[this->named_casec] = new pair<string, size_t>(key, pos);
+            this->casev[this->casec] = new pair<string, size_t>(key, pos);
             
             // sort
-            for (size_t j = named_casec++; j > 0 && this->named_casev[j]->first < this->named_casev[j - 1]->first; --j)
-                swap(this->named_casev[j], this->named_casev[j - 1]);
+            for (size_t j = casec++; j > 0 && this->casev[j]->first < this->casev[j - 1]->first; --j)
+                swap(this->casev[j], this->casev[j - 1]);
         };
                 
         for (size_t i = 0; i < this->statementc -  1; ++i) {
@@ -73,10 +71,10 @@ namespace ss {
     }
 
     void switch_statement::close() {
-        for (size_t i = 0; i < this->named_casec; ++i)
-            delete this->named_casev[i];
+        for (size_t i = 0; i < this->casec; ++i)
+            delete this->casev[i];
         
-        delete[] this->named_casev;
+        delete[] this->casev;
         
         for (size_t i = 0; i < this->statementc; ++i)
             this->statementv[i]->close();
@@ -114,7 +112,6 @@ namespace ss {
         this->goto_flag = false;
         
         this->is_paused.store(false);
-        
         this->return_flag.store(false);
         
         size_t state = this->cp->get_state();
@@ -140,7 +137,6 @@ namespace ss {
                 size_t _state = this->cp->get_state();
                 
                 this->statementv[j]->execute(this->cp);
-                
                 this->cp->set_state(_state);
     
                 if (this->goto_flag || this->return_flag.load())
@@ -154,7 +150,7 @@ namespace ss {
     }
 
     int switch_statement::find_case(const string key) {
-        return this->find_case(key, 0, this->named_casec);
+        return this->find_case(key, 0, this->casec);
     }
 
     int switch_statement::find_case(const string key, const size_t beg, const size_t end) {
@@ -163,10 +159,10 @@ namespace ss {
         
         size_t len = floor((end - beg) / 2);
         
-        if (this->named_casev[beg + len]->first == key)
+        if (this->casev[beg + len]->first == key)
             return (int)(beg + len);
         
-        if (this->named_casev[beg + len]->first > key)
+        if (this->casev[beg + len]->first > key)
             return this->find_case(key, beg, beg + len);
         
         return this->find_case(key, beg + len + 1, end);
@@ -198,7 +194,7 @@ namespace ss {
             if (pos == -1)
                 undefined_error(key);
             
-            for (size_t j = this->named_casev[pos]->second; j < this->statementc; ++j) {
+            for (size_t j = this->casev[pos]->second; j < this->statementc; ++j) {
                 // Begin Enhancement 1 - Thread safety - 2025-01-22
                 this->check_paused();
                 // End Enhancement 1

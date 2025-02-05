@@ -96,14 +96,14 @@ func main()
                 continue
             end if
             
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         if !request
             try
                 closeTCP(cfd)
             catch errno
-                throw errorMessage(err)
+                throw error(err)
             end try
             
             continue
@@ -419,7 +419,7 @@ func main()
         try
             closeTCP(cfd)
         catch errno
-            throw errorMessage(err)
+            throw error(err)
         end try
     end while
 end func

@@ -23,7 +23,9 @@ namespace ss {
             assert(name.length());
 #endif
             this->rename(name);
+            
             this->_function = function;
+            
             this->consume();
         }
         

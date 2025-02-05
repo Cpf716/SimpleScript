@@ -30,13 +30,13 @@ func main()
             try
                 send(fileDescriptor, unit_3_test_data)
             catch err
-                echo errorMessage(err) + "\n"
+                echo error(err) + "\n"
             end try
             
             try
                 closeTCP(fileDescriptor)
             catch err
-                throw errorMessage(err)
+                throw error(err)
             end try
         end for
     end while

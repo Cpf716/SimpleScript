@@ -1,21 +1,5 @@
-include("@/datetime/ISOString")
-include("@/datetime/parseTime")
+// echo system("pwd") + "\n"
 
-stopwatch = start()
+// sleep(10_000)
 
-ISOString(parseTime(local()))
-
-echo string(stop(stopwatch)) + "\n"
-
-/*
-include("socket")
-
-connection = TCPClient(localhost, 8080)
-
-send(connection, "/api/getSongs")
-
-res = recv(connection)
-
-echo res + "\n"
-
-closeTCP(connection)
+throw "Hello, world!"

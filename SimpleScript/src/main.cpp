@@ -12,46 +12,22 @@ using namespace ss;
 //  NON-MEMBER FIELDS
 
 command_processor cp;
-bool              is_running = true;
-mutex             main_mutex;
-vector<int>       timeouts;
+//bool              return_flag = false;
 
 //  NON-MEMBER FUNCTIONS
 
-int find_timeout(const size_t key, const size_t begin = 0, const size_t end = timeouts.size()) {
-    if (begin == end)
-        return -1;
+void handle_signal(int signum) {
+    // Begin Enhancement 1-1 - Thread Safety - 2025-02-05
+    broadcast(message_default);
+    // End Enhancement 1-1
     
-    size_t len = floor((end - begin) / 2);
-    
-    if (timeouts[begin + len] == key)
-        return (int)(begin + len);
-    
-    if (timeouts[begin + len] > key)
-        return find_timeout(key, begin, begin + len);
-    
-    return find_timeout(key, begin + len + 1, end);
-}
-
-void clear_timeout(string timeout) {
-    main_mutex.lock();
-    
-    int pos = find_timeout(stoi(timeout));
-    
-    if (pos != -1)
-        timeouts.erase(timeouts.begin() + pos);
-    
-    main_mutex.unlock();
-}
-
-void signal_handler(int signum) {
     thread([signum]() {
         if (call(&cp, "onExit", 1, (string[]) { to_string(signum) }))
             return;
         
         ss::integration::socket_close();
         
-        is_running = false;
+//        return_flag = true;
         
         cp.kill();
         
@@ -61,86 +37,22 @@ void signal_handler(int signum) {
 
 int main(int argc, char* argv[]) {
     //  register signal callbacks
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
     
-    load_preferences();
+    logger_open(logs());
     load(&cp);
-    
-    subscribe(clear_interval_t, [&](const string* value) {
-        clear_timeout(value[0]);
-    });
-    
-    subscribe(clear_timeout_t, [&](const string* value) {
-        clear_timeout(value[0]);
-    });
-    
-    subscribe(set_interval_t, [&](const string* value) {
-        main_mutex.lock();
-        
-        int interval = stoi(value[0]);
-        
-        timeouts.push_back(interval);
-        main_mutex.unlock();
-        
-        thread([interval](const int duration) {
-            while (true) {
-                this_thread::sleep_for(milliseconds(duration));
-                
-                main_mutex.lock();
-                
-                int pos = find_timeout(interval);
-                
-                main_mutex.unlock();
-                
-                if (pos == -1)
-                    return;
-                
-                call(&cp, "onInterval");
-            }
-        }, stoi(value[1])).detach();
-    });
-    
-    subscribe(set_timeout_t, [&](const string* value) {
-        main_mutex.lock();
-        
-        int timeout = stoi(value[0]);
-        
-        timeouts.push_back(timeout);
-        main_mutex.unlock();
-        
-        thread([timeout](int duration) {
-            this_thread::sleep_for(milliseconds(duration));
-            
-            main_mutex.lock();
-            
-            int pos = find_timeout(timeout);
-            
-            if (pos == -1) {
-                main_mutex.unlock();
-                
-                return;
-            }
-            
-            timeouts.erase(timeouts.begin() + pos);
-            main_mutex.unlock();
-            
-            call(&cp, "onTimeout");
-        }, stoi(value[1])).detach();
-    });
     
     //  build
     
     logger_write("Building...\n");
     
     time_point<steady_clock> beg = steady_clock::now();;
-    
-    node<string>* parent = new node<string>();
-    file*         target = NULL;
+    node<string>*            parent = new node<string>();
+    file*                    target = NULL;
     
     try {
-        string filename = argc == 1 ? get_base_dir() + get_main() :
-            decode_raw(raw(argv[1]));
+        string filename = argc == 1 ? path(library(), main()) : decode_raw(raw(argv[1]));
         
         target = new file(filename, parent, &cp);
     } catch (error& e) {
@@ -150,9 +62,7 @@ int main(int argc, char* argv[]) {
     }
     
     parent->close();
-    
-    // exit
-    target->subscribe([]() {
+    target->subscribe(event_kill, []() {
         ss::integration::socket_close();
     });
     
@@ -172,11 +82,10 @@ int main(int argc, char* argv[]) {
                 _argv[i] = raw(argv[i + 2]);
             
             target->call(sizeof(_argv) / sizeof(_argv[0]), _argv);
-            
         } catch (::exception& e) {
             ostringstream ss;
             
-            ss << "EXCEPTION: " << e.what() << endl;
+            ss << "EXCEPTION - " << e.what() << endl;
             ss << cp.stack_trace();
             
             cout << ss.str();
@@ -184,16 +93,16 @@ int main(int argc, char* argv[]) {
             logger_write(ss.str());
         }
     } catch (error& e) {
-        if (is_running) {
+//        if (!return_flag) {
             ostringstream ss;
             
-            ss << "ERROR: " << e.what() << endl;
+            ss << "ERROR - " << e.what() << endl;
             ss << cp.stack_trace();
             
             cout << ss.str();
             
             logger_write(ss.str());
-        }
+//        }
     }
     
     res = duration<double>(steady_clock::now() - beg).count();

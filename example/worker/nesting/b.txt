@@ -1,0 +1,13 @@
+func onMessage(message)
+  exit
+end func
+
+try
+    worker("/Library/Application Support/SimpleScript/example/worker/nesting/c.txt")
+
+    while true
+      continue
+    end while
+catch err
+    throw error(err)
+end try

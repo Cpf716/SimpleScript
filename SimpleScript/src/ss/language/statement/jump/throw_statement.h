@@ -14,11 +14,9 @@ namespace ss {
     class throw_statement: public statement_t {
         //  MEMBER FIELDS
         
-        string expression;
-        
+        string       expression;
         statement_t* parent = NULL;
-        
-        atomic<bool> return_flag = false;
+//        atomic<bool> return_flag = false;
     public:
         //  CONSTRUCTORS
         
@@ -54,8 +52,8 @@ namespace ss {
 #endif
             string message = cp->evaluate(this->expression);
             
-            if (this->return_flag.load())
-                return null();
+//            if (this->return_flag.load())
+//                return null();
             
             this->set_level(0);
             
@@ -71,7 +69,7 @@ namespace ss {
         };
         
         void kill() {
-            this->return_flag.store(true);
+//            this->return_flag.store(true);
         }
         
         void set_break() {

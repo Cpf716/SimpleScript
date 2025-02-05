@@ -74,14 +74,14 @@ func main()
             try
                 send(first connections, response)
             catch err
-                throw errorMessage(err)
+                throw error(err)
             end try
         end while
 
         try
             closeTCP(first connections)
         catch err
-            throw errorMessage(err)
+            throw error(err)
         end try
     end while
 end func

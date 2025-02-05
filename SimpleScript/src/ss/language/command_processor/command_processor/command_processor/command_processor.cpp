@@ -182,7 +182,7 @@ namespace ss {
 
     string command_processor::call(const string key, const size_t argc, string* argv) {
         // Begin Enhancement 1 - Thread safety - 2025-01-22
-        this->_is_paused.store(false);
+//        this->is_paused.store(false);
         // End Enhancement 1
 
         this->mutex.lock();
@@ -258,7 +258,10 @@ namespace ss {
         
         time_point<steady_clock> beg = steady_clock::now();;
 #endif
-        this->expression = expression;
+        if (this->expressionv.size() == this->MAX_LOG_SNIPPETS)
+            this->expressionv.erase(this->expressionv.begin());
+        
+        this->expressionv.push_back(expression);
         
         string data[expression.length() * 2 + 1];
         int n = prefix(data, expression);
@@ -425,7 +428,7 @@ namespace ss {
                                     argv[k++] = evaluate(operands.pop());
                             }
                             // Begin Enhancement 1 - Thread safety - 2025-01-22
-                            this->_is_paused.store(false);
+//                            this->is_paused.store(false);
                             // End Enhancement 1
                             
                             this->mutex.lock();
@@ -4281,7 +4284,7 @@ namespace ss {
                 size_t j;
                 
                 for (j = 0; j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[j * 2] << get_sep();
+                    ss << std::get<1>(* arrayv[i])[j * 2] << separator();
                 
                 ss << std::get<1>(* arrayv[i])[j * 2];
                 
@@ -4295,7 +4298,7 @@ namespace ss {
             stringstream ss;
             size_t i;
             for (i = 0; i < (size_t)floor(valuec / 2) - 1; ++i)
-                ss << valuev[i * 2] << get_sep();
+                ss << valuev[i * 2] << separator();
             
             ss << valuev[i * 2];
             
@@ -4547,7 +4550,7 @@ namespace ss {
                 
                 if (rhs.length()) {
                     for (size_t i = 0; i < rhs.length() - 1; ++i)
-                        ss << encode(string((char[]){ rhs[i], '\0' })) << get_sep();
+                        ss << encode(string((char[]){ rhs[i], '\0' })) << separator();
                     
                     ss << encode(string((char[]){ rhs[rhs.length() - 1], '\0' }));
                 }
@@ -4581,7 +4584,7 @@ namespace ss {
             
             if (rhs.length()) {
                 for (size_t j = 0; j < rhs.length() - 1; ++j)
-                    ss << encode(string((char[]){ rhs[j], '\0' })) << get_sep();
+                    ss << encode(string((char[]){ rhs[j], '\0' })) << separator();
                 
                 ss << encode(string((char[]){ rhs[rhs.length() - 1], '\0' }));
             }
@@ -4781,7 +4784,7 @@ namespace ss {
                 stringstream ss;
                 size_t j;
                 for (j = 0; j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[j * 2 + 1] << get_sep();
+                    ss << std::get<1>(* arrayv[i])[j * 2 + 1] << separator();
                 
                 ss << std::get<1>(* arrayv[i])[j * 2 + 1];
                 
@@ -4796,7 +4799,7 @@ namespace ss {
             size_t i;
             
             for (i = 0; i < (size_t)floor(valuec / 2) - 1; ++i)
-                ss << valuev[i * 2 + 1] << get_sep();
+                ss << valuev[i * 2 + 1] << separator();
             
             ss << valuev[i * 2 + 1];
             
@@ -5268,7 +5271,7 @@ namespace ss {
                     
                     std::get<2>(* arrayv[i]).second = true;
                     
-                    return stringify(std::get<1>(* arrayv[i])) + get_sep() + rhs;
+                    return stringify(std::get<1>(* arrayv[i])) + separator() + rhs;
                 }
                 
                 double num = parse_number(lhs);
@@ -5325,7 +5328,7 @@ namespace ss {
                 }
             }
             
-            return lhs + get_sep() + rhs;
+            return lhs + separator() + rhs;
         });
 
         uov[uoc++] = new binary_universal_operator("-", [this](const string lhs, const string rhs) {
@@ -5616,7 +5619,7 @@ namespace ss {
                     if ((std::get<1>(* arrayv[i]).size() - 1) / c != 1) {
                         size_t k;
                         for (k = 1; k < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[k * c + j + 1] << get_sep();
+                            ss << std::get<1>(* arrayv[i])[k * c + j + 1] << separator();
                         
                         ss << std::get<1>(* arrayv[i])[k * c + j + 1];
                     }
@@ -5644,7 +5647,7 @@ namespace ss {
                         
                         size_t k;
                         for (k = 0; k < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[k * c + idx + 1] << get_sep();
+                            ss << std::get<1>(* arrayv[i])[k * c + idx + 1] << separator();
                         
                         ss << std::get<1>(* arrayv[i])[k * c + idx + 1];
                         
@@ -5672,7 +5675,7 @@ namespace ss {
                     if ((std::get<1>(* arrayv[i]).size() - 1) / c != 1) {
                         size_t l;
                         for (l = 1; l < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++l)
-                            ss << std::get<1>(* arrayv[i])[l * c + k + 1] << get_sep();
+                            ss << std::get<1>(* arrayv[i])[l * c + k + 1] << separator();
                         
                         ss << std::get<1>(* arrayv[i])[l * c + k + 1];
                     }
@@ -5694,7 +5697,7 @@ namespace ss {
                 
                 size_t j;
                 for (j = 0; j < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[j * c + idx + 1] << get_sep();
+                    ss << std::get<1>(* arrayv[i])[j * c + idx + 1] << separator();
                 
                 ss << std::get<1>(* arrayv[i])[j * c + idx + 1];
                 
@@ -5736,7 +5739,7 @@ namespace ss {
                 if ((valuec - 1) / c != 1) {
                     size_t j;
                     for (j = 1; j < (valuec - 1) / c - 1; ++j)
-                        ss << valuev[j * c + i + 1] << get_sep();
+                        ss << valuev[j * c + i + 1] << separator();
                     
                     ss << valuev[j * c + i + 1];
                 }
@@ -5769,7 +5772,7 @@ namespace ss {
                     
                     size_t j;
                     for (j = 0; j < (valuec - 1) / c - 1; ++j)
-                        ss << valuev[j * c + (size_t)idx + 1] << get_sep();
+                        ss << valuev[j * c + (size_t)idx + 1] << separator();
                     
                     ss << valuev[j * c + (size_t)idx + 1];
                     
@@ -5799,7 +5802,7 @@ namespace ss {
                 if ((valuec - 1) / c != 1) {
                     size_t k;
                     for (k = 1; k < (valuec - 1) / c - 1; ++k)
-                        ss << valuev[k * c + j + 1] << get_sep();
+                        ss << valuev[k * c + j + 1] << separator();
                     
                     ss << valuev[k * c + j + 1];
                 }
@@ -5823,7 +5826,7 @@ namespace ss {
             
             size_t i;
             for (i = 0; i < (valuec - 1) / c - 1; ++i)
-                ss << valuev[i * c + (size_t)idx + 1] << get_sep();
+                ss << valuev[i * c + (size_t)idx + 1] << separator();
             
             ss << valuev[i * c + (size_t)idx + 1];
             
@@ -7910,7 +7913,7 @@ namespace ss {
                     if (c != 1) {
                         size_t k;
                         for (k = 1; k < c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[j * c + k + 1] << get_sep();
+                            ss << std::get<1>(* arrayv[i])[j * c + k + 1] << separator();
                         
                         ss << std::get<1>(* arrayv[i])[j * c + k + 1];
                     }
@@ -7938,7 +7941,7 @@ namespace ss {
                         
                         size_t k;
                         for (k = 0; k < c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[idx * c + k + 1] << get_sep();
+                            ss << std::get<1>(* arrayv[i])[idx * c + k + 1] << separator();
                         
                         ss << std::get<1>(* arrayv[i])[idx * c + k + 1];
                         
@@ -7965,7 +7968,7 @@ namespace ss {
                     if (c != 1) {
                         size_t l;
                         for (l = 1; l < c - 1; ++l)
-                            ss << std::get<1>(* arrayv[i])[k * c + l + 1] << get_sep();
+                            ss << std::get<1>(* arrayv[i])[k * c + l + 1] << separator();
                         
                         ss << std::get<1>(* arrayv[i])[k * c + l + 1];
                     }
@@ -7987,7 +7990,7 @@ namespace ss {
                 
                 size_t j;
                 for (j = 0; j < c - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[idx * c + j + 1] << get_sep();
+                    ss << std::get<1>(* arrayv[i])[idx * c + j + 1] << separator();
                 
                 ss << std::get<1>(* arrayv[i])[idx * c + j + 1];
                 
@@ -8028,7 +8031,7 @@ namespace ss {
                 if (c != 1) {
                     size_t j;
                     for (j = 1; j < c - 1; ++j)
-                        ss << valuev[i * c + j + 1] << get_sep();
+                        ss << valuev[i * c + j + 1] << separator();
                     
                     ss << valuev[i * c + j + 1];
                 }
@@ -8060,7 +8063,7 @@ namespace ss {
                     
                     size_t j;
                     for (j = 0; j < c - 1; ++j)
-                        ss << valuev[(size_t)idx * c + j + 1] << get_sep();
+                        ss << valuev[(size_t)idx * c + j + 1] << separator();
                     
                     ss << valuev[(size_t)idx * c + j + 1];
                     
@@ -8090,7 +8093,7 @@ namespace ss {
                 if (c != 1) {
                     size_t k;
                     for (k = 1; k < c - 1; ++k)
-                        ss << valuev[j * c + k + 1] << get_sep();
+                        ss << valuev[j * c + k + 1] << separator();
                     
                     ss << valuev[j * c + k + 1];
                 }
@@ -8114,7 +8117,7 @@ namespace ss {
             
             size_t i;
             for (i = 0; i < c - 1; ++i)
-                ss << valuev[(size_t)idx * c + i + 1] << get_sep();
+                ss << valuev[(size_t)idx * c + i + 1] << separator();
             
             ss << valuev[(size_t)idx * c + i + 1];
             
@@ -12059,6 +12062,22 @@ namespace ss {
         state_stringv = new pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>*[1];
     }
 
+    void command_processor::interrupt(std::function<void(function_t*)> function) {
+        this->mutex.lock();
+        
+        ss::stack<function_t*>* stack = new ss::stack<function_t*>();
+        
+        while (this->stack.size() > 1)
+            stack->push(this->stack.pop());
+        
+        function(this->stack.top());
+        
+        while (stack->size())
+            this->stack.push(stack->pop());
+        
+        this->mutex.unlock();
+    }
+
     int command_processor::io_array(const string key) const {
         return io_array(key, 0, arrayc);
     }
@@ -12209,22 +12228,12 @@ namespace ss {
         return i != n;
     }
 
-    // Begin Enhancement 1 - Thread safety - 2025-01-22
-    bool command_processor::is_paused() const {
-        return this->_is_paused.load();
-    }
-    // End Enhancement 1
-
     void command_processor::kill() {
-        this->mutex.lock();
-        
-        while (this->stack.size() > 1)
-            this->stack.pop();
-        
-        if (this->stack.size())
-            this->stack.top()->kill();
-        
-        this->mutex.unlock();
+        // Begin Enhancement 1-1 - Thread safety - 2025-02-05
+        this->interrupt([](function_t* cb) {
+            cb->kill();
+        });
+        // End Enhancement 1-1
     }
 
     int command_processor::merge(int n, string* data) const {
@@ -13349,28 +13358,30 @@ namespace ss {
 
     // Begin Enhancement 1 - Thread safety - 2025-01-22
     void command_processor::set_paused() {
-        this->_is_paused.store(true);
+        this->is_paused.store(true);
     }
     // End Enhancement 1
 
-    void command_processor::set_paused(const bool value) {
-        // Begin Enhancement 1 - Thread safety - 2025-01-22
-        this->_is_paused.store(false);
-        // End Enhancement 1
+    // Begin Enhancement 1-1 - Thread safety - 2025-02-01
+    void command_processor::set_paused(const bool value, std::function<void(command_processor*)> cb) {
+        this->is_paused.store(false);
+        // End Enhancement 1-1
         
-        this->mutex.lock();
+        this->interrupt([value](function_t* cb) {
+            cb->set_paused(value);
+        });
         
-        ss::stack<function_t*>* _stack = new ss::stack<function_t*>();
+        // Begin Enhancement 1-1 - Thread safety - 2025-02-01
+        if (!value)
+            return;
         
-        while (this->stack.size() > 1)
-            _stack->push(this->stack.pop());
+        while (!this->is_paused.load())
+            continue;
         
-        this->stack.top()->set_paused(value);
+        cb(this);
         
-        while (_stack->size())
-            this->stack.push(_stack->pop());
-        
-        this->mutex.unlock();
+        this->set_paused(false);
+        // End Enhancement 1-1
     }
 
     void command_processor::set_read_only(const string key, const bool value) {
@@ -13438,7 +13449,12 @@ namespace ss {
         
         ostringstream ss;
         
-        ss << "  " << expression << endl;
+        ss << "  Last few log snippets:\n";
+        
+        for (size_t i = this->expressionv.size(); i > 0; i--)
+            ss << "    " << this->expressionv[i - 1] << endl;
+        
+        ss << "  Stack:\n";
 
         string padding = "    ";
         

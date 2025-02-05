@@ -11,9 +11,7 @@
 #include "command_processor.h"
 
 namespace ss {
-    void load_file_system();
-
-    void set_file_system(command_processor* cp);
+    void load_file_system(command_processor* cp);
 
     void unload_file_system();
 }

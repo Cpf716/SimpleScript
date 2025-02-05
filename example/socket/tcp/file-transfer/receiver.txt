@@ -55,19 +55,19 @@ func main()
                 try
                     closeTCP(fileDescriptor)
                 catch err
-                    throw errorMessage(err)
+                    throw error(err)
                 end try
                 
                 continue
             end if
             
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         try
             closeTCP(fileDescriptor)
         catch err
-            throw errorMessage(err)
+            throw error(err)
         end try
         
         if !response
