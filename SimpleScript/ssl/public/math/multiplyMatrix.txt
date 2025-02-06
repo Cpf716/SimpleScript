@@ -1,32 +1,32 @@
 //  Author: Corey Ferguson
 //  Date:   August 3, 2023
-//  File:   multMat.txt
+//  File:   multiplyMatrix.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
 
     a = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if subtypeOf a !== "table"
-        typeExcept(subtypeOf a, "table")
+        typeException(subtypeOf a, "table")
     end if
 
     b = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if subtypeOf b !== "table"
-        typeExcept(subtypeOf b, "table")
+        typeException(subtypeOf b, "table")
     end if
 
-    assert first a === (count b - 1) / first b
+    assert first a === nrows(b)
 
     array c = first b
 
-    for i = 0; i < (count a - 1) / first a; i += 1
+    for i = 0; i < nrows(a); i += 1
         for j = 0; j < first b; j += 1
             c.(i * first c + j + 1) = 0
             

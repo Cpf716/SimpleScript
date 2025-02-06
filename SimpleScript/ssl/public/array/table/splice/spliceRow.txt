@@ -3,23 +3,23 @@
 //  File:   spliceRow.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
 
     array arr = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if subtypeOf arr !== "table"
-        typeExcept(subtypeOf arr, "table")
+        typeException(subtypeOf arr, "table")
     end if
 
     idx = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if subtypeOf idx !== "integer"
-        typeExcept(subtypeOf idx, "integer")
+        typeException(subtypeOf idx, "integer")
     end if
 
     if idx < 0 || idx >= (count arr - 1) / first arr

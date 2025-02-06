@@ -3,17 +3,17 @@
 //  File:   factorial.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
 
     a = (argv row 0) slice 1
 
     if subtypeOf a !== "integer"
-        typeExcept(subtypeOf a, "integer")
+        typeException(subtypeOf a, "integer")
     end if
 
     func `factorial`(a, b)

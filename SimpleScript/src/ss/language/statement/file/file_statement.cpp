@@ -48,7 +48,7 @@ namespace ss {
             ++i;
         
         if (i != this->statementc - 1)
-            logger_write("Unreachable code\n");
+            logger_write("Unreachable code");
         
         this->statementv[statementc - 1]->analyze(cp);
         

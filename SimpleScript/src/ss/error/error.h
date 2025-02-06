@@ -8,9 +8,13 @@
 #ifndef error_h
 #define error_h
 
-#include <iostream>
+#include "constants.h"
 
 namespace ss {
+    // TYPEDEF
+
+    enum data_t { array_t, char_t, dictionary_t, int_t, item_t, number_t, string_t, table_t };
+
     class error: public std::exception {
         //  MEMBER FIELDS
         
@@ -27,23 +31,27 @@ namespace ss {
 
     //  NON-MEMBER FUNCTIONS
 
-    void defined_error(const std::string key);
+    void        defined_error(const std::string key);
 
-    void expect_error(const std::string subject);
+    void        expect_error(const std::string subject);
 
-    void null_error();
+    void        null_error();
 
-    void operation_error();
+    void        operation_error();
 
-    void range_error(const std::string message);
+    void        range_error(const std::string message);
 
-    void type_error(const std::string lhs, const std::string rhs);
+    std::string to_string(const data_t type);
 
-    void undefined_error(const std::string key);
+    void        type_error(const data_t lhs, const data_t rhs);
 
-    void unsupported_error(const std::string subject);
+    void        type_error(const std::string lhs, const std::string rhs);
 
-    void write_error(const std::string key);
+    void        undefined_error(const std::string key);
+
+    void        unsupported_error(const std::string subject);
+
+    void        write_error(const std::string key);
 }
 
 

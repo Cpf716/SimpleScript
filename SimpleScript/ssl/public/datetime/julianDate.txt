@@ -9,13 +9,13 @@ include("@/number/digits")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("1 argument(s), got {}" format (nrows(argv) - 1))
+        expectException("1 argument(s), got {}" format (nrows(argv) - 1))
     end if
 
     timestamp = (argv row 1) slice 1
 
     if subtypeOf timestamp !== "integer"
-        typeExcept(subtypeOf timestamp, "integer")
+        typeException(subtypeOf timestamp, "integer")
     end if
 
     if timestamp < 0

@@ -8,11 +8,11 @@ include(dir + "mean")
 
 func main()
     if nrows(argv) === 0
-        expectExcept("1 argument(s), got 0")
+        expectException("1 argument(s), got 0")
     end if
     
     if nrows(argv) >= 3
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     array arr = ((argv row 0) slice 1, (argv cell 0, 0))
@@ -22,7 +22,7 @@ func main()
         num = ((argv row 1) slice 1, (argv cell 1, 0))
         
         if typeOf num !== "number"
-            typeExcept(typeOf num, "number")
+            typeException(typeOf num, "number")
         end if
         
         if num < 0

@@ -49,7 +49,7 @@ namespace ss {
                 ++i;
             
             if (i != this->position - 1)
-                logger_write("Unreachable code\n");
+                logger_write("Unreachable code");
             
             this->statementv[this->position - 1]->analyze(cp);
         }
@@ -58,7 +58,7 @@ namespace ss {
             this->statementv[i]->analyze(cp);
         
         if (!this->position)
-            logger_write("'if' statement has empty body\n");
+            logger_write("'if' statement has empty body");
         
         return false;
     }

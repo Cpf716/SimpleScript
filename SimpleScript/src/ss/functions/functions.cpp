@@ -10,10 +10,10 @@
 namespace ss {
     //  NON-MEMBER FUNCTIONS
 
-    bool is_array(const std::string val) {
-        std::string data[val.length() + 1];
+    bool is_array(const std::string value) {
+        std::string valuev[value.length() + 1];
         
-        return parse(data, val) != 1;
+        return parse(valuev, value) != 1;
     }
 
     bool is_dictionary(ss::array<std::string> arr) {
@@ -69,22 +69,21 @@ namespace ss {
         return false;
     }
 
-    bool is_key(const std::string str) {
-        if (str.empty())
+    bool is_key(const std::string value) {
+        if (value.empty())
             return false;
         
-        size_t i = 0;
-        while (i < floor(str.length() / 2) && str[i] == '`' && str[str.length() - i - 1] == '`')
-            ++i;
+        if (value.length() > 2 && value[0] == '`' && value[value.length() - 1] == '`')
+            return true;
         
-        if (str[i] != '_' && !isalpha(str[i]))
+        if (value[0] != '_' && !isalpha(value[0]))
             return false;
         
-        size_t j = i + 1;
-        while (j < str.length() - i && (str[j] == '_' || isalnum(str[j])))
+        size_t j = 1;
+        while (j < value.length() && (value[j] == '_' || isalnum(value[j])))
             ++j;
         
-        return j == str.length() - i;
+        return j == value.length();
     }
 
     bool is_string(const std::string val) {
@@ -234,29 +233,6 @@ namespace ss {
         return str;
     }
 
-    std::string to_string(const data_t type) {
-        switch (type) {
-            case array_t:
-                return "array";
-            case char_t:
-                return "character";
-            case dictionary_t:
-                return "dictionary";
-            case int_t:
-                return "integer";
-            case item_t:
-                return "item";
-            case number_t:
-                return "number";
-            case string_t:
-                return "string";
-            case table_t:
-                return "table";
-        }
-        
-        return null();
-    }
-
     std::string toupper(std::string str) {
         std::transform(str.begin(), str.end(), str.begin(), ::toupper);
         
@@ -279,10 +255,6 @@ namespace ss {
             ++s;
             
         return str.substr(s);
-    }
-
-    void type_error(const data_t lhs, const data_t rhs) {
-        ss::type_error(to_string(lhs), to_string(rhs));
     }
     
     //  NON-MEMBER FIELDS
@@ -413,7 +385,7 @@ namespace ss {
         }
                 
         if (i == n - 1) {
-            logger_write("Missing terminating '\"' character: (" + str + ")\n");
+            logger_write("Missing terminating '\"' character: (" + str + ")");
             
             int j = l;
             while (j < n - 2) {
@@ -699,7 +671,7 @@ namespace ss {
         }
                 
         if (i == n - 1) {
-            logger_write("Missing terminating '\"' character: (" + str + ")\n");
+            logger_write("Missing terminating '\"' character: (" + str + ")");
             
             for (int j = l; j < (int)n - 1; ++j) {
                 if (dst[j] == '\"') {
@@ -1178,10 +1150,6 @@ namespace ss {
         return len;
     }
 
-    std::string null() {
-        return std::string();
-    }
-
     size_t parse(std::string* dst, const std::string src, std::string sep) {
     #if DEBUG_LEVEL
         assert(dst != NULL);
@@ -1418,4 +1386,90 @@ namespace ss {
         
         return str.substr(0, n);
     }
+
+bool evaluate(const std::string value) {
+    if (ss::is_array(value))
+        return true;
+    
+    if (value.empty())
+        return false;
+    
+    if (is_string(value))
+        return !decode_raw(value).empty();
+    
+    return stod(value);
+}
+
+size_t get_dictionary(std::string* target, const std::string source) {
+    size_t len = parse(target, source);
+    
+    if (len == 1) {
+        if (target[0].empty() || is_string(target[0]))
+            type_error(string_t, dictionary_t);
+        
+        type_error(number_t, dictionary_t);
+    }
+    
+    if (!is_dictionary(len, target))
+        type_error(array_t, dictionary_t);
+    
+    return len;
+}
+
+int get_int(const std::string value) {
+    if (ss::is_array(value))
+        type_error(array_t, int_t);
+    
+    if (value.empty() || is_string(value))
+        type_error(string_t, int_t);
+    
+    double num = stod(value);
+    
+    if (!is_int(num))
+        type_error(number_t, int_t);
+    
+    return (int)num;
+}
+
+double get_number(const std::string value) {
+    if (ss::is_array(value))
+        type_error(array_t, number_t);
+    
+    if (value.empty() || is_string(value))
+        type_error(string_t, number_t);
+    
+    return stod(value);
+}
+
+std::string get_string(const std::string value) {
+    if (ss::is_array(value))
+        type_error(array_t, string_t);
+    
+    if (value.empty())
+        null_error();
+    
+    if (!is_string(value))
+        type_error(number_t, string_t);
+    
+    return value;
+}
+
+size_t get_table(std::string* target, const std::string source) {
+    size_t len = parse(target, source);
+    
+    if (len == 1) {
+        if (target[0] == std::to_string(1))
+            return 1;
+        
+        if (target[0].empty() || is_string(target[0]))
+            type_error(string_t, table_t);
+        
+        type_error(number_t, table_t);
+    }
+    
+    if (!is_table(len, target))
+        type_error(array_t, table_t);
+    
+    return len;
+}
 }

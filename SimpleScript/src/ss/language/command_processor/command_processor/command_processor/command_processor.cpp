@@ -13,24 +13,26 @@ namespace ss {
     command_processor::command_processor() {
         initialize();
         
-        set_number("SIGINT", SIGINT);
+        set_number("SIGINT", SIGINT, [](variable<double>* value) {
+            value->readonly() = true;
+            value->value();
+        });
         
-        logic::set_read_only("SIGINT", true);
+        set_number("SIGTERM", SIGTERM, [](variable<double>* value) {
+            value->readonly() = true;
+            value->value();
+        });
         
-        set_number("SIGTERM", SIGTERM);
+        set_number("nan", NAN, [](variable<double>* value) {
+            value->readonly() = true;
+            value->value();
+        });
         
-        logic::set_read_only("SIGTERM", true);
-        
-        set_string("cwd", encode(filesystem::current_path()));
-        
-        std::get<2>(* stringv[io_string("cwd")]).first = true;
-        
-        set_number("nan", NAN);
-        set_read_only("nan", true);
-        
-        set_string("null", null());
-        
-        std::get<2>(* stringv[io_string("null")]).first = true;
+        set_string("null", null(), [](variable<string>* value) {
+            value->readonly() = true;
+            value->value();
+            
+        });
         
         set_array("types", 0, encode(to_string(array_t)));
         set_array("types", 1, encode(to_string(char_t)));
@@ -40,7 +42,7 @@ namespace ss {
         set_array("types", 5, encode(to_string(string_t)));
         set_array("types", 6, encode(to_string(table_t)));
         
-        int pos = io_array("types");
+        int pos = find_array("types");
         
         std::get<1>(* arrayv[pos]).shrink_to_fit();
         std::get<2>(* arrayv[pos]).first = true; 
@@ -108,23 +110,24 @@ namespace ss {
     }
 
     int command_processor::_get_state(const string key) const {
-        int i;
-        if ((i = io_function(key)) == -1) {
-            if ((i = io_array(key)) == -1) {
-                if ((i = io_string(key)) == -1)
+        int pos;
+        
+        if ((pos = find_function(key)) == -1) {
+            if ((pos = find_array(key)) == -1) {
+                if ((pos = find_string(key)) == -1)
                     return logic::_get_state(key);
                 
-                return (int)std::get<3>(* stringv[i]);
+                return (int)stringv[pos]->state();
             }
             
-            return (int)std::get<3>(* arrayv[i]);
+            return (int)std::get<3>(* arrayv[pos]);
         }
         
         return -1;
     }
 
     void command_processor::_set_array(const string key, const size_t valuec, string* valuev) {
-        int i = io_array(key);
+        int i = find_array(key);
         
         if (i == -1) {
 #if DEBUG_LEVEL
@@ -187,7 +190,7 @@ namespace ss {
 
         this->mutex.lock();
         
-        int pos = this->io_function(key);
+        int pos = this->find_function(key);
         
         if (pos == -1) {
             this->mutex.unlock();
@@ -214,12 +217,12 @@ namespace ss {
 
     void command_processor::consume(const string key) {
         int i;
-        if ((i = io_function(key)) == -1) {
-            if ((i = io_array(key)) == -1) {
-                if ((i = io_string(key)) == -1)
+        if ((i = find_function(key)) == -1) {
+            if ((i = find_array(key)) == -1) {
+                if ((i = find_string(key)) == -1)
                     logic::consume(key);
                 else
-                    std::get<2>(* stringv[i]).second = true;
+                    stringv[i]->value();
             } else
                 std::get<2>(* arrayv[i]).second = true;
         } else
@@ -237,16 +240,14 @@ namespace ss {
             return encode(decode(val));
         
         if (is_key(val)) {
-            if (io_array(val) != -1)
+            if (find_array(val) != -1)
                 type_error(array_t, item_t);
             
-            int i = io_string(val);
+            int i = find_string(val);
             if (i == -1)
                 return encode(get_number(val));
             
-            std::get<2>(* stringv[i]).second = true;
-            
-            return std::get<1>(* stringv[i]);
+            return stringv[i]->value();
         }
         
         return encode(parse_number(val));
@@ -338,7 +339,7 @@ namespace ss {
                     }
                     
                     if (j == aoc - 2) {
-                        int j = io_function(data[i]);
+                        int j = find_function(data[i]);
                         if (j == -1) {
                             //  validate operand
                             
@@ -455,9 +456,9 @@ namespace ss {
                                 if (!is_key(lhs))
                                     operation_error();
                                 
-                                int k = io_array(lhs);
+                                int k = find_array(lhs);
                                 if (k == -1) {
-                                    if (io_string(lhs) != -1)
+                                    if (find_string(lhs) != -1)
                                         type_error(string_t, number_t);
                                     
                                     size_t l = i + 1;
@@ -480,11 +481,11 @@ namespace ss {
                                     double b;
                                     
                                     if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, number_t);
                                             //  array != double
                                         
-                                        if (io_string(rhs) != -1)
+                                        if (find_string(rhs) != -1)
                                             type_error(string_t, number_t);
                                             //  string != double
                                         
@@ -564,11 +565,11 @@ namespace ss {
                                         
                                         double b;
                                         if (is_key(rhs)) {
-                                            if (io_array(rhs) != -1)
+                                            if (find_array(rhs) != -1)
                                                 type_error(array_t, number_t);
                                                 //  array != double
                                             
-                                            if (io_string(rhs) != -1)
+                                            if (find_string(rhs) != -1)
                                                 type_error(string_t, number_t);
                                                 //  string != double
                                             
@@ -585,11 +586,11 @@ namespace ss {
                                         std::get<1>(* arrayv[k])[l * 2 + 1] = rhs;
                                         
                                     } else if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
                                         
-                                        int l = io_string(rhs);
+                                        int l = find_string(rhs);
                                         if (l == -1) {
                                             double idx = get_number(rhs);
                                             
@@ -624,11 +625,11 @@ namespace ss {
                                             
                                             double b;
                                             if (is_key(rhs)) {
-                                                if (io_array(rhs) != -1)
+                                                if (find_array(rhs) != -1)
                                                     type_error(array_t, number_t);
                                                     //  array != double
                                                 
-                                                if (io_string(rhs) != -1)
+                                                if (find_string(rhs) != -1)
                                                     type_error(string_t, number_t);
                                                     //  string != double
                                                 
@@ -648,7 +649,7 @@ namespace ss {
                                                 type_error(array_t, dictionary_t);
                                                 //  array != dictionary
                                             
-                                            rhs = std::get<1>(* stringv[l]);
+                                            rhs = stringv[l]->value();
                                             
                                             if (rhs.empty())
                                                 null_error();
@@ -687,11 +688,11 @@ namespace ss {
                                             
                                             double b;
                                             if (is_key(rhs)) {
-                                                if (io_array(rhs) != -1)
+                                                if (find_array(rhs) != -1)
                                                     type_error(array_t, number_t);
                                                     //  array != double
                                                 
-                                                if (io_string(rhs) != -1)
+                                                if (find_string(rhs) != -1)
                                                     type_error(string_t, number_t);
                                                     //  string != double
                                                 
@@ -741,11 +742,11 @@ namespace ss {
                                         
                                         double b;
                                         if (is_key(rhs)) {
-                                            if (io_array(rhs) != -1)
+                                            if (find_array(rhs) != -1)
                                                 type_error(array_t, number_t);
                                                 //  array != double
                                             
-                                            if (io_string(rhs) != -1)
+                                            if (find_string(rhs) != -1)
                                                 type_error(string_t, number_t);
                                                 //  string != double
                                             
@@ -842,11 +843,11 @@ namespace ss {
                                     
                                     double b;
                                     if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, number_t);
                                             //  array != double
                                         
-                                        if (io_string(rhs) != -1)
+                                        if (find_string(rhs) != -1)
                                             type_error(string_t, number_t);
                                             //  string != double
                                         
@@ -863,11 +864,11 @@ namespace ss {
                                     rhs = stringify(s, dst);
                                     
                                 } else if (is_key(rhs)) {
-                                    if (io_array(rhs) != -1)
+                                    if (find_array(rhs) != -1)
                                         type_error(array_t, int_t);
                                         //  array != int
                                     
-                                    int k = io_string(rhs);
+                                    int k = find_string(rhs);
                                     if (k == -1) {
                                         double idx = get_number(rhs);
                                         
@@ -900,11 +901,11 @@ namespace ss {
                                         
                                         double b;
                                         if (is_key(rhs)) {
-                                            if (io_array(rhs) != -1)
+                                            if (find_array(rhs) != -1)
                                                 type_error(array_t, number_t);
                                                 //  array != double
                                             
-                                            if (io_string(rhs) != -1)
+                                            if (find_string(rhs) != -1)
                                                 type_error(string_t, number_t);
                                                 //  string != double
                                             
@@ -926,7 +927,7 @@ namespace ss {
                                             //  array != dictionary
                                         }
                                         
-                                        rhs = std::get<1>(* stringv[k]);
+                                        rhs = stringv[k]->value();
                                         
                                         if (rhs.empty()) {
                                             delete[] dst;
@@ -971,11 +972,11 @@ namespace ss {
                                         
                                         double b;
                                         if (is_key(rhs)) {
-                                            if (io_array(rhs) != -1)
+                                            if (find_array(rhs) != -1)
                                                 type_error(array_t, number_t);
                                                 //  array != double
                                             
-                                            if (io_string(rhs) != -1)
+                                            if (find_string(rhs) != -1)
                                                 type_error(string_t, number_t);
                                                 //  string != double
                                             
@@ -1023,11 +1024,11 @@ namespace ss {
                                     
                                     double b;
                                     if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, number_t);
                                             //  array != double
                                         
-                                        if (io_string(rhs) != -1)
+                                        if (find_string(rhs) != -1)
                                             type_error(string_t, number_t);
                                             //  string != double
                                         
@@ -1057,11 +1058,11 @@ namespace ss {
                             
                             double a;
                             if (is_key(rhs)) {
-                                if (io_array(rhs) != -1)
+                                if (find_array(rhs) != -1)
                                     type_error(array_t, number_t);
                                     //  array != double
                                 
-                                if (io_string(rhs) != -1)
+                                if (find_string(rhs) != -1)
                                     type_error(string_t, number_t);
                                     //  string != double
                                 
@@ -1084,11 +1085,11 @@ namespace ss {
                                 
                                 double b;
                                 if (is_key(rhs)) {
-                                    if (io_array(rhs) != -1)
+                                    if (find_array(rhs) != -1)
                                         type_error(array_t, number_t);
                                         //  array != double
                                     
-                                    if (io_string(rhs) != -1)
+                                    if (find_string(rhs) != -1)
                                         type_error(string_t, number_t);
                                         //  string != douoble
                                     
@@ -1119,17 +1120,15 @@ namespace ss {
                         else if (is_string(rhs))
                             num = !decode_raw(rhs).empty();
                         else if (is_key(rhs)) {
-                            int k = io_array(rhs);
+                            int k = find_array(rhs);
                             
                             if (k == -1) {
-                                k = io_string(rhs);
+                                k = find_string(rhs);
                                 
                                 if (k == -1)
                                     num = get_number(rhs);
                                 else {
-                                    num = rhs.empty() ? 0 : !decode_raw(std::get<1>(* stringv[k])).empty();
-                                    
-                                    std::get<2>(* stringv[k]).second = true;
+                                    num = rhs.empty() ? 0 : !decode_raw(stringv[k]->value()).empty();
                                 }
                             } else {
                                 if (std::get<1>(* arrayv[k]).size() == 1) {
@@ -1285,9 +1284,9 @@ namespace ss {
                                     type_error(number_t, array_t);
                                     //  double != array
                                 
-                                int k = io_array(lhs);
+                                int k = find_array(lhs);
                                 if (k == -1) {
-                                    k = io_string(lhs);
+                                    k = find_string(lhs);
                                     if (k == -1) {
                                         if (is_defined(lhs))
                                             type_error(number_t, array_t);
@@ -1296,7 +1295,7 @@ namespace ss {
                                         undefined_error(lhs);
                                     }
                                     
-                                    string text = std::get<1>(* stringv[k]);
+                                    string text = stringv[k]->value();
                                     
                                     if (text.empty())
                                         null_error();
@@ -1360,7 +1359,7 @@ namespace ss {
                                     
                                     rhs = encode(rhs);
                                     
-                                    std::get<2>(* stringv[io_string(lhs)]).second = true;
+                                    stringv[find_string(lhs)]->value();
                                 } else {
                                     array<string> arr = std::get<1>(* arrayv[k]);
                                     
@@ -1420,7 +1419,7 @@ namespace ss {
                                     } else
                                         rhs = stringify(arr, (size_t)s);
                                     
-                                    std::get<2>(* arrayv[io_array(lhs)]).second = true;
+                                    std::get<2>(* arrayv[find_array(lhs)]).second = true;
                                 }
                             }
                         } else {
@@ -1501,9 +1500,9 @@ namespace ss {
                             if (!is_key(lhs))
                                 type_error(number_t, array_t);
                             
-                            int k = io_array(lhs);
+                            int k = find_array(lhs);
                             if (k == -1) {
-                                if (io_string(lhs) != -1)
+                                if (find_string(lhs) != -1)
                                     type_error(string_t, array_t);
                                     //  string != array
                                     
@@ -1516,7 +1515,7 @@ namespace ss {
                             
                             rhs = evaluate(operands.pop());
                             
-                            k = io_array(lhs);
+                            k = find_array(lhs);
                             
                             if (ss::is_array(rhs))
                                 type_error(array_t, item_t);
@@ -1614,7 +1613,7 @@ namespace ss {
                                     if (!is_int(l))
                                         type_error(number_t, int_t);
                                     
-                                    k = io_array(lhs);
+                                    k = find_array(lhs);
                                     
                                     if (l < 0 || s + l > std::get<1>(* arrayv[k]).size())
                                         range_error("start " + encode(s) + ", length " + encode(l) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
@@ -1786,11 +1785,11 @@ namespace ss {
                                 type_error(number_t, string_t);
                                 //  double != string
                             
-                            if (io_array(lhs) != -1)
+                            if (find_array(lhs) != -1)
                                 type_error(array_t, string_t);
                                 //  array != string
                             
-                            int k = io_string(lhs);
+                            int k = find_string(lhs);
                             if (k == -1) {
                                 if (is_defined(lhs))
                                     type_error(number_t, string_t);
@@ -1799,12 +1798,10 @@ namespace ss {
                                 undefined_error(lhs);
                             }
                             
-                            lhs = std::get<1>(* stringv[k]);
+                            lhs = stringv[k]->value();
                             
                             if (lhs.empty())
                                 null_error();
-                            
-                            std::get<2>(* stringv[k]).second = true;
                         }
                         
                         lhs = decode(lhs);
@@ -1878,9 +1875,9 @@ namespace ss {
                             if (!is_key(lhs))
                                 type_error(number_t, array_t);
                             
-                            int k = io_array(lhs);
+                            int k = find_array(lhs);
                             if (k == -1) {
-                                if (io_string(lhs) != -1)
+                                if (find_string(lhs) != -1)
                                     type_error(string_t, array_t);
                                 
                                 if (is_defined(lhs))
@@ -1905,7 +1902,7 @@ namespace ss {
                                 type_error(number_t, int_t);
                                 //  double != int
                             
-                            k = io_array(lhs);
+                            k = find_array(lhs);
                             
                             if (s < 0 || s > std::get<1>(* arrayv[k]).size())
                                 range_error("start " + encode(s) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
@@ -1941,7 +1938,7 @@ namespace ss {
                                     type_error(number_t, int_t);
                                     //  double != int
                                 
-                                k = io_array(lhs);
+                                k = find_array(lhs);
                                 
                                 if (e < 0 || s + e > std::get<1>(* arrayv[k]).size())
                                     range_error("start " + encode(s) + " length " + encode(e) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
@@ -2051,9 +2048,9 @@ namespace ss {
                             
                             rhs = operands.pop();
                             
-                            int k = io_array(lhs);
+                            int k = find_array(lhs);
                             if (k == -1) {
-                                k = io_string(lhs);
+                                k = find_string(lhs);
                                 if (k == -1) {
                                     double d = get_number(lhs);
                                     
@@ -2081,11 +2078,11 @@ namespace ss {
                                         //  string != double
                                     
                                     if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, number_t);
                                             //  array != double
                                         
-                                        if (io_string(rhs) != -1)
+                                        if (find_string(rhs) != -1)
                                             type_error(string_t, number_t);
                                             //  string != double
                                         
@@ -2106,12 +2103,10 @@ namespace ss {
                                     
                                     string tmp = rhs;
                                     
-                                    rhs = std::get<1>(* stringv[k]);
+                                    rhs = stringv[k]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
-                                    
-                                    std::get<2>(* stringv[k]).second = true;
                                     
                                     rhs = decode_raw(rhs);
                                     
@@ -2132,20 +2127,18 @@ namespace ss {
                                         rhs = decode(rhs);
                                     
                                     else if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, string_t);
                                             //  array != string
                                         
-                                        int j = io_string(rhs);
+                                        int j = find_string(rhs);
                                         if (j == -1)
                                             rhs = encode(get_number(rhs));
                                         else {
-                                            rhs = std::get<1>(* stringv[j]);
+                                            rhs = stringv[j]->value();
                                             
                                             if (rhs.empty())
                                                 null_error();
-                                            
-                                            std::get<2>(* stringv[j]).second = true;
                                             
                                             rhs = decode_raw(rhs);
                                         }
@@ -2221,20 +2214,18 @@ namespace ss {
                                                 rhs = decode(rhs);
                                             
                                             else if (is_key(rhs)) {
-                                                if (io_array(rhs) != -1)
+                                                if (find_array(rhs) != -1)
                                                     type_error(array_t, string_t);
                                                     //  array != string
                                                 
-                                                int q = io_string(rhs);
+                                                int q = find_string(rhs);
                                                 if (q == -1)
                                                     rhs = encode(get_number(rhs));
                                                 else {
-                                                    rhs = std::get<1>(* stringv[q]);
+                                                    rhs = stringv[q]->value();
                                                     
                                                     if (rhs.empty())
                                                         null_error();
-                                                    
-                                                    std::get<2>(* stringv[q]).second = true;
                                                     
                                                     rhs = decode_raw(rhs);
                                                 }
@@ -2257,11 +2248,11 @@ namespace ss {
                                                 //  string != double
                                                 
                                             if (is_key(rhs)) {
-                                                if (io_array(rhs) != -1)
+                                                if (find_array(rhs) != -1)
                                                     type_error(array_t, number_t);
                                                     //  array != double
                                                 
-                                                if (io_string(rhs) != -1)
+                                                if (find_string(rhs) != -1)
                                                     type_error(string_t, number_t);
                                                     //  string != double
                                                 
@@ -2277,11 +2268,11 @@ namespace ss {
                                             std::get<1>(* arrayv[k])[m * 2 + 1] = rhs;
                                         }
                                     } else if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
                                         
-                                        int m = io_string(rhs);
+                                        int m = find_string(rhs);
                                         if (m == -1) {
                                             double index = get_number(rhs);
                                             
@@ -2323,20 +2314,18 @@ namespace ss {
                                                     rhs = decode(rhs);
                                                 
                                                 else if (is_key(rhs)) {
-                                                    if (io_array(rhs) != -1)
+                                                    if (find_array(rhs) != -1)
                                                         type_error(array_t, string_t);
                                                         //  array != string
                                                     
-                                                    l = io_string(rhs);
+                                                    l = find_string(rhs);
                                                     if (l == -1)
                                                         rhs = encode(get_number(rhs));
                                                     else {
-                                                        rhs = std::get<1>(* stringv[l]);
+                                                        rhs = stringv[l]->value();
                                                         
                                                         if (rhs.empty())
                                                             null_error();
-                                                        
-                                                        std::get<2>(* stringv[l]).second = true;
                                                         
                                                         rhs = decode_raw(rhs);
                                                     }
@@ -2359,11 +2348,11 @@ namespace ss {
                                                     //  string != double
                                                     
                                                 if (is_key(rhs)) {
-                                                    if (io_array(rhs) != -1)
+                                                    if (find_array(rhs) != -1)
                                                         type_error(array_t, number_t);
                                                         //  array != double
                                                     
-                                                    if (io_string(rhs) != -1)
+                                                    if (find_string(rhs) != -1)
                                                         type_error(string_t, number_t);
                                                         //  string != double
                                                     
@@ -2383,7 +2372,7 @@ namespace ss {
                                                 type_error(string_t, int_t);
                                                 //  string != int
                                             
-                                            rhs = std::get<1>(* stringv[m]);
+                                            rhs = stringv[m]->value();
                                             
                                             if (rhs.empty())
                                                 null_error();
@@ -2426,20 +2415,18 @@ namespace ss {
                                                     rhs = decode(rhs);
                                                 
                                                 else if (is_key(rhs)) {
-                                                    if (io_array(rhs) != -1)
+                                                    if (find_array(rhs) != -1)
                                                         type_error(array_t, string_t);
                                                         //  array != string
                                                     
-                                                    size_t r = io_string(rhs);
+                                                    size_t r = find_string(rhs);
                                                     if (r == -1)
                                                         rhs = encode(get_number(rhs));
                                                     else {
-                                                        rhs = std::get<1>(* stringv[r]);
+                                                        rhs = stringv[r]->value();
                                                         
                                                         if (rhs.empty())
                                                             null_error();
-                                                        
-                                                        std::get<2>(* stringv[r]).second = true;
                                                         
                                                         rhs = decode_raw(rhs);
                                                     }
@@ -2462,11 +2449,11 @@ namespace ss {
                                                     //  string != double
                                                     
                                                 if (is_key(rhs)) {
-                                                    if (io_array(rhs) != -1)
+                                                    if (find_array(rhs) != -1)
                                                         type_error(array_t, number_t);
                                                         //  array != double
                                                     
-                                                    if (io_string(rhs) != -1)
+                                                    if (find_string(rhs) != -1)
                                                         type_error(string_t, number_t);
                                                         //  string != double
                                                     
@@ -2523,20 +2510,18 @@ namespace ss {
                                                 rhs = decode(rhs);
                                             
                                             else if (is_key(rhs)) {
-                                                if (io_array(rhs) != -1)
+                                                if (find_array(rhs) != -1)
                                                     type_error(array_t, string_t);
                                                     //  array != string
                                                 
-                                                int m = io_string(rhs);
+                                                int m = find_string(rhs);
                                                 if (m == -1)
                                                     rhs = encode(get_number(rhs));
                                                 else {
-                                                    rhs = std::get<1>(* stringv[m]);
+                                                    rhs = stringv[m]->value();
                                                     
                                                     if (rhs.empty())
                                                         null_error();
-                                                    
-                                                    std::get<2>(* stringv[m]).second = true;
                                                     
                                                     rhs = decode_raw(rhs);
                                                 }
@@ -2559,11 +2544,11 @@ namespace ss {
                                                 //  string != double
                                                 
                                             if (is_key(rhs)) {
-                                                if (io_array(rhs) != -1)
+                                                if (find_array(rhs) != -1)
                                                     type_error(array_t, number_t);
                                                     //  array != double
                                                 
-                                                if (io_string(rhs) != -1)
+                                                if (find_string(rhs) != -1)
                                                     type_error(string_t, number_t);
                                                     //  string != double
                                                 
@@ -2603,16 +2588,11 @@ namespace ss {
                                                 std::get<1>(* arrayv[k]).push(rhs);
                                                 
                                             } else if (is_key(rhs)) {
-                                                int l = io_array(rhs);
+                                                int l = find_array(rhs);
                                                 if (l == -1) {
-                                                    l = io_string(rhs);
-                                                    if (l == -1)
-                                                        rhs = encode(get_number(rhs));
-                                                    else {
-                                                        rhs = std::get<1>(* stringv[l]);
-                                                        
-                                                        std::get<2>(* stringv[l]).second = true;
-                                                    }
+                                                    l = find_string(rhs);
+                                                    
+                                                    rhs = l == -1 ? encode(get_number(rhs)) : stringv[l]->value();
                                                     
                                                     if (std::get<2>(* arrayv[k]).first)
                                                         write_error(lhs);
@@ -2743,11 +2723,11 @@ namespace ss {
                                     v[l * 2 + 1] = encode(number);
                                 }
                             } else if (is_key(rhs)) {
-                                if (io_array(rhs) != -1)
+                                if (find_array(rhs) != -1)
                                     type_error(array_t, int_t);
                                     //  array != int
                                 
-                                int l = io_string(rhs);
+                                int l = find_string(rhs);
                                 if (l == -1) {
                                     double idx = get_number(rhs);
                                     
@@ -2801,7 +2781,7 @@ namespace ss {
                                         //  array != dictionary
                                     }
                                     
-                                    rhs = std::get<1>(* stringv[l]);
+                                    rhs = stringv[l]->value();
                                     
                                     if (rhs.empty()) {
                                         delete[] v;
@@ -2929,7 +2909,7 @@ namespace ss {
                                 if (!is_key(lhs))
                                     operation_error();
                                 
-                                int k = io_array(lhs);
+                                int k = find_array(lhs);
                                 if (k == -1) {
                                     if (is_defined(lhs))
                                         operation_error();
@@ -2975,11 +2955,11 @@ namespace ss {
                                         } else
                                             std::get<1>(* arrayv[k])[l * 2 + 1] = rhs;
                                     } else if (is_key(rhs)) {
-                                        if (io_array(rhs) != -1)
+                                        if (find_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
                                         
-                                        int l = io_string(rhs);
+                                        int l = find_string(rhs);
                                         if (l == -1) {
                                             double ctr = get_number(rhs);
                                             
@@ -2997,7 +2977,7 @@ namespace ss {
                                             
                                             set_array(lhs, (int)ctr, rhs);
                                         } else {
-                                            string ctr = std::get<1>(* stringv[l]);
+                                            string ctr = stringv[l]->value();
                                             
                                             if (ctr.empty())
                                                 null_error();
@@ -3093,13 +3073,13 @@ namespace ss {
                                     } else
                                         valuev[k * 2 + 1] = rhs;
                                 } else if (is_key(rhs)) {
-                                    if (io_array(rhs) != -1) {
+                                    if (find_array(rhs) != -1) {
                                         delete[] valuev;
                                         type_error(array_t, int_t);
                                         //  array != int
                                     }
                                     
-                                    int k = io_string(rhs);
+                                    int k = find_string(rhs);
                                     if (k == -1) {
                                         double ctr = get_number(rhs);
                                         
@@ -3136,7 +3116,7 @@ namespace ss {
                                             //  array != dictionary
                                         }
                                         
-                                        rhs = std::get<1>(* stringv[k]);
+                                        rhs = stringv[k]->value();
                                         
                                         if (rhs.empty()) {
                                             delete[] valuev;
@@ -3238,31 +3218,29 @@ namespace ss {
                                         set_array(lhs, 0, rhs);
                                         
                                     } else if (is_key(rhs)) {
-                                        int l = io_array(rhs);
+                                        int l = find_array(rhs);
                                         if (l == -1) {
-                                            l = io_string(rhs);
+                                            l = find_string(rhs);
                                             if (l == -1) {
                                                 rhs = encode(get_number(rhs));
                                                 
                                                 set_array(lhs, 0, rhs);
                                             } else {
-                                                rhs = std::get<1>(* stringv[l]);
+                                                rhs = stringv[l]->value();
                                                 
                                                 set_array(lhs, 0, rhs);
-                                                
-                                                std::get<2>(* stringv[l]).second = true;
                                             }
                                         } else {
                                             set_array(lhs, 0, std::get<1>(* arrayv[l])[0]);
                                             
-                                            l = io_array(rhs);
+                                            l = find_array(rhs);
                                             
                                             std::get<2>(* arrayv[l]).second = true;
                                             
                                             for (size_t m = 1; m < std::get<1>(* arrayv[l]).size(); ++m)
                                                 set_array(lhs, m, std::get<1>(* arrayv[l])[m]);
                                             
-                                            std::get<1>(* arrayv[io_array(lhs)]).shrink_to_fit();
+                                            std::get<1>(* arrayv[find_array(lhs)]).shrink_to_fit();
                                             
                                             rhs = stringify(std::get<1>(* arrayv[l]));
                                         }
@@ -3275,11 +3253,11 @@ namespace ss {
                                     for (size_t m = 0; m < valuec; ++m)
                                         set_array(lhs, m, valuev[m]);
                                     
-                                    std::get<1>(* arrayv[io_array(lhs)]).shrink_to_fit();
+                                    std::get<1>(* arrayv[find_array(lhs)]).shrink_to_fit();
                                 }
                                 
                                 if (data[i + 1] == uov[const_pos]->opcode())
-                                    std::get<2>(* arrayv[io_array(lhs)]).first = true;
+                                    std::get<2>(* arrayv[find_array(lhs)]).first = true;
                             } else {
                                 bool handle = true;
                                 
@@ -3298,9 +3276,9 @@ namespace ss {
                                 if (handle) {
                                     handle = false;
                                     
-                                    int k = io_array(lhs);
+                                    int k = find_array(lhs);
                                     if (k == -1) {
-                                        k = io_string(lhs);
+                                        k = find_string(lhs);
                                         if (k == -1) {
                                             if (is_defined(lhs)) {
 //                                                if (data[i + 1] == uov[const_pos]->opcode())
@@ -3317,11 +3295,11 @@ namespace ss {
                                                 double ctr;
                                                 
                                                 if (is_key(rhs)) {
-                                                    if (io_array(rhs) != -1)
+                                                    if (find_array(rhs) != -1)
                                                         type_error(array_t, number_t);
                                                         //  array != double
                                                         
-                                                    if (io_string(rhs) != -1)
+                                                    if (find_string(rhs) != -1)
                                                         type_error(string_t, number_t);
                                                         //  string != double
                                                     
@@ -3346,11 +3324,11 @@ namespace ss {
                                                 rhs = encode(decode(rhs));
                                                 
                                             else if (is_key(rhs)) {
-                                                if (io_array(rhs) != -1)
+                                                if (find_array(rhs) != -1)
                                                     type_error(array_t, string_t);
                                                     //  array != string
                                                 
-                                                int k = io_string(rhs);
+                                                int k = find_string(rhs);
                                                 if (k == -1) {
                                                     if (is_defined(rhs))
                                                         type_error(number_t, string_t);
@@ -3359,9 +3337,7 @@ namespace ss {
                                                     undefined_error(rhs);
                                                 }
                                                 
-                                                rhs = std::get<1>(* stringv[k]);
-                                                
-                                                std::get<2>(* stringv[k]).second = true;
+                                                rhs = stringv[k]->value();
                                             } else
                                                 type_error(number_t, string_t);
                                                 //  double != string
@@ -3391,16 +3367,11 @@ namespace ss {
                                                     std::get<1>(* arrayv[k]).push(rhs);
                                                     
                                                 } else if (is_key(rhs)) {
-                                                    int l = io_array(rhs);
+                                                    int l = find_array(rhs);
                                                     if (l == -1) {
-                                                        l = io_string(rhs);
-                                                        if (l == -1)
-                                                            rhs = encode(get_number(rhs));
-                                                        else {
-                                                            rhs = std::get<1>(* stringv[l]);
-                                                            
-                                                            std::get<2>(* stringv[l]).second = true;
-                                                        }
+                                                        l = find_string(rhs);
+                                                        
+                                                        rhs = l == -1 ? encode(get_number(rhs)) : stringv[l]->value();
                                                         
                                                         std::get<1>(* arrayv[k]).push(rhs);
                                                     } else {
@@ -3431,7 +3402,7 @@ namespace ss {
                                         set_string(lhs, rhs);
                                         
                                         if (data[i + 1] == uov[const_pos]->opcode())
-                                            std::get<2>(* stringv[io_string(lhs)]).first = true;
+                                            stringv[find_string(lhs)]->readonly() = true;
                                     } else {
                                         string valuev[rhs.length() + 1];
                                         size_t valuec = parse(valuev, rhs);
@@ -3443,41 +3414,39 @@ namespace ss {
                                                 set_string(lhs, rhs);
                                                 
                                                 if (data[i + 1] == uov[const_pos]->opcode())
-                                                    std::get<2>(* stringv[io_string(lhs)]).first = true;
+                                                    stringv[find_string(lhs)]->readonly() = true;
                                                 
                                             } else if (is_key(rhs))  {
-                                                k = io_array(rhs);
+                                                k = find_array(rhs);
                                                 if (k == -1) {
-                                                    k = io_string(rhs);
+                                                    k = find_string(rhs);
                                                     if (k == -1) {
                                                         double ctr = get_number(rhs);
                                                         
-                                                        set_number(lhs, ctr);
-                                                        
-                                                        if (data[i + 1] == uov[const_pos]->opcode())
-                                                            set_read_only(lhs, true);
+                                                        set_number(lhs, ctr, [&](variable<double>* value) {
+                                                            if (data[i + 1] == uov[const_pos]->opcode())
+                                                                value->readonly() = true;
+                                                        });
                                                         
                                                         rhs = encode(ctr);
                                                     } else {
-                                                        rhs = std::get<1>(* stringv[k]);
-                                                        
-                                                        std::get<2>(* stringv[k]).second = true;
+                                                        rhs = stringv[k]->value();
                                                         
                                                         set_string(lhs, rhs);
                                                         
                                                         if (data[i + 1] == uov[const_pos]->opcode())
-                                                            std::get<2>(* stringv[io_string(lhs)]).first = true;
+                                                            stringv[find_string(lhs)]->readonly() = true;
                                                     }
                                                 } else {
                                                     set_array(lhs, 0, std::get<1>(* arrayv[k])[0]);
                                                     
-                                                    k = io_array(rhs);
+                                                    k = find_array(rhs);
                                                     
                                                     for (size_t l = 1; l < std::get<1>(* arrayv[k]).size(); ++l)
                                                         set_array(lhs, l, std::get<1>(* arrayv[k])[l]);
                                                     
                                                     if (data[i + 1] == uov[const_pos]->opcode()) {
-                                                        k = io_array(lhs);
+                                                        k = find_array(lhs);
                                                         std::get<1>(* arrayv[k]).shrink_to_fit();
                                                         std::get<2>(* arrayv[k]).first = true;
                                                     }
@@ -3486,10 +3455,10 @@ namespace ss {
                                             } else {
                                                 double ctr = parse_number(rhs);
                                                 
-                                                set_number(lhs, ctr);
-                                                
-                                                if (data[i + 1] == uov[const_pos]->opcode())
-                                                    set_read_only(lhs, true);
+                                                set_number(lhs, ctr, [&](variable<double>* value) {
+                                                    if (data[i + 1] == uov[const_pos]->opcode())
+                                                        value->readonly() = true;
+                                                });
                                                 
                                                 rhs = encode(ctr);
                                             }
@@ -3497,7 +3466,7 @@ namespace ss {
                                             _set_array(lhs, valuec, valuev);
                                         
                                             if (data[i + 1] == uov[const_pos]->opcode())
-                                                std::get<2>(* arrayv[io_array(lhs)]).first = true;
+                                                std::get<2>(* arrayv[find_array(lhs)]).first = true;
                                         }
                                     }
                                 }
@@ -3517,13 +3486,13 @@ namespace ss {
                                 flag = !decode_raw(lhs).empty();
                             
                             else if (is_key(lhs)) {
-                                int k = io_array(lhs);
+                                int k = find_array(lhs);
                                 if (k == -1) {
-                                    k = io_string(lhs);
+                                    k = find_string(lhs);
                                     if (k == -1)
                                         flag = get_number(lhs);
                                     else {
-                                        string str = std::get<1>(* stringv[k]);
+                                        string str = stringv[k]->value();
                                         
                                         if (str.empty())
                                             flag = 0;
@@ -3531,8 +3500,6 @@ namespace ss {
                                             str = decode_raw(str);
                                             flag = !str.empty();
                                         }
-                                        
-                                        std::get<2>(* stringv[k]).second = true;
                                     }
                                 } else {
                                     std::get<2>(* arrayv[k]).second = true;
@@ -3595,15 +3562,15 @@ namespace ss {
             }
             
             if (is_key(operands.top())) {
-                int i = io_array(operands.top());
+                int i = find_array(operands.top());
                 
                 if (i == -1) {
-                    i = io_string(operands.top());
+                    i = find_string(operands.top());
                     
                     if (i == -1)
                         get_number(operands.top());
                     else
-                        std::get<2>(* stringv[i]).second = true;
+                        stringv[i]->value();
                 } else
                     std::get<2>(* arrayv[i]).second = true;
                 
@@ -3621,17 +3588,15 @@ namespace ss {
             return encode(decode(operands.pop()));
         
         if (is_key(operands.top())) {
-            int i = io_array(operands.top());
+            int i = find_array(operands.top());
             
             if (i == -1) {
-                i = io_string(operands.top());
+                i = find_string(operands.top());
                 
                 if (i == -1)
                     return encode(get_number(operands.pop()));
                 
-                std::get<2>(* stringv[i]).second = true;
-                
-                return std::get<1>(* stringv[i]);
+                return stringv[i]->value();
             }
             
             std::get<2>(* arrayv[i]).second = true;
@@ -3676,12 +3641,13 @@ namespace ss {
             state_arrayv = _state_arrayv;
             
             //  resize strings
-            pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>** _state_stringv = new pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>*[statec * 2];
+            pair<size_t, variable<string>**>** _state_stringv = new pair<size_t, variable<string>**>*[statec * 2];
             
             for (size_t i = 0; i < statec;  ++i)
                 _state_stringv[i] = state_stringv[i];
             
             delete[] state_stringv;
+            
             state_stringv = _state_stringv;
         }
         
@@ -3710,18 +3676,12 @@ namespace ss {
     
         state_functionv[statec] = new pair<size_t, function_t**>(functionc, _functionv);
         
-        tuple<string, string, pair<bool, bool>, size_t>** _stringv = new tuple<string, string, pair<bool, bool>, size_t>*[pow2(stringc)];
+        variable<string>** _stringv = new variable<string>*[pow2(stringc)];
         
-        for (size_t i = 0; i < stringc; ++i) {
-            string key = std::get<0>(* stringv[i]);
-            string value = std::get<1>(* stringv[i]);
-            pair<bool, bool> flags = std::get<2>(* stringv[i]);
-            size_t state = std::get<3>(* stringv[i]);
-            
-            _stringv[i] = new tuple<string, string, pair<bool, bool>, size_t>(key, value, flags, state);
-        }
+        for (size_t i = 0; i < stringc; ++i)
+            _stringv[i] = new variable<string>(* stringv[i]);
         
-        state_stringv[statec] = new pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>(stringc, _stringv);
+        state_stringv[statec] = new pair<size_t, variable<string>**>(stringc, _stringv);
         
         ++statec;
         
@@ -3760,12 +3720,13 @@ namespace ss {
             state_arrayv = _state_arrayv;
             
             //  resize strings
-            pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>** _state_stringv = new pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>*[statec * 2];
+            pair<size_t, variable<string>**>** _state_stringv = new pair<size_t, variable<string>**>*[statec * 2];
             
             for (size_t i = 0; i < statec;  ++i)
                 _state_stringv[i] = state_stringv[i];
             
             delete[] state_stringv;
+            
             state_stringv = _state_stringv;
         }
         
@@ -3794,31 +3755,23 @@ namespace ss {
         state_functionv[statec] = new pair<size_t, function_t**>(functionc, _functionv);
         
         //  get_state strings
-        tuple<string, string, pair<bool, bool>, size_t>** _stringv = new tuple<string, string, pair<bool, bool>, size_t>*[pow2(stringc)];
+        variable<string>** _stringv = new variable<string>*[pow2(stringc)];
         
-        for (size_t i = 0; i < stringc; ++i) {
-            string key = std::get<0>(* stringv[i]);
-            string value = std::get<1>(* stringv[i]);
-            pair<bool, bool> flags = std::get<2>(* stringv[i]);
-            size_t state = std::get<3>(* stringv[i]);
-            
-            _stringv[i] = new tuple<string, string, pair<bool, bool>, size_t>(key, value, flags, state);
-        }
+        for (size_t i = 0; i < stringc; ++i)
+            _stringv[i] = new variable<string>(* stringv[i]);
         
-        state_stringv[statec] = new pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>(stringc, _stringv);
+        state_stringv[statec] = new pair<size_t, variable<string>**>(stringc, _stringv);
         
         ++statec;
     }
 
     string command_processor::get_string(const string key) {
-        int i = io_string(key);
+        int pos = find_string(key);
         
-        if (i == -1)
+        if (pos == -1)
             undefined_error(key);
         
-        std::get<2>(* stringv[i]).second = true;
-        
-        return std::get<1>(* stringv[i]);
+        return stringv[pos]->value();
     }
 
     void command_processor::initialize() {
@@ -3846,9 +3799,9 @@ namespace ss {
                 if (!is_key(rhs))
                     type_error(number_t, string_t);
                 
-                int i = io_array(rhs);
+                int i = find_array(rhs);
                 if (i == -1) {
-                    i = io_string(rhs);
+                    i = find_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             type_error(number_t, string_t);
@@ -3856,12 +3809,10 @@ namespace ss {
                         undefined_error(rhs);
                     }
                     
-                    if (std::get<1>(* stringv[i]).empty())
+                    if (stringv[i]->value().empty())
                         null_error();
                     
-                    std::get<2>(* stringv[i]).second = true;
-                    
-                    return std::to_string(decode_raw(std::get<1>(* stringv[i])).length());
+                    return std::to_string(decode_raw(stringv[i]->value()).length());
                 }
                 
                 std::get<2>(* arrayv[i]).second = true;
@@ -3887,9 +3838,9 @@ namespace ss {
                     type_error(string_t, array_t);
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
-                        if (io_string(rhs) != -1)
+                        if (find_string(rhs) != -1)
                             type_error(string_t, array_t);
                         
                         if (is_defined(rhs))
@@ -3928,9 +3879,9 @@ namespace ss {
                     type_error(number_t, table_t);
                     //  double != table
                 
-                int i = io_array(rhs);
+                int i = find_array(rhs);
                 if (i == -1) {
-                    if (io_string(rhs) != -1)
+                    if (find_string(rhs) != -1)
                         type_error(string_t, table_t);
                         //  string != table
                     
@@ -3996,11 +3947,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(number_t, string_t);
@@ -4009,9 +3960,7 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
-                
-                std::get<2>(* stringv[i]).second = true;
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
@@ -4040,11 +3989,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 
                 if (i == -1) {
                     if (is_defined(rhs))
@@ -4054,9 +4003,7 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
-                
-                std::get<2>(* stringv[i]).second = true;
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
@@ -4085,11 +4032,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(number_t, string_t);
@@ -4098,9 +4045,7 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
-                
-                std::get<2>(* stringv[i]).second = true;
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
@@ -4129,11 +4074,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 
                 if (i == -1) {
                     if (is_defined(rhs))
@@ -4143,9 +4088,7 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
-                
-                std::get<2>(* stringv[i]).second = true;
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
@@ -4174,11 +4117,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(number_t, string_t);
@@ -4187,9 +4130,7 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
-                
-                std::get<2>(* stringv[i]).second = true;
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
@@ -4217,11 +4158,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 
                 if (i == -1) {
                     if (is_defined(rhs))
@@ -4231,9 +4172,7 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
-                
-                std::get<2>(* stringv[i]).second = true;
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
@@ -4261,9 +4200,9 @@ namespace ss {
                 if (!is_key(rhs))
                     type_error(number_t, dictionary_t);
                 
-                int i = io_array(rhs);
+                int i = find_array(rhs);
                 if (i == -1) {
-                    if (io_string(rhs) != -1)
+                    if (find_string(rhs) != -1)
                         type_error(string_t, dictionary_t);
                         //  string != dictionary
                     
@@ -4316,9 +4255,9 @@ namespace ss {
                 if (!is_key(rhs))
                     type_error(number_t, array_t);
                 
-                int i = io_array(rhs);
+                int i = find_array(rhs);
                 if (i == -1) {
-                    if (io_string(rhs) != -1)
+                    if (find_string(rhs) != -1)
                         type_error(string_t, array_t);
                     
                     if (is_defined(rhs))
@@ -4348,11 +4287,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(number_t, string_t);
@@ -4361,12 +4300,10 @@ namespace ss {
                     undefined_error(rhs);
                 }
                
-                rhs = std::get<1>(* stringv[i]);
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
-                
-                std::get<2>(* stringv[i]).second = true;
             }
             
             rhs = decode(rhs);
@@ -4386,9 +4323,9 @@ namespace ss {
             if (!is_key(rhs))
                 operation_error();
             
-            int i = io_array(rhs);
+            int i = find_array(rhs);
             if (i == -1) {
-                if (io_string(rhs) != -1)
+                if (find_string(rhs) != -1)
                     type_error(string_t, array_t);
                 
                 if (is_defined(rhs))
@@ -4411,9 +4348,9 @@ namespace ss {
             if (!is_key(rhs))
                 operation_error();
             
-            int i = io_array(rhs);
+            int i = find_array(rhs);
             if (i == -1) {
-                if (io_string(rhs) != -1)
+                if (find_string(rhs) != -1)
                     type_error(string_t, array_t);
                 
                 if (is_defined(rhs))
@@ -4448,9 +4385,9 @@ namespace ss {
                 //  char | string
             
             if (is_key(rhs)) {
-                int i = io_array(rhs);
+                int i = find_array(rhs);
                 if (i == -1) {
-                    i = io_string(rhs);
+                    i = find_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs)) {
                             if (is_int(get_number(rhs)))
@@ -4464,9 +4401,7 @@ namespace ss {
                         return null();
                     }
                     
-                    rhs = std::get<1>(* stringv[i]);
-                    
-                    std::get<2>(* stringv[i]).second = true;
+                    rhs = stringv[i]->value();
                     
                     if (rhs.empty())
                         return encode(to_string(string_t));
@@ -4512,11 +4447,11 @@ namespace ss {
                 //  string != int
             
             if (is_key(rhs)) {
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, int_t);
                     //  array != int
                 
-                if (io_string(rhs) != -1)
+                if (find_string(rhs) != -1)
                     type_error(string_t, int_t);
                     //  string != int
                 
@@ -4561,10 +4496,10 @@ namespace ss {
             if (!is_key(rhs))
                 type_error(number_t, string_t);
                 
-            if (io_array(rhs) != -1)
+            if (find_array(rhs) != -1)
                 type_error(array_t, string_t);
                 
-            int i = io_string(rhs);
+            int i = find_string(rhs);
             if (i == -1) {
                 if (is_defined(rhs))
                     type_error(number_t, string_t);
@@ -4573,7 +4508,7 @@ namespace ss {
                 undefined_error(rhs);
             }
             
-            rhs = std::get<1>(* stringv[i]);
+            rhs = stringv[i]->value();
             
             if (rhs.empty())
                 null_error();
@@ -4604,11 +4539,11 @@ namespace ss {
                     type_error(number_t, char_t);
                     //  double != char
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, char_t);
                     //  array != char
                     
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(number_t, char_t);
@@ -4617,12 +4552,10 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
-                
-                std::get<2>(* stringv[i]).second = true;
             }
             
             rhs = decode(rhs);
@@ -4647,11 +4580,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(number_t, string_t);
@@ -4660,12 +4593,10 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
-                
-                std::get<2>(* stringv[i]).second = true;
             }
             
             rhs = tolower(decode(rhs));
@@ -4687,11 +4618,11 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     if (is_defined(rhs))
                         type_error(number_t, string_t);
@@ -4700,12 +4631,10 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty())
                     null_error();
-                
-                std::get<2>(* stringv[i]).second = true;
             }
             
             rhs = tolower(decode(rhs));
@@ -4722,10 +4651,10 @@ namespace ss {
                 return encode(to_string(string_t));
             
             if (is_key(rhs)) {
-                int pos = io_array(rhs);
+                int pos = find_array(rhs);
                 
                 if (pos == -1) {
-                    pos = io_string(rhs);
+                    pos = find_string(rhs);
                     
                     if (pos == -1) {
                         if (is_defined(rhs)) {
@@ -4737,7 +4666,7 @@ namespace ss {
                         return null();
                     }
                     
-                    std::get<2>(* stringv[pos]).second = true;
+                    stringv[pos]->value();
                     
                     return encode(to_string(string_t));
                 }
@@ -4762,9 +4691,9 @@ namespace ss {
                 if (!is_key(rhs))
                     type_error(number_t, dictionary_t);
                 
-                int i = io_array(rhs);
+                int i = find_array(rhs);
                 if (i == -1) {
-                    if (io_string(rhs) != -1)
+                    if (find_string(rhs) != -1)
                         type_error(string_t, dictionary_t);
                         //  string != dictionary
                     
@@ -4838,11 +4767,11 @@ namespace ss {
                     double num;
                     
                     if (is_key(rhs)) {
-                        if (io_array(rhs) != -1)
+                        if (find_array(rhs) != -1)
                             type_error(array_t, int_t);
                             //  array != int
                         
-                        if (io_string(rhs) != -1)
+                        if (find_string(rhs) != -1)
                             type_error(string_t, int_t);
                             //  string != int
                         
@@ -4866,9 +4795,9 @@ namespace ss {
                     type_error(number_t, string_t);
                     //  double != string
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    i = io_string(lhs);
+                    i = find_string(lhs);
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(number_t, string_t);
@@ -4877,7 +4806,7 @@ namespace ss {
                         undefined_error(lhs);
                     }
                     
-                    lhs = std::get<1>(* stringv[i]);
+                    lhs = stringv[i]->value();
                     
                     if (lhs.empty())
                         null_error();
@@ -4899,11 +4828,11 @@ namespace ss {
                     double num;
                     
                     if (is_key(rhs)) {
-                        if (io_array(rhs) != -1)
+                        if (find_array(rhs) != -1)
                             type_error(array_t, int_t);
                             //  array != int
                         
-                        if (io_string(rhs) != -1)
+                        if (find_string(rhs) != -1)
                             type_error(string_t, int_t);
                             //  string != int
                         
@@ -4917,8 +4846,6 @@ namespace ss {
                     
                     if (num < 0 || num >= lhs.length())
                         range_error("index " + encode(num) + ", count " + std::to_string(lhs.length()));
-                    
-                    std::get<2>(* stringv[i]).second = true;
                     
                     rhs = string((char[]){ lhs[(size_t)num], '\0' });
                     
@@ -4957,11 +4884,11 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, int_t);
                         //  array != int
                     
-                    int j = io_string(rhs);
+                    int j = find_string(rhs);
                     if (j == -1) {
                         double num = get_number(rhs);
                         
@@ -4977,7 +4904,7 @@ namespace ss {
                         return std::get<1>(* arrayv[i])[(size_t)num];
                     }
                     
-                    rhs = std::get<1>(* stringv[j]);
+                    rhs = stringv[j]->value();
                     
                     if (rhs.empty()) {
                         if (is_dictionary(std::get<1>(* arrayv[i])))
@@ -4989,9 +4916,6 @@ namespace ss {
                     if (!is_dictionary(std::get<1>(* arrayv[i])))
                         type_error(array_t, dictionary_t);
                         //  array != dictionary
-                    
-                    std::get<2>(* arrayv[i]).second = true;
-                    std::get<2>(* stringv[j]).second = true;
                     
                     size_t k = 0;
                     while (k < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) && std::get<1>(* arrayv[i])[k * 2] != rhs)
@@ -5047,11 +4971,11 @@ namespace ss {
             }
             
             if (is_key(rhs)) {
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, int_t);
                     //  array != int
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     double num = get_number(rhs);
                     
@@ -5065,7 +4989,7 @@ namespace ss {
                     return valuev[(size_t)num];
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty()) {
                     if (is_dictionary(valuec, valuev))
@@ -5077,8 +5001,6 @@ namespace ss {
                 if (!is_dictionary(valuec, valuev))
                     type_error(array_t, dictionary_t);
                     //  array != dictionary
-                
-                std::get<2>(* stringv[i]).second = true;
                 
                 size_t j = 0;
                 while (j < (size_t)floor(valuec / 2) && valuev[j * 2] != rhs)
@@ -5146,21 +5068,19 @@ namespace ss {
                         rhs = decode(rhs);
                     
                     else if (is_key(rhs)) {
-                        if (io_array(rhs) != -1)
+                        if (find_array(rhs) != -1)
                             type_error(array_t, string_t);
                             //  array != string
                         
-                        int i = io_string(rhs);
+                        int i = find_string(rhs);
                         
                         if (i == -1)
                             rhs = encode(get_number(rhs));
                         else {
-                            rhs = std::get<1>(* stringv[i]);
+                            rhs = stringv[i]->value();
                             
                             if (rhs.empty())
                                 null_error();
-                            
-                            std::get<2>(* stringv[i]).second = true;
                             
                             rhs = decode_raw(rhs);
                         }
@@ -5171,9 +5091,9 @@ namespace ss {
                 }
                 
                 if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             double num = get_number(lhs);
                             
@@ -5186,11 +5106,11 @@ namespace ss {
                                 //  array != double
                             
                             if (is_key(rhs)) {
-                                if (io_array(rhs) != -1)
+                                if (find_array(rhs) != -1)
                                     type_error(array_t, number_t);
                                     //  array != double
                                 
-                                if (io_string(rhs) != -1)
+                                if (find_string(rhs) != -1)
                                     type_error(string_t, number_t);
                                     //  string != double
                                 
@@ -5201,7 +5121,7 @@ namespace ss {
                             return encode(num);
                         }
                         
-                        lhs = std::get<1>(* stringv[i]);
+                        lhs = stringv[i]->value();
                         
                         if (lhs.empty())
                             null_error();
@@ -5219,24 +5139,20 @@ namespace ss {
                             rhs = decode(rhs);
                         
                         else if (is_key(rhs)) {
-                            int j = io_string(rhs);
+                            int j = find_string(rhs);
                             
                             if (j == -1)
                                 rhs = encode(get_number(rhs));
                             else {
-                                rhs = std::get<1>(* stringv[j]);
+                                rhs = stringv[j]->value();
                                 
                                 if (rhs.empty())
                                     null_error();
-                                
-                                std::get<2>(* stringv[j]).second = true;
                                 
                                 rhs = decode_raw(rhs);
                             }
                         } else
                             rhs = encode(parse_number(rhs));
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         return encode(lhs + rhs);
                     }
@@ -5247,18 +5163,12 @@ namespace ss {
                                 rhs = encode(decode(rhs));
                                 
                             else if (is_key(rhs)) {
-                                int j = io_array(rhs);
+                                int j = find_array(rhs);
                                 
                                 if (j == -1) {
-                                    j = io_string(rhs);
+                                    j = find_string(rhs);
                                     
-                                    if (j == -1)
-                                        rhs = encode(get_number(rhs));
-                                    else {
-                                        std::get<2>(* stringv[j]).second = true;
-                                        
-                                        rhs = std::get<1>(* stringv[j]);
-                                    }
+                                    rhs = j == -1 ? encode(get_number(rhs)) : stringv[j]->value();
                                 } else {
                                     std::get<2>(* arrayv[j]).second = true;
                                     
@@ -5285,11 +5195,11 @@ namespace ss {
                     //  string != double
                 
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, number_t);
                         //  array != double
                     
-                    if (io_string(rhs) != -1)
+                    if (find_string(rhs) != -1)
                         type_error(string_t, number_t);
                         //  string != double
                     
@@ -5306,18 +5216,12 @@ namespace ss {
                         rhs = encode(decode(rhs));
                         
                     else if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             
-                            if (i == -1)
-                                rhs = encode(get_number(rhs));
-                            else {
-                                rhs = std::get<1>(* stringv[i]);
-                                
-                                std::get<2>(* stringv[i]).second = true;
-                            }
+                            rhs = i == -1 ? encode(get_number(rhs)) : stringv[i]->value();
                         } else {
                             rhs = stringify(std::get<1>(* arrayv[i]));
                             
@@ -5369,9 +5273,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, array_t);
                     
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    if (io_string(lhs) != -1)
+                    if (find_string(lhs) != -1)
                         type_error(string_t, array_t);
                         //  string != array
                     
@@ -5413,13 +5317,13 @@ namespace ss {
                 
                 string result;
                 
-                result = std::get<1>(* arrayv[io_array(ctr)])[0];
+                result = std::get<1>(* arrayv[find_array(ctr)])[0];
                 
                 remove_key(ctr);
                 
                 set_state(state);
                 
-                std::get<2>(* arrayv[io_array(lhs)]).second = true;
+                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 return result;
             }
@@ -5447,7 +5351,7 @@ namespace ss {
             
             string result;
             
-            result = std::get<1>(* arrayv[io_array(ctr)])[0];
+            result = std::get<1>(* arrayv[find_array(ctr)])[0];
             
             remove_key(ctr);
             
@@ -5467,9 +5371,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, table_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    if (io_string(lhs) != -1)
+                    if (find_string(lhs) != -1)
                         type_error(string_t, table_t);
                         
                     if (is_defined(lhs))
@@ -5579,9 +5483,9 @@ namespace ss {
                 if  (!is_key(lhs))
                     type_error(number_t, table_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    if (io_string(lhs) != -1)
+                    if (find_string(lhs) != -1)
                         type_error(string_t, table_t);
                     
                     if (is_defined(lhs))
@@ -5628,10 +5532,10 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, item_t);
                     
-                    int j = io_string(rhs);
+                    int j = find_string(rhs);
                     if (j == -1) {
                         double idx = get_number(rhs);
                         
@@ -5654,13 +5558,10 @@ namespace ss {
                         return ss.str();
                     }
                     
-                    rhs = std::get<1>(* stringv[j]);
+                    rhs = stringv[j]->value();
                     
                     if (rhs.empty())
                         null_error();
-                    
-                    std::get<2>(* arrayv[i]).second = true;
-                    std::get<2>(* stringv[j]).second = true;
                     
                     size_t k = 0;
                     while (k < c && std::get<1>(* arrayv[i])[k + 1] != rhs)
@@ -5748,12 +5649,12 @@ namespace ss {
             }
             
             if (is_key(rhs)) {
-                if (io_array(rhs) != -1) {
+                if (find_array(rhs) != -1) {
                     delete[] valuev;
                     type_error(array_t, item_t);
                 }
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
 
                 if (i == -1) {
                     double idx = get_number(rhs);
@@ -5779,14 +5680,12 @@ namespace ss {
                     return ss.str();
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty()) {
                     delete[] valuev;
                     null_error();
                 }
-                
-                std::get<2>(* stringv[i]).second = true;
                 
                 size_t j = 0;
                 while (j < c && valuev[j + 1] != rhs)
@@ -5874,10 +5773,10 @@ namespace ss {
                     if (!is_key(rhs))
                         type_error(number_t, string_t);
                     
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, string_t);
                     
-                    int i = io_string(rhs);
+                    int i = find_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             type_error(number_t, string_t);
@@ -5885,14 +5784,12 @@ namespace ss {
                         undefined_error(rhs);
                     }
                     
-                    string pattern = std::get<1>(* stringv[i]);
+                    string pattern = stringv[i]->value();
                     
                     if (pattern.empty())
                         null_error();
                     
                     pattern = decode_raw(pattern);
-                    
-                    std::get<2>(* stringv[i]).second = true;
                     
                     if (text.length() < pattern.length())
                         return std::to_string(0);
@@ -5913,10 +5810,10 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, string_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             if (is_defined(lhs))
                                 type_error(number_t, string_t);
@@ -5924,7 +5821,7 @@ namespace ss {
                             undefined_error(lhs);
                         }
                         
-                        string text = std::get<1>(* stringv[i]);
+                        string text = stringv[i]->value();
                         
                         if (text.empty())
                             null_error();
@@ -5959,10 +5856,10 @@ namespace ss {
                         if (!is_key(rhs))
                             type_error(number_t, string_t);
                         
-                        if (io_array(rhs) != -1)
+                        if (find_array(rhs) != -1)
                             type_error(array_t, string_t);
                         
-                        int j = io_string(rhs);
+                        int j = find_string(rhs);
                         if (j == -1) {
                             if (is_defined(rhs))
                                 type_error(number_t, string_t);
@@ -5970,15 +5867,12 @@ namespace ss {
                             undefined_error(rhs);
                         }
                         
-                        string pattern = std::get<1>(* stringv[j]);
+                        string pattern = stringv[j]->value();
                         
                         if (pattern.empty())
                             null_error();
                         
                         pattern = decode_raw(pattern);
-                        
-                        std::get<2>(* stringv[i]).second = true;
-                        std::get<2>(* stringv[j]).second = true;
                         
                         if (text.length() < pattern.length())
                             return std::to_string(0);
@@ -6031,9 +5925,9 @@ namespace ss {
                     type_error(number_t, array_t);
                     //  double != array
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    i = io_string(lhs);
+                    i = find_string(lhs);
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(number_t, array_t);
@@ -6064,18 +5958,13 @@ namespace ss {
                     rhs = encode(decode(rhs));
                     
                 else if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, string_t);
                         //  array != string
                     
-                    int j = io_string(rhs);
-                    if (j == -1)
-                        rhs = encode(get_number(rhs));
-                    else {
-                        rhs = std::get<1>(* stringv[j]);
-                        
-                        std::get<2>(* stringv[j]).second = true;
-                    }
+                    int j = find_string(rhs);
+                    
+                    rhs = j == -1 ? encode(get_number(rhs)) : stringv[j]->value();
                 } else
                     rhs = encode(parse_number(rhs));
             }
@@ -6103,9 +5992,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, array_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    if (io_string(lhs) != -1)
+                    if (find_string(lhs) != -1)
                         type_error(string_t, array_t);
                     
                     if (is_defined(lhs))
@@ -6151,7 +6040,7 @@ namespace ss {
                 
                 set_state(state);
                 
-                std::get<2>(* arrayv[io_array(lhs)]).second = true;
+                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 string result = stringify(valuec, valuev);
                 
@@ -6211,9 +6100,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, array_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    if (io_string(lhs) != -1)
+                    if (find_string(lhs) != -1)
                         type_error(string_t, array_t);
                     
                     if (is_defined(lhs))
@@ -6255,7 +6144,7 @@ namespace ss {
                 
                 set_state(state);
                 
-                std::get<2>(* arrayv[io_array(lhs)]).second = true;
+                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 if (j == valuec) {
                     delete[] valuev;
@@ -6321,9 +6210,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, array_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    if (io_string(lhs) != -1)
+                    if (find_string(lhs) != -1)
                         type_error(string_t, array_t);
                     
                     if (is_defined(lhs))
@@ -6365,7 +6254,7 @@ namespace ss {
                 
                 set_state(state);
                 
-                std::get<2>(* arrayv[io_array(lhs)]).second = true;
+                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 if (j == valuec) {
                     delete[] valuev;
@@ -6509,9 +6398,9 @@ namespace ss {
                     }
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 size_t i = 0;
                                 while (i < text.length() - 1 && (text[i] != '{' || text[i + 1] != '}'))
@@ -6549,8 +6438,6 @@ namespace ss {
                                 return encode(string(str));
                             }
                             
-                            std::get<2>(* stringv[i]).second = true;
-                            
                             size_t j = 0;
                             while (j < text.length() - 1 && (text[j] != '{' || text[j + 1] != '}'))
                                 ++j;
@@ -6558,7 +6445,7 @@ namespace ss {
                             if (j == text.length() - 1)
                                 return encode(text);
                             
-                            string pattern = std::get<1>(* stringv[i]);
+                            string pattern = stringv[i]->value();
                             
                             pattern = pattern.empty() ? "null" : decode_raw(pattern);
                             
@@ -6754,11 +6641,11 @@ namespace ss {
                 type_error(number_t, string_t);
                 //  double != string
             
-            if (io_array(lhs) != -1)
+            if (find_array(lhs) != -1)
                 type_error(array_t, string_t);
                 //  array != string
             
-            int i = io_string(lhs);
+            int i = find_string(lhs);
             if (i == -1) {
                 if (is_defined(lhs))
                     type_error(number_t, string_t);
@@ -6767,9 +6654,7 @@ namespace ss {
                 undefined_error(lhs);
             }
             
-            std::get<2>(* stringv[i]).second = true;
-            
-            string text = std::get<1>(* stringv[i]);
+            string text = stringv[i]->value();
             
             if (text.empty())
                 null_error();
@@ -6858,9 +6743,9 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int j = io_array(rhs);
+                    int j = find_array(rhs);
                     if (j == -1) {
-                        j = io_string(rhs);
+                        j = find_string(rhs);
                         if (j == -1) {
                             size_t k = 0;
                             while (k < text.length() - 1 && (text[k] != '{' || text[k + 1] != '}'))
@@ -6898,8 +6783,6 @@ namespace ss {
                             return encode(string(str));
                         }
                         
-                        std::get<2>(* stringv[j]).second = true;
-                        
                         size_t k = 0;
                         while (k < text.length() - 1 && (text[k] != '{' || text[k + 1] != '}'))
                             ++k;
@@ -6907,7 +6790,7 @@ namespace ss {
                         if (k == text.length() - 1)
                             return encode(text);
                         
-                        string pattern = std::get<1>(* stringv[j]);
+                        string pattern = stringv[j]->value();
                         
                         pattern = pattern.empty() ? "null" : decode_raw(pattern);
                         
@@ -7139,11 +7022,11 @@ namespace ss {
                         type_error(number_t, string_t);
                         //  double != string
                     
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, string_t);
                         //  array != string
                     
-                    int i = io_string(rhs);
+                    int i = find_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             type_error(number_t, string_t);
@@ -7152,14 +7035,12 @@ namespace ss {
                         undefined_error(rhs);
                     }
                     
-                    string pattern = std::get<1>(* stringv[i]);
+                    string pattern = stringv[i]->value();
                     
                     if (pattern.empty())
                         null_error();
                     
                     pattern = decode_raw(pattern);
-                    
-                    std::get<2>(* stringv[i]).second = true;
                     
                     if (text.length() < pattern.length())
                         return std::to_string(-1);
@@ -7180,10 +7061,10 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, string_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             if (is_defined(lhs))
                                 type_error(number_t, string_t);
@@ -7191,7 +7072,7 @@ namespace ss {
                             undefined_error(lhs);
                         }
                         
-                        string text = std::get<1>(* stringv[i]);
+                        string text = stringv[i]->value();
                         
                         if (text.empty())
                             null_error();
@@ -7228,11 +7109,11 @@ namespace ss {
                             type_error(number_t, string_t);
                             //  double != string
                         
-                        if (io_array(rhs) != -1)
+                        if (find_array(rhs) != -1)
                             type_error(array_t, string_t);
                             //  array != string
                         
-                        int j = io_string(rhs);
+                        int j = find_string(rhs);
                         if (j == -1) {
                             if (is_defined(rhs))
                                 type_error(number_t, string_t);
@@ -7241,15 +7122,12 @@ namespace ss {
                             undefined_error(rhs);
                         }
                         
-                        string pattern = std::get<1>(* stringv[j]);
+                        string pattern = stringv[j]->value();
                         
                         if (pattern.empty())
                             null_error();
                         
                         pattern = decode_raw(pattern);
-                        
-                        std::get<2>(* stringv[i]).second = true;
-                        std::get<2>(* stringv[j]).second = true;
                         
                         if (text.length() < pattern.length())
                             return std::to_string(-1);
@@ -7297,9 +7175,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, array_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    i = io_string(lhs);
+                    i = find_string(lhs);
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(number_t, array_t);
@@ -7401,9 +7279,9 @@ namespace ss {
                     type_error(number_t, array_t);
                     //  double != array
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    i = io_string(lhs);
+                    i = find_string(lhs);
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(number_t, array_t);
@@ -7425,22 +7303,20 @@ namespace ss {
                     rhs = decode(rhs);
                 
                 else if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, string_t);
                         //  array != string
                     
-                    int j = io_string(rhs);
+                    int j = find_string(rhs);
                     if (j == -1)
                         rhs = encode(get_number(rhs));
                     else {
-                        rhs = std::get<1>(* stringv[j]);
+                        rhs = stringv[j]->value();
                         
                         if (rhs.empty())
                             null_error();
                         
                         rhs = decode_raw(rhs);
-                        
-                        std::get<2>(* stringv[j]).second = true;
                     }
                 } else
                     rhs = encode(parse_number(rhs));
@@ -7476,23 +7352,21 @@ namespace ss {
                 rhs = decode(rhs);
             
             else if (is_key(rhs)) {
-                int i = io_array(rhs);
+                int i = find_array(rhs);
                 if (i != -1)
                     type_error(array_t, string_t);
                     //  array != string
                 
-                i = io_string(rhs);
+                i = find_string(rhs);
                 if (i == -1)
                     rhs = encode(get_number(rhs));
                 else {
-                    rhs = std::get<1>(* stringv[i]);
+                    rhs = stringv[i]->value();
                     
                     if (rhs.empty())
                         null_error();
                     
                     rhs = decode_raw(rhs);
-                    
-                    std::get<2>(* stringv[i]).second = true;
                 }
             } else
                 rhs = encode(parse_number(rhs));
@@ -7556,11 +7430,11 @@ namespace ss {
                         type_error(number_t, string_t);
                         //  double != string
                     
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, string_t);
                         //  array != string
                     
-                    int i = io_string(rhs);
+                    int i = find_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             type_error(number_t, string_t);
@@ -7569,14 +7443,12 @@ namespace ss {
                         undefined_error(rhs);
                     }
                     
-                    string pattern = std::get<1>(* stringv[i]);
+                    string pattern = stringv[i]->value();
                     
                     if (pattern.empty())
                         null_error();
                     
                     pattern = decode_raw(pattern);
-                    
-                    std::get<2>(* stringv[i]).second = true;
                     
                     if (text.length() < pattern.length())
                         return std::to_string(-1);
@@ -7597,9 +7469,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, string_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    i = io_string(lhs);
+                    i = find_string(lhs);
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(number_t, string_t);
@@ -7607,12 +7479,10 @@ namespace ss {
                         undefined_error(lhs);
                     }
                     
-                    string text = std::get<1>(* stringv[i]);
+                    string text = stringv[i]->value();
                     
                     if (text.empty())
                         null_error();
-                    
-                    std::get<2>(* stringv[i]).second = true;
                     
                     text = decode_raw(text);
                     
@@ -7646,11 +7516,11 @@ namespace ss {
                         type_error(number_t, string_t);
                         //  double != string
                     
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, string_t);
                         //  array != string
                     
-                    int j = io_string(rhs);
+                    int j = find_string(rhs);
                     if (j == -1) {
                         if (is_defined(rhs))
                             type_error(number_t, string_t);
@@ -7659,14 +7529,12 @@ namespace ss {
                         undefined_error(rhs);
                     }
                     
-                    string pattern = std::get<1>(* stringv[j]);
+                    string pattern = stringv[j]->value();
                     
                     if (pattern.empty())
                         null_error();
                     
                     pattern = decode_raw(pattern);
-                    
-                    std::get<2>(* stringv[j]).second = true;
                     
                     if (text.length() < pattern.length())
                         return std::to_string(-1);
@@ -7713,9 +7581,9 @@ namespace ss {
                 if (!is_key(lhs))
                     type_error(number_t, array_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    i = io_string(lhs);
+                    i = find_string(lhs);
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(number_t, array_t);
@@ -7758,7 +7626,7 @@ namespace ss {
                 
                 set_state(state);
                 
-                std::get<2>(* arrayv[io_array(lhs)]).second = true;
+                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 string result = stringify(valuec, valuev);
                 
@@ -7807,9 +7675,9 @@ namespace ss {
             if (!is_key(lhs))
                 operation_error();
             
-            int i = io_array(lhs);
+            int i = find_array(lhs);
             if (i == -1) {
-                i = io_string(lhs);
+                i = find_string(lhs);
                 if (i == -1) {
                     if (is_defined(lhs))
                         type_error(number_t, array_t);
@@ -7831,11 +7699,11 @@ namespace ss {
             double num;
             
             if (is_key(rhs)) {
-                if (io_array(rhs) != -1)
+                if (find_array(rhs) != -1)
                     type_error(array_t, int_t);
                     //  array != int
                 
-                if (io_string(rhs) != -1)
+                if (find_string(rhs) != -1)
                     type_error(string_t, int_t);
                     //  string != int
                 
@@ -7874,9 +7742,9 @@ namespace ss {
                 if  (!is_key(lhs))
                     type_error(number_t, table_t);
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    if (io_string(lhs) != -1)
+                    if (find_string(lhs) != -1)
                         type_error(string_t, table_t);
                     
                     if (is_defined(lhs))
@@ -7922,10 +7790,10 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, item_t);
                     
-                    int j = io_string(rhs);
+                    int j = find_string(rhs);
                     if (j == -1) {
                         double idx = get_number(rhs);
                         
@@ -7948,13 +7816,10 @@ namespace ss {
                         return ss.str();
                     }
                     
-                    rhs = std::get<1>(* stringv[j]);
+                    rhs = stringv[j]->value();
                     
                     if (rhs.empty())
                         null_error();
-                    
-                    std::get<2>(* arrayv[i]).second = true;
-                    std::get<2>(* stringv[j]).second = true;
                     
                     size_t k = 0;
                     while (k < (std::get<1>(* arrayv[i]).size() - 1) / c && std::get<1>(* arrayv[i])[k * c + 1] != rhs)
@@ -8040,12 +7905,12 @@ namespace ss {
             }
             
             if (is_key(rhs)) {
-                if (io_array(rhs) != -1) {
+                if (find_array(rhs) != -1) {
                     delete[] valuev;
                     type_error(array_t, item_t);
                 }
                 
-                int i = io_string(rhs);
+                int i = find_string(rhs);
                 if (i == -1) {
                     double idx = get_number(rhs);
                     
@@ -8070,14 +7935,12 @@ namespace ss {
                     return ss.str();
                 }
                 
-                rhs = std::get<1>(* stringv[i]);
+                rhs = stringv[i]->value();
                 
                 if (rhs.empty()) {
                     delete[] valuev;
                     null_error();
                 }
-                
-                std::get<2>(* stringv[i]).second = true;
                 
                 size_t j = 0;
                 while (j < (valuec - 1) / c && valuev[j * c + 1] != rhs)
@@ -8136,9 +7999,9 @@ namespace ss {
                 if (!is_key(lhs))
                     operation_error();
                 
-                int i = io_array(lhs);
+                int i = find_array(lhs);
                 if (i == -1) {
-                    i = io_string(lhs);
+                    i = find_string(lhs);
                     if (i == -1) {
                         if (is_defined(lhs))
                             type_error(number_t, array_t);
@@ -8159,11 +8022,11 @@ namespace ss {
                 
                 double num;
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         type_error(array_t, int_t);
                         //  array != int
                     
-                    if (io_string(rhs) != -1)
+                    if (find_string(rhs) != -1)
                         type_error(string_t, int_t);
                         //  string != int
                     
@@ -8202,13 +8065,13 @@ namespace ss {
             
             double num;
             if (is_key(rhs)) {
-                if (io_array(rhs) != -1) {
+                if (find_array(rhs) != -1) {
                     delete[] valuev;
                     type_error(array_t, int_t);
                     //  array != int
                 }
                 
-                if (io_string(rhs) != -1) {
+                if (find_string(rhs) != -1) {
                     delete[] valuev;
                     type_error(string_t, int_t);
                     //  string != int
@@ -8300,9 +8163,9 @@ namespace ss {
                     }
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 lhs = decode(lhs);
                                 rhs = encode(get_number(rhs));
@@ -8310,12 +8173,10 @@ namespace ss {
                                 return std::to_string(lhs <= rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[i]);
+                            rhs = stringv[i]->value();
                             
                             if (rhs.empty())
                                 null_error();
-                            
-                            std::get<2>(* stringv[i]).second = true;
                             
                             lhs = decode(lhs);
                             rhs = decode_raw(rhs);
@@ -8342,9 +8203,9 @@ namespace ss {
                 }
                 
                 if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             if (ss::is_array(rhs))
                                 return std::to_string(1);
@@ -8357,9 +8218,9 @@ namespace ss {
                             }
                             
                             if (is_key(rhs)) {
-                                int j = io_array(rhs);
+                                int j = find_array(rhs);
                                 if (j == -1) {
-                                    j = io_string(rhs);
+                                    j = find_string(rhs);
                                     if (j == -1) {
                                         double a = get_number(lhs);
                                         double b = get_number(rhs);
@@ -8367,12 +8228,10 @@ namespace ss {
                                         return std::to_string(a <= b);
                                     }
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
-                                    
-                                    std::get<2>(* stringv[j]).second = true;
                                     
                                     lhs = encode(get_number(lhs));
                                     rhs = decode_raw(rhs);
@@ -8410,12 +8269,10 @@ namespace ss {
                             return std::to_string(a <= b);
                         }
                         
-                        lhs = std::get<1>(* stringv[i]);
+                        lhs = stringv[i]->value();
                         
                         if (lhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = decode_raw(lhs);
                         
@@ -8429,21 +8286,19 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     rhs = encode(get_number(rhs));
                                     
                                     return std::to_string(lhs <= rhs);
                                 }
                                 
-                                rhs = std::get<1>(* stringv[j]);
+                                rhs = stringv[j]->value();
                                 
                                 if (rhs.empty())
                                     null_error();
-                                
-                                std::get<2>(* stringv[j]).second = true;
                                 
                                 rhs = decode_raw(rhs);
                                 
@@ -8496,9 +8351,9 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     if (std::get<1>(* arrayv[i]).size() == 1) {
                                         lhs = std::get<1>(* arrayv[i])[0];
@@ -8515,15 +8370,13 @@ namespace ss {
                                     return std::to_string(0);
                                 }
                                 
-                                std::get<2>(* stringv[j]).second = true;
-                                
                                 if (std::get<1>(* arrayv[i]).size() == 1) {
                                     lhs = std::get<1>(* arrayv[i])[0];
                                     
                                     if (lhs.empty())
                                         null_error();
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -8666,9 +8519,9 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             double a = parse_number(lhs);
                             double b = get_number(rhs);
@@ -8676,12 +8529,10 @@ namespace ss {
                             return std::to_string(a <= b);
                         }
                         
-                        rhs = std::get<1>(* stringv[i]);
+                        rhs = stringv[i]->value();
                         
                         if (rhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = encode(parse_number(lhs));
                         rhs = decode_raw(rhs);
@@ -8805,9 +8656,9 @@ namespace ss {
                     }
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 lhs = decode(lhs);
                                 rhs = encode(get_number(rhs));
@@ -8815,13 +8666,11 @@ namespace ss {
                                 return std::to_string(lhs >= rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[i]);
+                            rhs = stringv[i]->value();
                             
                             if (rhs.empty())
                                 null_error();
-                            
-                            std::get<2>(* stringv[i]).second = true;
-                            
+                                                        
                             lhs = decode(lhs);
                             rhs = decode_raw(rhs);
                             
@@ -8847,9 +8696,9 @@ namespace ss {
                 }
                 
                 if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             if (ss::is_array(rhs))
                                 return std::to_string(0);
@@ -8862,9 +8711,9 @@ namespace ss {
                             }
                             
                             if (is_key(rhs)) {
-                                int j = io_array(rhs);
+                                int j = find_array(rhs);
                                 if (j == -1) {
-                                    j = io_string(rhs);
+                                    j = find_string(rhs);
                                     if (j == -1) {
                                         double a = get_number(lhs);
                                         double b = get_number(rhs);
@@ -8872,12 +8721,10 @@ namespace ss {
                                         return std::to_string(a >= b);
                                     }
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
-                                    
-                                    std::get<2>(* stringv[j]).second = true;
                                     
                                     lhs = encode(get_number(lhs));
                                     rhs = decode_raw(rhs);
@@ -8915,12 +8762,10 @@ namespace ss {
                             return std::to_string(a >= b);
                         }
                         
-                        lhs = std::get<1>(* stringv[i]);
+                        lhs = stringv[i]->value();
                         
                         if (lhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = decode_raw(lhs);
                         
@@ -8934,21 +8779,19 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     rhs = encode(get_number(rhs));
                                     
                                     return std::to_string(lhs >= rhs);
                                 }
                                 
-                                rhs = std::get<1>(* stringv[j]);
+                                rhs = stringv[j]->value();
                                 
                                 if (rhs.empty())
                                     null_error();
-                                
-                                std::get<2>(* stringv[j]).second = true;
                                 
                                 rhs = decode_raw(rhs);
                                 
@@ -9001,9 +8844,9 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     if (std::get<1>(* arrayv[i]).size() == 1) {
                                         lhs = std::get<1>(* arrayv[i])[0];
@@ -9021,15 +8864,13 @@ namespace ss {
                                     return std::to_string(1);
                                 }
                                 
-                                std::get<2>(* stringv[j]).second = true;
-                                
                                 if (std::get<1>(* arrayv[i]).size() == 1) {
                                     lhs = std::get<1>(* arrayv[i])[0];
                                     
                                     if (lhs.empty())
                                         null_error();
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -9172,9 +9013,9 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             double a = parse_number(lhs);
                             double b = get_number(rhs);
@@ -9182,12 +9023,10 @@ namespace ss {
                             return std::to_string(a >= b);
                         }
                         
-                        rhs = std::get<1>(* stringv[i]);
+                        rhs = stringv[i]->value();
                         
                         if (rhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = encode(parse_number(lhs));
                         rhs = decode_raw(rhs);
@@ -9311,9 +9150,9 @@ namespace ss {
                     }
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 lhs = decode(lhs);
                                 rhs = encode(get_number(rhs));
@@ -9321,12 +9160,10 @@ namespace ss {
                                 return std::to_string(lhs < rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[i]);
+                            rhs = stringv[i]->value();
                             
                             if (rhs.empty())
                                 null_error();
-                            
-                            std::get<2>(* stringv[i]).second = true;
                             
                             lhs = decode(lhs);
                             rhs = decode_raw(rhs);
@@ -9353,9 +9190,9 @@ namespace ss {
                 }
                 
                 if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             if (ss::is_array(rhs))
                                 return std::to_string(1);
@@ -9368,9 +9205,9 @@ namespace ss {
                             }
                             
                             if (is_key(rhs)) {
-                                int j = io_array(rhs);
+                                int j = find_array(rhs);
                                 if (j == -1) {
-                                    j = io_string(rhs);
+                                    j = find_string(rhs);
                                     if (j == -1) {
                                         double a = get_number(lhs);
                                         double b = get_number(rhs);
@@ -9378,12 +9215,10 @@ namespace ss {
                                         return std::to_string(a < b);
                                     }
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
-                                    
-                                    std::get<2>(* stringv[j]).second = true;
                                     
                                     lhs = encode(get_number(lhs));
                                     rhs = decode_raw(rhs);
@@ -9421,12 +9256,10 @@ namespace ss {
                             return std::to_string(a < b);
                         }
                         
-                        lhs = std::get<1>(* stringv[i]);
+                        lhs = stringv[i]->value();
                         
                         if (lhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = decode_raw(lhs);
                         
@@ -9440,21 +9273,19 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     rhs = encode(get_number(rhs));
                                     
                                     return std::to_string(lhs < rhs);
                                 }
                                 
-                                rhs = std::get<1>(* stringv[j]);
+                                rhs = stringv[j]->value();
                                 
                                 if (rhs.empty())
                                     null_error();
-                                
-                                std::get<2>(* stringv[j]).second = true;
                                 
                                 rhs = decode_raw(rhs);
                                 
@@ -9507,9 +9338,9 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     if (std::get<1>(* arrayv[i]).size() == 1) {
                                         lhs = std::get<1>(* arrayv[i])[0];
@@ -9527,15 +9358,13 @@ namespace ss {
                                     return std::to_string(0);
                                 }
                                 
-                                std::get<2>(* stringv[j]).second = true;
-                                
                                 if (std::get<1>(* arrayv[i]).size() == 1) {
                                     lhs = std::get<1>(* arrayv[i])[0];
                                     
                                     if (lhs.empty())
                                         null_error();
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -9678,9 +9507,9 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             double a = parse_number(lhs);
                             double b = get_number(rhs);
@@ -9688,12 +9517,10 @@ namespace ss {
                             return std::to_string(a < b);
                         }
                         
-                        rhs = std::get<1>(* stringv[i]);
+                        rhs = stringv[i]->value();
                         
                         if (rhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = encode(parse_number(lhs));
                         rhs = decode_raw(rhs);
@@ -9816,9 +9643,9 @@ namespace ss {
                     }
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 lhs = decode(lhs);
                                 rhs = encode(get_number(rhs));
@@ -9826,12 +9653,10 @@ namespace ss {
                                 return std::to_string(lhs > rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[i]);
+                            rhs = stringv[i]->value();
                             
                             if (rhs.empty())
                                 null_error();
-                            
-                            std::get<2>(* stringv[i]).second = true;
                             
                             lhs = decode(lhs);
                             rhs = decode_raw(rhs);
@@ -9858,9 +9683,9 @@ namespace ss {
                 }
                 
                 if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             if (ss::is_array(rhs))
                                 return std::to_string(0);
@@ -9873,9 +9698,9 @@ namespace ss {
                             }
                             
                             if (is_key(rhs)) {
-                                int j = io_array(rhs);
+                                int j = find_array(rhs);
                                 if (j == -1) {
-                                    j = io_string(rhs);
+                                    j = find_string(rhs);
                                     if (j == -1) {
                                         double a = get_number(lhs);
                                         double b = get_number(rhs);
@@ -9883,12 +9708,10 @@ namespace ss {
                                         return std::to_string(a > b);
                                     }
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
-                                    
-                                    std::get<2>(* stringv[j]).second = true;
                                     
                                     lhs = encode(get_number(lhs));
                                     rhs = decode_raw(rhs);
@@ -9926,12 +9749,10 @@ namespace ss {
                             return std::to_string(a > b);
                         }
                         
-                        lhs = std::get<1>(* stringv[i]);
+                        lhs = stringv[i]->value();
                         
                         if (lhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = decode_raw(lhs);
                         
@@ -9945,21 +9766,19 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     rhs = encode(get_number(rhs));
                                     
                                     return std::to_string(lhs > rhs);
                                 }
                                 
-                                rhs = std::get<1>(* stringv[j]);
+                                rhs = stringv[j]->value();
                                 
                                 if (rhs.empty())
                                     null_error();
-                                
-                                std::get<2>(* stringv[j]).second = true;
                                 
                                 rhs = decode_raw(rhs);
                                 
@@ -10012,9 +9831,9 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     if (std::get<1>(* arrayv[i]).size() == 1) {
                                         lhs = std::get<1>(* arrayv[i])[0];
@@ -10032,15 +9851,13 @@ namespace ss {
                                     return std::to_string(1);
                                 }
                                 
-                                std::get<2>(* stringv[j]).second = true;
-                                
                                 if (std::get<1>(* arrayv[i]).size() == 1) {
                                     lhs = std::get<1>(* arrayv[i])[0];
                                     
                                     if (lhs.empty())
                                         null_error();
                                     
-                                    rhs = std::get<1>(* stringv[j]);
+                                    rhs = stringv[j]->value();
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -10177,9 +9994,9 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             double a = parse_number(lhs);
                             double b = get_number(rhs);
@@ -10187,12 +10004,10 @@ namespace ss {
                             return std::to_string(a > b);
                         }
                         
-                        rhs = std::get<1>(* stringv[i]);
+                        rhs = stringv[i]->value();
                         
                         if (rhs.empty())
                             null_error();
-                        
-                        std::get<2>(* stringv[i]).second = true;
                         
                         lhs = encode(parse_number(lhs));
                         rhs = decode_raw(rhs);
@@ -10306,9 +10121,9 @@ namespace ss {
                     //  null === (string)
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             if (is_defined(rhs)) {
                                 logic::consume(rhs);
@@ -10320,9 +10135,7 @@ namespace ss {
                             undefined_error(rhs);
                         }
                         
-                        rhs = std::get<1>(* stringv[i]);
-                        
-                        std::get<2>(* stringv[i]).second = true;
+                        rhs = stringv[i]->value();
                         
                         return std::to_string(rhs.empty());
                         //  null === string
@@ -10366,9 +10179,9 @@ namespace ss {
                     }
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 if (is_defined(rhs)) {
                                     logic::consume(rhs);
@@ -10379,9 +10192,7 @@ namespace ss {
                                 undefined_error(rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[i]);
-                            
-                            std::get<2>(* stringv[i]).second = true;
+                            rhs = stringv[i]->value();
                             
                             if (rhs.empty())
                                 return std::to_string(0);
@@ -10403,9 +10214,9 @@ namespace ss {
                 }
                 
                 if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             double d = get_number(lhs);
                             
@@ -10420,16 +10231,17 @@ namespace ss {
                                 //  double === (string)
                             
                             if (is_key(rhs)) {
-                                i = io_array(rhs);
+                                i = find_array(rhs);
                                 if (i != -1) {
                                     std::get<2>(* arrayv[i]).second = true;
                                     return std::to_string(0);
                                     //  double === array
                                 }
                                 
-                                i = io_string(rhs);
+                                i = find_string(rhs);
                                 if (i != -1) {
-                                    std::get<2>(* stringv[i]).second = true;
+                                    stringv[i]->value();
+                                    
                                     return std::to_string(0);
                                     //  double === string
                                 }
@@ -10451,9 +10263,7 @@ namespace ss {
                             //  double === (double)
                         }
                         
-                        lhs = std::get<1>(* stringv[i]);
-                        
-                        std::get<2>(* stringv[i]).second = true;
+                        lhs = stringv[i]->value();
                         
                         if (lhs.empty()) {
                             if (rhs.empty())
@@ -10470,12 +10280,12 @@ namespace ss {
                                 //  null === (string)
                             
                             if (is_key(rhs)) {
-                                if (io_array(rhs) != -1) {
+                                if (find_array(rhs) != -1) {
                                     return std::to_string(0);
                                     //  null === array
                                 }
                                 
-                                int i = io_string(rhs);
+                                int i = find_string(rhs);
                                 if (i == -1) {
                                     if (is_defined(rhs))
                                         return std::to_string(0);
@@ -10484,9 +10294,7 @@ namespace ss {
                                     undefined_error(rhs);
                                 }
                                 
-                                rhs = std::get<1>(* stringv[i]);
-                                
-                                std::get<2>(* stringv[i]).second = true;
+                                rhs = stringv[i]->value();
                                 
                                 return std::to_string(rhs.empty() ? 1 : 0);
                                 //  null === string
@@ -10509,14 +10317,14 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j != -1) {
                                 std::get<2>(* arrayv[j]).second = true;
                                 return std::to_string(0);
                                 //  str === array
                             }
                             
-                            j = io_string(rhs);
+                            j = find_string(rhs);
                             if (j == -1) {
                                 if (is_defined(rhs))
                                     return std::to_string(0);
@@ -10525,9 +10333,7 @@ namespace ss {
                                 undefined_error(rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[j]);
-                            
-                            std::get<2>(* stringv[j]).second = true;
+                            rhs = stringv[j]->value();
                             
                             if (rhs.empty())
                                 return std::to_string(0);
@@ -10560,9 +10366,9 @@ namespace ss {
                             //  array === (str)
                         
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     if (is_defined(rhs))
                                         return std::to_string(0);
@@ -10571,7 +10377,7 @@ namespace ss {
                                     undefined_error(rhs);
                                 }
                                 
-                                std::get<2>(* stringv[j]).second = true;
+                                stringv[j]->value();
                                 
                                 return std::to_string(0);
                                 //  array === string
@@ -10627,7 +10433,7 @@ namespace ss {
                     //  double === (string)
                 
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1 || io_string(rhs) != -1)
+                    if (find_array(rhs) != -1 || find_string(rhs) != -1)
                         return std::to_string(0);
                         //  double === (array)
                         //  double === (string)
@@ -10666,11 +10472,11 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
                         delete[] v;
                         
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             if (is_defined(rhs))
                                 return std::to_string(0);
@@ -10741,11 +10547,11 @@ namespace ss {
                     //  null !== (string)
                 
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1)
+                    if (find_array(rhs) != -1)
                         return std::to_string(1);
                         //  null !== array
                     
-                    int i = io_string(rhs);
+                    int i = find_string(rhs);
                     if (i == -1) {
                         if (is_defined(rhs))
                             return std::to_string(1);
@@ -10754,7 +10560,7 @@ namespace ss {
                         undefined_error(rhs);
                     }
                     
-                    rhs = std::get<1>(* stringv[i]);
+                    rhs = stringv[i]->value();
                     
                     return std::to_string(rhs.empty() ? 0 : 1);
                     //  null !== str
@@ -10792,11 +10598,11 @@ namespace ss {
                     }
                     
                     if (is_key(rhs)) {
-                        if (io_array(rhs) != -1)
+                        if (find_array(rhs) != -1)
                             return std::to_string(1);
                             //  (string) !== array
                         
-                        int i = io_string(rhs);
+                        int i = find_string(rhs);
                         if (i == -1) {
                             if (is_defined(rhs))
                                 return std::to_string(1);
@@ -10805,9 +10611,7 @@ namespace ss {
                             undefined_error(rhs);
                         }
                         
-                        rhs = std::get<1>(* stringv[i]);
-                        
-                        std::get<2>(* stringv[i]).second = true;
+                        rhs = stringv[i]->value();
                         
                         if (rhs.empty())
                             return std::to_string(1);
@@ -10824,9 +10628,9 @@ namespace ss {
                 }
                 
                 if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1) {
                             double d = get_number(lhs);
                             
@@ -10841,7 +10645,7 @@ namespace ss {
                                 //  double !== (string)
                             
                             if (is_key(rhs)) {
-                                if (io_array(rhs) != -1 || io_string(rhs) != -1)
+                                if (find_array(rhs) != -1 || find_string(rhs) != -1)
                                     return std::to_string(1);
                                     //  double !== array
                                     //  double !== string
@@ -10864,9 +10668,7 @@ namespace ss {
                             //  double !== (double)
                         }
                         
-                        lhs = std::get<1>(* stringv[i]);
-                        
-                        std::get<2>(* stringv[i]).second = true;
+                        lhs = stringv[i]->value();
                         
                         if (lhs.empty()) {
                             if (rhs.empty())
@@ -10882,11 +10684,11 @@ namespace ss {
                                 //  null !== (array)
                             
                             if (is_key(rhs)) {
-                                if (io_array(rhs) != -1)
+                                if (find_array(rhs) != -1)
                                     return std::to_string(1);
                                     //  null !== array
                                 
-                                int i = io_string(rhs);
+                                int i = find_string(rhs);
                                 if (i == -1) {
                                     if (is_defined(rhs))
                                         return std::to_string(1);
@@ -10895,7 +10697,7 @@ namespace ss {
                                     undefined_error(rhs);
                                 }
                                 
-                                rhs = std::get<1>(* stringv[i]);
+                                rhs = stringv[i]->value();
                                 
                                 return std::to_string(rhs.empty() ? 0 : 1);
                                 //  null !== string
@@ -10919,11 +10721,11 @@ namespace ss {
                         }
                         
                         if (is_key(rhs)) {
-                            if (io_array(rhs) != -1)
+                            if (find_array(rhs) != -1)
                                 return std::to_string(1);
                                 //  str !== array
                             
-                            int j = io_string(rhs);
+                            int j = find_string(rhs);
                             if (j == -1) {
                                 if (is_defined(rhs))
                                     return std::to_string(1);
@@ -10932,9 +10734,7 @@ namespace ss {
                                 undefined_error(rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[j]);
-                            
-                            std::get<2>(* stringv[j]).second = true;
+                            rhs = stringv[j]->value();
                             
                             if (rhs.empty())
                                 return std::to_string(1);
@@ -10965,9 +10765,9 @@ namespace ss {
                             //  array !== (string)
                             
                         if (is_key(rhs)) {
-                            int j = io_array(rhs);
+                            int j = find_array(rhs);
                             if (j == -1) {
-                                j = io_string(rhs);
+                                j = find_string(rhs);
                                 if (j == -1) {
                                     if (is_defined(rhs))
                                         return std::to_string(1);
@@ -11028,7 +10828,7 @@ namespace ss {
                     //  double !== (string)
                 
                 if (is_key(rhs)) {
-                    if (io_array(rhs) != -1 || io_string(rhs) != -1)
+                    if (find_array(rhs) != -1 || find_string(rhs) != -1)
                         return std::to_string(1);
                         // double !== array
                         // double !== string
@@ -11066,11 +10866,11 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
                         delete[] v;
                         
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             if (is_defined(rhs))
                                 return std::to_string(1);
@@ -11139,9 +10939,9 @@ namespace ss {
                         //  null == (string)
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 if (is_defined(rhs))
                                     return std::to_string(0);
@@ -11150,7 +10950,7 @@ namespace ss {
                                 undefined_error(rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[i]);
+                            rhs = stringv[i]->value();
                             
                             return std::to_string(rhs.empty() ? 1 : 0);
                             //  null == string
@@ -11180,13 +10980,13 @@ namespace ss {
                     lhs = decode(lhs);
                 
                 else if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1)
                             lhs = encode(get_number(lhs));
                         else {
-                            lhs = std::get<1>(* stringv[i]);
+                            lhs = stringv[i]->value();
                             
                             if (lhs.empty()) {
                                 if (rhs.empty())
@@ -11203,9 +11003,9 @@ namespace ss {
                                         //  null == (string)
                                     
                                     if (is_key(rhs)) {
-                                        int j = io_array(rhs);
+                                        int j = find_array(rhs);
                                         if (j == -1) {
-                                            j = io_string(rhs);
+                                            j = find_string(rhs);
                                             if (j == -1) {
                                                 if (is_defined(rhs))
                                                     return std::to_string(0);
@@ -11214,7 +11014,7 @@ namespace ss {
                                                 undefined_error(rhs);
                                             }
                                             
-                                            rhs = std::get<1>(* stringv[j]);
+                                            rhs = stringv[j]->value();
                                             
                                             return std::to_string(rhs.empty() ? 1 : 0);
                                             //  null == string
@@ -11269,9 +11069,9 @@ namespace ss {
                             }
                             
                             if (is_key(rhs)) {
-                                int j = io_array(rhs);
+                                int j = find_array(rhs);
                                 if (j == -1) {
-                                    j = io_string(rhs);
+                                    j = find_string(rhs);
                                     if (j == -1) {
                                         if (std::get<1>(* arrayv[i]).size() == 1) {
                                             lhs = std::get<1>(* arrayv[i])[0];
@@ -11296,7 +11096,7 @@ namespace ss {
                                     
                                     if (std::get<1>(* arrayv[i]).size() == 1) {
                                         lhs = std::get<1>(* arrayv[i])[0];
-                                        rhs = std::get<1>(* stringv[j]);
+                                        rhs = stringv[j]->value();
                                         
                                         return std::to_string(lhs == rhs ? 1 : 0);
                                         //  array == string
@@ -11368,13 +11168,13 @@ namespace ss {
                         rhs = decode(rhs);
                     
                     else if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1)
                                 rhs = encode(get_number(rhs));
                             else {
-                                rhs = std::get<1>(* stringv[i]);
+                                rhs = stringv[i]->value();
                                 
                                 if (rhs.empty())
                                     return std::to_string(0);
@@ -11423,11 +11223,11 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
                         delete[] v;
                         
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             if (is_defined(rhs))
                                 return std::to_string(0);
@@ -11499,9 +11299,9 @@ namespace ss {
                         //  null != (str)
                     
                     if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1) {
                                 if (is_defined(rhs))
                                     return std::to_string(1);
@@ -11510,7 +11310,7 @@ namespace ss {
                                 undefined_error(rhs);
                             }
                             
-                            rhs = std::get<1>(* stringv[i]);
+                            rhs = stringv[i]->value();
                             
                             return std::to_string(rhs.empty() ? 0 : 1);
                             //  null != string
@@ -11540,13 +11340,13 @@ namespace ss {
                     lhs = decode(lhs);
                 
                 else if (is_key(lhs)) {
-                    int i = io_array(lhs);
+                    int i = find_array(lhs);
                     if (i == -1) {
-                        i = io_string(lhs);
+                        i = find_string(lhs);
                         if (i == -1)
                             lhs = encode(get_number(lhs));
                         else {
-                            lhs = std::get<1>(* stringv[i]);
+                            lhs = stringv[i]->value();
                             
                             if (lhs.empty()) {
                                 if (rhs.empty())
@@ -11563,9 +11363,9 @@ namespace ss {
                                         //  null != (string)
                                     
                                     if (is_key(rhs)) {
-                                        int j = io_array(rhs);
+                                        int j = find_array(rhs);
                                         if (j == -1) {
-                                            j = io_string(rhs);
+                                            j = find_string(rhs);
                                             if (j == -1) {
                                                 if (is_defined(rhs))
                                                     return std::to_string(1);
@@ -11574,7 +11374,7 @@ namespace ss {
                                                 undefined_error(rhs);
                                             }
                                             
-                                            rhs = std::get<1>(* stringv[j]);
+                                            rhs = stringv[j]->value();
                                             
                                             return std::to_string(rhs.empty() ? 0 : 1);
                                             //  null != string
@@ -11629,9 +11429,9 @@ namespace ss {
                             }
                             
                             if (is_key(rhs)) {
-                                int j = io_array(rhs);
+                                int j = find_array(rhs);
                                 if (j == -1) {
-                                    j = io_string(rhs);
+                                    j = find_string(rhs);
                                     if (j == -1) {
                                         if (std::get<1>(* arrayv[i]).size() == 1) {
                                             lhs = std::get<1>(* arrayv[i])[0];
@@ -11656,7 +11456,7 @@ namespace ss {
                                     
                                     if (std::get<1>(* arrayv[i]).size() == 1) {
                                         lhs = std::get<1>(* arrayv[i])[0];
-                                        rhs = std::get<1>(* stringv[j]);
+                                        rhs = stringv[j]->value();
                                         
                                         return std::to_string(lhs != rhs ? 1 : 0);
                                         //  array != string
@@ -11726,13 +11526,13 @@ namespace ss {
                         rhs = decode(rhs);
                     
                     else if (is_key(rhs)) {
-                        int i = io_array(rhs);
+                        int i = find_array(rhs);
                         if (i == -1) {
-                            i = io_string(rhs);
+                            i = find_string(rhs);
                             if (i == -1)
                                 rhs = encode(get_number(rhs));
                             else {
-                                rhs = std::get<1>(* stringv[i]);
+                                rhs = stringv[i]->value();
                                 
                                 if (rhs.empty())
                                     return std::to_string(1);
@@ -11781,11 +11581,11 @@ namespace ss {
                 }
                 
                 if (is_key(rhs)) {
-                    int i = io_array(rhs);
+                    int i = find_array(rhs);
                     if (i == -1) {
                         delete[] v;
                         
-                        i = io_string(rhs);
+                        i = find_string(rhs);
                         if (i == -1) {
                             if (is_defined(rhs))
                                 return std::to_string(1);
@@ -12054,12 +11854,12 @@ namespace ss {
         
         arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[1];
         functionv = new function_t*[1];
-        stringv = new tuple<string, string, pair<bool, bool>, size_t>*[1];
+        stringv = new variable<string>*[1];
         
         state_arrayv = new pair<size_t, tuple<string, ss::array<string>*,  pair<bool, bool>, size_t>**>*[1];
         state_functionv = new pair<size_t, function_t**>*[1];
         state_numberv = new size_t[1];
-        state_stringv = new pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>*[1];
+        state_stringv = new pair<size_t, variable<string>**>*[1];
     }
 
     void command_processor::interrupt(std::function<void(function_t*)> function) {
@@ -12078,11 +11878,11 @@ namespace ss {
         this->mutex.unlock();
     }
 
-    int command_processor::io_array(const string key) const {
-        return io_array(key, 0, arrayc);
+    int command_processor::find_array(const string key) const {
+        return find_array(key, 0, arrayc);
     }
 
-    int command_processor::io_array(const string key, const size_t start, const size_t end) const {
+    int command_processor::find_array(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
@@ -12092,16 +11892,16 @@ namespace ss {
             return (int)(start + len);
         
         if (std::get<0>(* arrayv[start + len]) > key)
-            return io_array(key, start, start + len);
+            return find_array(key, start, start + len);
         
-        return io_array(key, start + len + 1, end);
+        return find_array(key, start + len + 1, end);
     }
 
-    int command_processor::io_function(const string key) const {
-        return io_function(key, 0, functionc);
+    int command_processor::find_function(const string key) const {
+        return find_function(key, 0, functionc);
     }
 
-    int command_processor::io_function(const string key, const size_t start, const size_t end) const {
+    int command_processor::find_function(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
@@ -12111,35 +11911,35 @@ namespace ss {
             return (int)(start + len);
         
         if (functionv[start + len]->name() > key)
-            return io_function(key, start, start + len);
+            return find_function(key, start, start + len);
         
-        return io_function(key, start + len + 1, end);
+        return find_function(key, start + len + 1, end);
     }
 
-    int command_processor::io_string(const string key) const {
-        return io_string(key, 0, stringc);
+    int command_processor::find_string(const string key) const {
+        return find_string(key, 0, stringc);
     }
 
-    int command_processor::io_string(const string key, const size_t start, const size_t end) const {
+    int command_processor::find_string(const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* stringv[start + len]) == key)
+        if (stringv[start + len]->key() == key)
             return (int)(start + len);
         
-        if (std::get<0>(* stringv[start + len]) > key)
-            return io_string(key, start, start + len);
+        if (stringv[start + len]->key() > key)
+            return find_string(key, start, start + len);
         
-        return io_string(key, start + len + 1, end);
+        return find_string(key, start + len + 1, end);
     }
 
-    int command_processor::io_state_array(const size_t state, const string key) const {
-        return io_state_array(state, key, 0, state_arrayv[state]->first);
+    int command_processor::find_state_array(const size_t state, const string key) const {
+        return find_state_array(state, key, 0, state_arrayv[state]->first);
     }
 
-    int command_processor::io_state_array(const size_t state, const string key, size_t start, size_t end) const {
+    int command_processor::find_state_array(const size_t state, const string key, size_t start, size_t end) const {
         if (start == end)
             return -1;
         
@@ -12149,16 +11949,16 @@ namespace ss {
             return (int)(start + len);
         
         if (std::get<0>(* state_arrayv[state]->second[start + len]) > key)
-            return io_state_array(state, key, start, start + len);
+            return find_state_array(state, key, start, start + len);
         
-        return io_state_array(state, key, start + len + 1, end);
+        return find_state_array(state, key, start + len + 1, end);
     }
 
-    int command_processor::io_state_function(const size_t state, const string key) const {
-        return io_state_function(state, key, 0, state_functionv[state]->first);
+    int command_processor::find_state_function(const size_t state, const string key) const {
+        return find_state_function(state, key, 0, state_functionv[state]->first);
     }
 
-    int command_processor::io_state_function(const size_t state, const string key, size_t start, size_t end) const {
+    int command_processor::find_state_function(const size_t state, const string key, size_t start, size_t end) const {
         if (start == end)
             return -1;
         
@@ -12168,28 +11968,28 @@ namespace ss {
             return (int)(start + len);
         
         if (state_functionv[state]->second[start + len]->name() > key)
-            return io_state_function(state, key, start, start + len);
+            return find_state_function(state, key, start, start + len);
         
-        return io_state_function(state, key, start + len + 1, end);
+        return find_state_function(state, key, start + len + 1, end);
     }
 
-    int command_processor::io_state_string(const size_t state, const string key) const {
-        return io_state_string(state, key, 0, state_stringv[state]->first);
+    int command_processor::find_state_string(const size_t state, const string key) const {
+        return find_state_string(state, key, 0, state_stringv[state]->first);
     }
 
-    int command_processor::io_state_string(const size_t state, const string key, const size_t start, const size_t end) const {
+    int command_processor::find_state_string(const size_t state, const string key, const size_t start, const size_t end) const {
         if (start == end)
             return -1;
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* state_stringv[state]->second[start + len]) == key)
+        if (state_stringv[state]->second[start + len]->key() == key)
             return (int)(start + len);
         
-        if (std::get<0>(* state_stringv[state]->second[start + len]) > key)
-            return io_state_string(state, key, start, start + len);
+        if (state_stringv[state]->second[start + len]->key() > key)
+            return find_state_string(state, key, start, start + len);
         
-        return io_state_string(state, key, start + len + 1, end);
+        return find_state_string(state, key, start + len + 1, end);
     }
 
     bool command_processor::is_mutating(const string expression) const {
@@ -13085,13 +12885,13 @@ namespace ss {
     }
 
     void command_processor::remove_key(const string key) {
-        int i = io_function(key);
+        int i = find_function(key);
         
         if (i == -1) {
-            i = io_array(key);
+            i = find_array(key);
             
             if (i == -1) {
-                i = io_string(key);
+                i = find_string(key);
                 
                 if (i == -1) {
                     logic::remove_key(key);
@@ -13158,7 +12958,7 @@ namespace ss {
             null_error(std::to_string(state));
 #endif
         for (size_t j = 0; j < arrayc; ++j) {
-            int k = io_state_array(i, std::get<0>(* arrayv[j]));
+            int k = find_state_array(i, std::get<0>(* arrayv[j]));
             
             if (k == -1 || (std::get<3>(* state_arrayv[i]->second[k]) != std::get<3>(* arrayv[j]))) {
                 if (verbose)
@@ -13200,7 +13000,7 @@ namespace ss {
         
         if (verbose) {
             for (size_t j = 0; j < functionc; ++j) {
-                int k = io_state_function(i, functionv[j]->name());
+                int k = find_state_function(i, functionv[j]->name());
                 
                 if (k == -1 && !functionv[j]->count())
                     logger_write("Unused function '" + functionv[j]->name() + "'\n");
@@ -13226,17 +13026,20 @@ namespace ss {
         
         //  set_state strings
         for (size_t j = 0; j < stringc; ++j) {
-            int k = io_state_string(i, std::get<0>(* stringv[j]));
+            int k = find_state_string(i, stringv[j]->key());
             
             //  no such string
-            if (k == -1 || std::get<3>(* state_stringv[i]->second[k]) != std::get<3>(* stringv[j])) {
+            if (k == -1 || state_stringv[i]->second[k]->state() != stringv[j]->state()) {
                 if (verbose)
-                    if (!std::get<2>(* stringv[j]).second)
-                        logger_write("Unused " + string(std::get<2>(* stringv[j]).first ? "constant" : "variable") + " '" + std::get<0>(* stringv[j]) + "'\n");
+                    if (!stringv[j]->suppressed())
+                        logger_write("Unused " + string(stringv[j]->readonly() ? "constant" : "variable") + " '" + stringv[j]->key() + "'\n");
                 
             } else if (update) {
-                std::get<1>(* state_stringv[i]->second[k]) = std::get<1>(* stringv[j]);
-                std::get<2>(* state_stringv[i]->second[k]).second = std::get<2>(* stringv[j]).second;
+                if (!state_stringv[i]->second[k]->readonly())
+                    state_stringv[i]->second[k]->set_value(stringv[j]->value());
+                
+                if (stringv[j]->suppressed())
+                    state_stringv[i]->second[k]->value();
             }
         }
         
@@ -13267,7 +13070,7 @@ namespace ss {
         if (!value.empty() && !is_string(value) && !is_number(value))
             throw error("Unexpected token: " + value);
 #endif
-        int i = io_array(key);
+        int i = find_array(key);
         
         if (i == -1) {
 #if DEBUG_LEVEL
@@ -13384,54 +13187,15 @@ namespace ss {
         // End Enhancement 1-1
     }
 
-    void command_processor::set_read_only(const string key, const bool value) {
+    void command_processor::set_readonly(const string key, const bool value) {
         int i;
-        if ((i = io_array(key)) == -1) {
-            if ((i = io_string(key)) == -1)
-                logic::set_read_only(key, false);
+        if ((i = find_array(key)) == -1) {
+            if ((i = find_string(key)) == -1)
+                logic::set_readonly(key, false);
             else
-                std::get<2>(* stringv[i]).first = value;
+                stringv[i]->readonly() = value;
         } else
             std::get<2>(* arrayv[i]).first = value;
-    }
-
-    void command_processor::set_string(const string key, const string value) {
-#if DEBUG_LEVEL
-        if (!is_key(key))
-            expect_error("key: " + key);
-        
-        if (!value.empty() && !is_string(value))
-            throw error("Unexpected token: " + value);
-#endif
-        int i = io_string(key);
-        if (i == -1) {
-#if DEBUG_LEVEL
-            if (is_defined(key))
-                defined_error(key);
-#endif
-            if (is_pow(stringc, 2)) {
-                tuple<string, string, pair<bool, bool>, size_t>** tmp = new tuple<string, string, pair<bool, bool>, size_t>*[stringc * 2];
-                
-                for (size_t j = 0; j < stringc; ++j)
-                    tmp[j] = stringv[j];
-                
-                delete[] stringv;
-                
-                stringv = tmp;
-            }
-            
-            stringv[stringc] = new tuple<string, string, pair<bool, bool>, size_t>(key, value, pair<bool, bool>(false, false), _statec);
-            
-            for (size_t j = stringc++; j > 0 && std::get<0>(* stringv[j]) < std::get<0>(* stringv[j - 1]); --j)
-                swap(stringv[j], stringv[j - 1]);
-            
-            add_key(key);
-        } else {
-            if (std::get<2>(* stringv[i]).first)
-                write_error(key);
-            
-            std::get<1>(* stringv[i]) = value;
-        }
     }
 
     void command_processor::stack_push(function_t* function) {
@@ -13469,91 +13233,44 @@ namespace ss {
         return ss.str();
     }
 
-    //  NON-MEMBER FUNCTIONS
-
-    bool evaluate(const string value) {
-        if (ss::is_array(value))
-            return true;
+    void command_processor::set_string(const string key, const string value, std::function<void(variable<string>*)> callback) {
+#if DEBUG_LEVEL
+        if (!is_key(key))
+            expect_error("key: " + key);
         
-        if (value.empty())
-            return false;
-        
-        if (is_string(value))
-            return !decode_raw(value).empty();
-        
-        return stod(value);
-    }
-
-    size_t get_dictionary(string* destination, const string source) {
-        size_t len = parse(destination, source);
-        
-        if (len == 1) {
-            if (destination[0].empty() || is_string(destination[0]))
-                type_error(string_t, dictionary_t);
+        if (!value.empty() && !is_string(value))
+            throw error("Unexpected token: " + value);
+#endif
+        int pos = find_string(key);
+    
+        if (pos == -1) {
+#if DEBUG_LEVEL
+            if (is_defined(key))
+                defined_error(key);
+#endif
+            if (is_pow(stringc, 2)) {
+                variable<string>** tmp = new variable<string>*[stringc * 2];
+                
+                for (size_t j = 0; j < stringc; ++j)
+                    tmp[j] = stringv[j];
+                
+                delete[] stringv;
+                
+                stringv = tmp;
+            }
             
-            type_error(number_t, dictionary_t);
+            add_key(key);
+            
+            stringv[stringc] = new variable<string>(key, value, _statec);
+            
+            for (size_t j = stringc; j > 0 && stringv[j]->key() < stringv[j - 1]->key(); --j)
+                swap(stringv[j], stringv[j - 1]);
+            
+            callback(stringv[stringc++]);
+        } else {
+            stringv[pos]->set_value(value);
+            
+            callback(stringv[pos]);
         }
-        
-        if (!is_dictionary(len, destination))
-            type_error(array_t, dictionary_t);
-        
-        return len;
-    }
-
-    int get_int(const string value) {
-        if (ss::is_array(value))
-            type_error(array_t, int_t);
-        
-        if (value.empty() || is_string(value))
-            type_error(string_t, int_t);
-        
-        double num = stod(value);
-        
-        if (!is_int(num))
-            type_error(number_t, int_t);
-        
-        return (int)num;
-    }
-
-    double get_number(const string value) {
-        if (ss::is_array(value))
-            type_error(array_t, number_t);
-        
-        if (value.empty() || is_string(value))
-            type_error(string_t, number_t);
-        
-        return stod(value);
-    }
-
-    string get_string(const string value) {
-        if (ss::is_array(value))
-            type_error(array_t, string_t);
-        
-        if (value.empty())
-            null_error();
-        
-        if (!is_string(value))
-            type_error(number_t, string_t);
-        
-        return value;
-    }
-
-    size_t get_table(string* destination, const string source) {
-        size_t len = parse(destination, source);
-        
-        if (len == 1) {
-            if (destination[0] == std::to_string(1))
-                return 1;
-            
-            if (destination[0].empty() || is_string(destination[0]))
-                type_error(string_t, table_t);
-            
-            type_error(number_t, table_t);
-        }
-        
-        if (!is_table(len, destination))
-            type_error(array_t, table_t);
-        
-        return len;
     }
 }

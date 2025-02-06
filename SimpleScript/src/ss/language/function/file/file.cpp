@@ -140,7 +140,7 @@ namespace ss {
                     ++j;
                 
                 if (j == n) {
-                    logger_write("Missing terminating '*/' character\n");
+                    logger_write("Missing terminating '*/' character");
                     --j;
                 }
                 
@@ -374,7 +374,7 @@ namespace ss {
                 // file import
                 if (tokenc == 2) {
                     if (dst.size() != 1)
-                        logger_write(dst[0] + " is a directory\n");
+                        logger_write(dst[0] + " is a directory");
                     
                     tokenv[1] = cp->evaluate(tokenv[1]);
                     tokenv[1] = decode_raw(get_string(tokenv[1]));
@@ -401,7 +401,7 @@ namespace ss {
                     
                     if (k != this->filec) {
                         if (filev.index_of(basename) == -1) {
-                            logger_write("'" + basename + "' is defined\n");
+                            logger_write("'" + basename + "' is defined");
 
                             filev.push(basename);
                         }
@@ -506,7 +506,7 @@ namespace ss {
         if (!n) {
             if (!this->filec && !this->file_system_flag &&
                 !this->mysql_flag && !this->socket_flag)
-                logger_write("'file' statement has empty body\n");
+                logger_write("'file' statement has empty body");
             
             else
                 //  config. file
@@ -1118,9 +1118,10 @@ namespace ss {
         
         ss::array<string> arr = this->marshall(argc, argv);
         
-        this->cp->set_array("argv", stringify(arr));
-        this->cp->evaluate("shrink argv");
-        this->cp->consume("argv");
+//        this->cp->set_array("argv", [&arr](variable<ss::array<string>>* value) {
+//            value->set_value(arr);
+//            value->value();
+//        });
         
         this->is_paused.store(false);
         
@@ -1181,6 +1182,7 @@ namespace ss {
         }
         
         data.insert(0, std::to_string(j + 1));
+        data.shrink_to_fit();
         
         return data;
     }

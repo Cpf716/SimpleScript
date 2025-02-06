@@ -33,7 +33,7 @@ namespace ss {
         
         bool analyze(command_processor* cp) const {
             if (!cp->is_mutating(expression))
-                logger_write("Expression result unused: (" + expression + ")\n");
+                logger_write("Expression result unused: (" + expression + ")");
             
             return false;
         }

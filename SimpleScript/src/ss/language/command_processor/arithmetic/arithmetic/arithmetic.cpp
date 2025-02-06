@@ -13,11 +13,15 @@ namespace ss {
     arithmetic::arithmetic() {
         initialize();
        
-        set_number("E", exp(1));
-        set_read_only("E", true);
+        set_number("E", exp(1), [](variable<double>* value) {
+            value->readonly() = true;
+            value->value();
+        });
         
-        set_number("pi", 2 * acos(0.0));
-        set_read_only("pi", true);
+        set_number("pi", 2 * acos(0.0), [](variable<double>* value) {
+            value->readonly() = true;
+            value->value();
+        });
     }
 
     arithmetic::~arithmetic() {
@@ -53,13 +57,7 @@ namespace ss {
     //  MEMBER FUNCTIONS
 
     int arithmetic::_get_state(const string key) const {
-        int i = find_number(key);
-        
-#if DEBUG_LEVEL == 2
-        if (i == -1)
-            return -1;
-#endif
-        return (int)std::get<3>(* numberv[i]);
+        return (int)numberv[find_number(key)]->state();
     }
 
     void arithmetic::add_key(const string key) {
@@ -291,8 +289,8 @@ namespace ss {
         //  resize get_states
         if (is_pow(this->statec, 2)) {
             //  resize numbers
-            pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>** _state_numberv =
-                new pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>*[this->statec * 2];
+            pair<size_t, variable<double>**>** _state_numberv =
+                new pair<size_t, variable<double>**>*[this->statec * 2];
             
             for (size_t i = 0; i < statec; ++i)
                 _state_numberv[i] = this->state_numberv[i];
@@ -313,19 +311,13 @@ namespace ss {
             this->statev_key = _statev_key;
         }
         
-        tuple<string, double, pair<bool, bool>, size_t>** _numberv =
-            new tuple<string, double, pair<bool, bool>, size_t>*[pow2(this->numberc)];
+        variable<double>** _numberv =
+            new variable<double>*[pow2(this->numberc)];
         
-        for (size_t i = 0; i < this->numberc; ++i) {
-            string           key = std::get<0>(* this->numberv[i]);
-            double           value = std::get<1>(* this->numberv[i]);
-            pair<bool, bool> flags = std::get<2>(* this->numberv[i]);
-            size_t           state = std::get<3>(* this->numberv[i]);
-            
-            _numberv[i] = new tuple<string, double, pair<bool, bool>, size_t>(key, value, flags, state);
-        }
+        for (size_t i = 0; i < this->numberc; ++i)
+            _numberv[i] = new variable<double>(* this->numberv[i]);
 
-        this->state_numberv[this->statec] = new pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>(numberc, _numberv);
+        this->state_numberv[this->statec] = new pair<size_t, variable<double>**>(numberc, _numberv);
         
         string* _keyv = new string[pow2(this->keyc)];
         
@@ -350,8 +342,8 @@ namespace ss {
         
         if (is_pow(this->statec, 2)) {
             //  resize numbers
-            pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>** _state_numberv =
-                new pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>*[this->statec * 2];
+            pair<size_t, variable<double>**>** _state_numberv =
+                new pair<size_t, variable<double>**>*[this->statec * 2];
             
             for (size_t i = 0; i < this->statec; ++i)
                 _state_numberv[i] = this->state_numberv[i];
@@ -380,30 +372,24 @@ namespace ss {
         
         this->statev_key[this->statec] = new tuple<size_t, size_t, string*>(state, this->keyc, _keyv);
         
-        tuple<string, double, pair<bool, bool>, size_t>** _numberv =
-            new tuple<string, double, pair<bool, bool>, size_t>*[pow2(this->numberc)];
+        variable<double>** _numberv =
+        new variable<double>*[pow2(this->numberc)];
         
-        for (size_t i = 0; i < this->numberc; ++i) {
-            string           key = std::get<0>(* this->numberv[i]);
-            double           value = std::get<1>(* this->numberv[i]);
-            pair<bool, bool> flags = std::get<2>(* this->numberv[i]);
-            size_t           state = std::get<3>(* this->numberv[i]);
-            
-            _numberv[i] = new tuple<string, double, pair<bool, bool>, size_t>(key, value, flags, state);
-        }
+        for (size_t i = 0; i < this->numberc; ++i)
+            _numberv[i] = new variable<double>(* this->numberv[i]);
 
-        this->state_numberv[this->statec] = new pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>(this->numberc, _numberv);
+        this->state_numberv[this->statec] = new pair<size_t, variable<double>**>(this->numberc, _numberv);
         this->statec++;
         this->mutex.unlock();
     }
 
     void arithmetic::consume(const string key) {
-        int i = find_number(key);
+        int pos = find_number(key);
         
-        if (i == -1)
+        if (pos == -1)
             undefined_error(key);
         
-        std::get<2>(* numberv[i]).second = true;
+        numberv[pos]->value();
     }
 
     int arithmetic::find_key(const string key) const {
@@ -485,15 +471,13 @@ namespace ss {
         if (i == -1)
             undefined_error(key);
         
-        std::get<2>(* numberv[i]).second = true;
-        
-        return std::get<1>(* numberv[i]);
+        return numberv[i]->value();
     }
 
     void arithmetic::initialize() {
-        numberv = new tuple<string, double, pair<bool, bool>, size_t>*[1];
+        numberv = new variable<double>*[1];
     
-        state_numberv = new pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>*[1];
+        state_numberv = new pair<size_t, variable<double>**>*[1];
         statev_key = new tuple<size_t, size_t, string*>*[1];
         
         keyv = new string[1];
@@ -766,16 +750,19 @@ namespace ss {
             null_error(std::to_string(state));
 #endif
         for (size_t j = 0; j < this->numberc; ++j) {
-            int k = this->find_state_number(i, std::get<0>(* numberv[j]));
+            int k = this->find_state_number(i, numberv[j]->key());
             
-            if (k == -1 || std::get<3>(* this->state_numberv[i]->second[k]) != std::get<3>(* this->numberv[j])) {
+            if (k == -1 || this->state_numberv[i]->second[k]->state() != this->numberv[j]->state()) {
                 if (verbose)
-                    if (!std::get<2>(* this->numberv[j]).second)
-                        logger_write("Unused " + string(std::get<2>(* this->numberv[j]).first ? "constant" : "variable") + " '" + std::get<0>(* this->numberv[j]) + "'\n");
+                    if (!this->numberv[j]->suppressed())
+                        logger_write("Unused " + string(this->numberv[j]->readonly() ? "constant" : "variable") + " '" + this->numberv[j]->key() + "'");
                 
             } else if (update) {
-                std::get<1>(* this->state_numberv[i]->second[k]) = std::get<1>(* this->numberv[j]);
-                std::get<2>(* this->state_numberv[i]->second[k]).second = std::get<2>(* this->numberv[j]).second;
+                if (!this->state_numberv[i]->second[k]->readonly())
+                    this->state_numberv[i]->second[k]->set_value(this->numberv[j]->value());
+                
+                if (this->numberv[j]->value())
+                    this->state_numberv[i]->second[k]->value();
             }
         }
         
@@ -822,10 +809,10 @@ namespace ss {
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* numberv[start + len]) == key)
+        if (numberv[start + len]->key() == key)
             return (int)(start + len);
         
-        if (std::get<0>(* numberv[start + len]) > key)
+        if (numberv[start + len]->key() > key)
             return find_number(key, start, start + len);
         
         return find_number(key, start + len + 1, end);
@@ -849,60 +836,62 @@ namespace ss {
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* state_numberv[state]->second[start + len]) == key)
+        if (state_numberv[state]->second[start + len]->key() == key)
             return (int)(start + len);
         
-        if (std::get<0>(* state_numberv[state]->second[start + len]) > key)
+        if (state_numberv[state]->second[start + len]->key() > key)
             return find_state_number(state, key, start, start + len);
         
         return find_state_number(state, key, start + len + 1, end);
     }
 
     //  precondition:   key is non-empty & double is not nan
-    void arithmetic::set_number(const string key, const double value) {
+    void arithmetic::set_number(const string key, const double value, std::function<void(variable<double>*)> callback) {
 #if DEBUG_LEVEL
         if (!is_key(key))
             expect_error("key: " + key);
 #endif
-        int i = find_number(key);
+        int pos = find_number(key);
         
-        if (i == -1) {
+        if (pos == -1) {
 #if DEBUG_LEVEL
             if (is_defined(key))
                 defined_error(key);
 #endif
             if (is_pow(numberc, 2)) {
-                tuple<string, double, pair<bool, bool>, size_t>** tmp = new tuple<string, double, pair<bool, bool>, size_t>*[numberc * 2];
+                variable<double>** tmp = new variable<double>*[numberc * 2];
                 
                 for (size_t j = 0; j < numberc; ++j)
                     tmp[j] = numberv[j];
                 
                 delete[] numberv;
+                
                 numberv = tmp;
             }
             
-            numberv[numberc] = new tuple<string, double, pair<bool, bool>, size_t>(key, value, { false, false }, _statec);
+            add_key(key);
             
-            for (size_t j = numberc++; j > 0 && key < std::get<0>(* numberv[j - 1]); --j)
+            numberv[numberc] = new variable<double>(key, value, _statec);
+            
+            for (size_t j = numberc; j > 0 && numberv[j]->key() < numberv[j - 1]->key(); --j)
                 swap(numberv[j], numberv[j - 1]);
             
-            add_key(key);
+            callback(numberv[numberc++]);
         } else {
-            if (std::get<2>(* numberv[i]).first)
-                write_error(key);
+            numberv[pos]->set_value(value);
             
-            std::get<1>(* numberv[i]) = value;
+            callback(numberv[pos]);
         }
     }
 
-    void arithmetic::set_read_only(const string key, const bool value) {
-        int i = find_number(key);
+    void arithmetic::set_readonly(const string key, const bool value) {
+        int pos = find_number(key);
         
 #if DEBUG_LEVEL
         if (i == -1)
             null_error(key);
 #endif
-        std::get<2>(* numberv[i]).first = value;
+        numberv[pos]->readonly() = value;
     }
 
     //  precondition:   sizeof(data) / sizeof(data[0]) >= expr.length()

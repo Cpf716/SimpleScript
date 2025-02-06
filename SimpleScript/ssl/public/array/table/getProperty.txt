@@ -3,17 +3,17 @@
 //  File:   getProperty.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
     
     array table = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if subtypeOf table !== "table"
-        typeExcept(subtypeOf table, "table")
+        typeException(subtypeOf table, "table")
     end if
     
     key = ((argv row 1) slice 1, (argv cell 1, 0))

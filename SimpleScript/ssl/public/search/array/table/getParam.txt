@@ -3,17 +3,17 @@
 //  File:   getParam.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
 
     req = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if subtypeOf req !== "table"
-        typeExcept(subtypeOf req, "table")
+        typeException(subtypeOf req, "table")
     end if
 
     if first req < 2
@@ -29,7 +29,7 @@ func main()
     key = ((argv row 1) slice 1, (argv cell 1, 0))
     
     if typeOf key !== "string"
-        typeExcept(typeOf key, "string")
+        typeException(typeOf key, "string")
     end if
     
     if key === null

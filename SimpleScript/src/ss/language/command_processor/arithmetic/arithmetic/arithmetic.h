@@ -12,6 +12,7 @@
 #include "bitwise_binary_arithmetic_operator.h"
 #include "mysql.h"
 #include "unary_arithmetic_operator.h"
+#include "variable.h"
 #include <atomic>
 #include <cctype>
 #include <cmath>
@@ -23,16 +24,18 @@
 using namespace std;
 
 namespace ss {
+    // TYPEDEF
+
     class arithmetic {
         //  MEMBER FIELDS
     
-        size_t                                                            keyc = 0;
-        string*                                                           keyv = NULL;
-        size_t                                                            numberc = 0;
-        tuple<string, double, pair<bool, bool>, size_t>**                 numberv = NULL;
-        size_t                                                            statec = 0;
-        pair<size_t, tuple<string, double, pair<bool, bool>, size_t>**>** state_numberv = NULL;
-        tuple<size_t, size_t, string*>**                                  statev_key = NULL;
+        size_t                             keyc = 0;
+        string*                            keyv = NULL;
+        size_t                             numberc = 0;
+        variable<double>**                 numberv = NULL;
+        size_t                             statec = 0;
+        pair<size_t, variable<double>**>** state_numberv = NULL;
+        tuple<size_t, size_t, string*>**   statev_key = NULL;
         
         //  MEMBER FUNCTIONS
             
@@ -103,9 +106,9 @@ namespace ss {
         
         void remove_key(const string key);
         
-        void set_number(const string key, const double new_value);
+        void set_number(const string key, const double value, std::function<void(variable<double>*)> callback = [](variable<double>* value) { });
         
-        void set_read_only(const string key, const bool value);
+        void set_readonly(const string key, const bool value);
         
         void set_state(const size_t state, bool verbose = true, bool update = true);
     };

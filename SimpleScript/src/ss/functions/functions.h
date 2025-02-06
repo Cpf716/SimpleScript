@@ -23,10 +23,6 @@
 #include <sys/stat.h>       //  mkdir
 
 namespace ss {
-    //  NON-MEMBER FIELDS
-
-    enum data_t { array_t, char_t, dictionary_t, int_t, item_t, number_t, string_t, table_t };
-
     //  NON-MEMBER FUNCTIONS
 
     size_t       _tokens(std::string* target, const std::string source);
@@ -39,11 +35,23 @@ namespace ss {
 
     std::string  escape(const std::string src);
 
+    bool         evaluate(const std::string value);
+
     std::string  date();
 
     std::string  decode(const std::string str);
 
     std::string  decode_raw(const std::string str);
+
+    size_t       get_dictionary(std::string* destination, const std::string source);
+
+    int          get_int(const std::string value);
+
+    double       get_number(const std::string value);
+
+    std::string  get_string(const std::string value);
+
+    size_t       get_table(std::string* destination, const std::string source);
 
     bool         is_array(const std::string val);
 
@@ -66,8 +74,6 @@ namespace ss {
     bool         is_table(ss::array<std::string> arr);
 
     size_t       merge(size_t len, std::string* arr, const std::string sep);
-
-    std::string  null();
 
     std::string  pad_start(std::string string, size_t pad_length, std::string pad_string);
 
@@ -97,8 +103,6 @@ namespace ss {
 
     std::string  tolower(std::string str);
 
-    std::string  to_string(const data_t type);
-
     size_t       tokens(std::string* dst, const std::string src, const size_t sepc = 0, const std::string* sepv = NULL);
 
     std::string  toupper(std::string str);
@@ -108,8 +112,6 @@ namespace ss {
     std::string  trim_end(const std::string str);
 
     std::string  trim_start(const std::string str);
-
-    void         type_error(const data_t lhs, const data_t rhs);
 }
 
-#endif /* commoon_h */
+#endif /* functions_h */

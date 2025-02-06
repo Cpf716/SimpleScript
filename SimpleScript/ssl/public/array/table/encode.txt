@@ -3,11 +3,11 @@
 //  File:   encode.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     array arr = (argv row 0) slice 1
@@ -19,7 +19,7 @@ func main()
     arr = inverse arr
     array tmp = array(first arr)
 
-    arr insert 1, (tmp fill (count arr - 1) / first arr)
+    arr insert 1, (tmp fill nrows(arr))
 
     return inverse arr
 end func

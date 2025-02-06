@@ -3,17 +3,17 @@
 //  File:   scientific.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     num = (argv row 1) slice 1
     
     if typeOf num !== "number"
-        typeExcept(typeOf num, "number")
+        typeException(typeOf num, "number")
     end if
     
     sign = num / abs num

@@ -9,13 +9,13 @@ include(dir + "tokens")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     dateStr = (argv row 0) slice 1
     
     if typeOf dateStr !== "string"
-        typeExcept(typeOf dateStr, "string")
+        typeException(typeOf dateStr, "string")
     end if
     
     if dateStr === null

@@ -8,13 +8,13 @@ include("socket")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
 
     fileDescriptor = (argv row 0) slice 1
     
     if subtypeOf fileDescriptor !== "integer"
-        typeExcept(subtypeOf fileDescriptor, "integer")
+        typeException(subtypeOf fileDescriptor, "integer")
     end if
     
     if fileDescriptor < 0

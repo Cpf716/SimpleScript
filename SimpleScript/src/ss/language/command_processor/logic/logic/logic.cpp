@@ -13,11 +13,15 @@ namespace ss {
     logic::logic() {
         initialize();
         
-        set_number("false", 0);
-        set_read_only("false", true);
+        set_number("false", 0, [](variable<double>* value) {
+            value->readonly() = true;
+            value->value();
+        });
         
-        set_number("true", 1);
-        set_read_only("true", true);
+        set_number("true", 1, [](variable<double>* value) {
+            value->readonly() = true;
+            value->value();
+        });
     }
 
     logic::~logic() {

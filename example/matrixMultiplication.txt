@@ -6,14 +6,14 @@
 include("@/math/multMat")
 
 func main()
-    if nrows(argv) !== 1
-        throw "Expected 0 argument(s), got {}" format (nrows(argv) - 1)
+    if nrows(argv)
+        throw "Expected 0 argument(s), got {}" format nrows(argv)
     end if
 
     echo "Matrix Multplication\n\n"
 
     func printMat(c)
-        for i = 0; i < (count c - 1) / first c; i += 1
+        for i = 0; i < nrows(c); i += 1
             echo "\t"
         
             for j = 0; j < first c; j += 1
@@ -33,18 +33,19 @@ func main()
     a = array(3, 1, 2, 3, 4, 5, 6)
 
     echo "a:"
+    
     printMat(a)
 
     echo "*\n"
-
     echo "b:"
+    
     b = array(2, 7, 8, 9, 10, 11, 12)
 
     printMat(b)
 
     echo "=\n"
-
     echo "c:"
+    
     calc(a, b)
 
     echo "\n\n"
@@ -52,6 +53,7 @@ func main()
     a = array(3, 3, 4, 2)
 
     echo "a:"
+    
     printMat(a)
 
     echo "*\n"
@@ -59,11 +61,12 @@ func main()
     b = array(4, 13, 9, 7, 15, 8, 7, 4, 6, 6, 4, 0, 3)
 
     echo "b:"
+    
     printMat(b)
 
     echo "=\n"
-
     echo "c:"
+    
     calc(a, b)
 end func
 

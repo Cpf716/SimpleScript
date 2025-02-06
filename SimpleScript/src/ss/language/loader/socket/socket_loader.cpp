@@ -9,11 +9,10 @@
 
 namespace ss {
     void load_socket(command_processor* cp) {
-        string localhost = "localhost";
-
-        cp->set_string(localhost, encode("127.0.0.1"));
-        cp->set_read_only(localhost, true);
-        cp->consume(localhost);
+        cp->set_string("localhost", encode("127.0.0.1"), [](variable<string>* value) {
+            value->readonly() = true;
+            value->value();
+        });
         
         cp->set_function(new ss::function("closeTCP", [](const size_t argc, string* argv) {
             if (argc != 1)

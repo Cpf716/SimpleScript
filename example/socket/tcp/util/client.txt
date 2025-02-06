@@ -25,13 +25,13 @@ end func
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
 
     port = (argv row 0) slice 1
     
     if subtypeOf port !== "integer"
-        typeExcept(subtypeOf port, "integer")
+        typeException(subtypeOf port, "integer")
     end if
 
     fileDescriptor = `client`(10)

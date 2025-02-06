@@ -3,17 +3,17 @@
 //  File:   mega.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     num = (argv row 0) slice 1
     
     if typeOf num !== "integer"
-        typeExcept(typeOf num, "integer")
+        typeException(typeOf num, "integer")
     end if
 
     return num / 10^^6

@@ -3,24 +3,24 @@
 //  File:   precision.txt
 //
 
-include((dir = "@/exception/") + "expectExcept")
+include((dir = "@/exception/") + "expectException")
 include(dir + "rangeExcept")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
     
     x = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if typeOf x !== "number"
-        typeExcept(typeOf x, "number")
+        typeException(typeOf x, "number")
     end if
     
     y = ((argv row 1) slice 1, (argv cell 1, 0))
     
     if subtypeOf y !== "integer"
-        typeExcept(subtypeOf y, "integer")
+        typeException(subtypeOf y, "integer")
     end if
     
     if y < 0

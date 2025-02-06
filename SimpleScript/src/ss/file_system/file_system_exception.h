@@ -11,8 +11,7 @@
 #include "exception.h"
 
 namespace ss {
-    class file_system_exception: public ::exception {
-    public:
+    struct file_system_exception: public ::exception {
         //  CONSTRUCTORS
         
         file_system_exception(const std::string message) : ::exception(message) { }

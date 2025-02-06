@@ -1,9 +1,9 @@
 //  Author: Corey Ferguson
 //  Date:   August 3, 2023
-//  File:   expectExcept.txt
+//  File:   expectException.txt
 //
 
-include("@/exception/typeExcept")
+include("@/exception/typeException")
 
 if nrows(argv) !== 1
     throw "Expected 1 argument(s), got {}" format nrows(argv)
@@ -12,7 +12,7 @@ end if
 message = (argv row 0) slice 1
 
 if typeOf message !== "string"
-    typeExcept(typeOf message, "string")
+    typeException(typeOf message, "string")
 end if
 
-throw "Expected {}" format message
+throw "Expected " + message

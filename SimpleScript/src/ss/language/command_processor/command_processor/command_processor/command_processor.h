@@ -20,6 +20,8 @@
 using namespace std::chrono;
 
 namespace ss {
+    // TYPEDEF
+
     class command_processor: public logic {
         //  MEMBER FIELDS
         
@@ -89,10 +91,10 @@ namespace ss {
         
         size_t* state_numberv = NULL;
         
-        pair<size_t, tuple<string, string, pair<bool, bool>, size_t>**>** state_stringv = NULL;
+        pair<size_t, variable<string>**>** state_stringv = NULL;
         
         size_t stringc = 0;
-        tuple<string, string, pair<bool, bool>, size_t>** stringv = NULL;
+        variable<string>** stringv = NULL;
         
         size_t uoc = 0;
         operator_t** uov = NULL;
@@ -105,7 +107,7 @@ namespace ss {
         
         void _set_array(const string key, const size_t valuec, string* valuev);
                         
-        string element(string val);
+        string get_item(string val);
         
         void get_state(const size_t state);
         
@@ -115,29 +117,29 @@ namespace ss {
         void interrupt(std::function<void(function_t*)> cb);
         // End Enhancement 1-1
         
-        int io_array(const string key) const;
+        int find_array(const string key) const;
         
-        int io_array(const string key, const size_t start, const size_t end) const;
+        int find_array(const string key, const size_t start, const size_t end) const;
         
-        int io_function(const string key) const;
+        int find_function(const string key) const;
         
-        int io_function(const string key, const size_t start, const size_t end) const;
+        int find_function(const string key, const size_t start, const size_t end) const;
         
-        int io_state_array(const size_t state, const string key) const;
+        int find_state_array(const size_t state, const string key) const;
         
-        int io_state_array(const size_t state, const string key, size_t start, size_t end) const;
+        int find_state_array(const size_t state, const string key, size_t start, size_t end) const;
         
-        int io_state_function(const size_t state, const string key) const;
+        int find_state_function(const size_t state, const string key) const;
         
-        int io_state_function(const size_t state, const string key, size_t start, size_t end) const;
+        int find_state_function(const size_t state, const string key, size_t start, size_t end) const;
         
-        int io_state_string(const size_t state, const string key) const;
+        int find_state_string(const size_t state, const string key) const;
         
-        int io_state_string(const size_t state, const string key, const size_t start, const size_t end) const;
+        int find_state_string(const size_t state, const string key, const size_t start, const size_t end) const;
         
-        int io_string(const string key) const;
+        int find_string(const string key) const;
         
-        int io_string(const string key, const size_t start, const size_t end) const;
+        int find_string(const string key, const size_t start, const size_t end) const;
         
         int merge(int n, string* data) const;
         
@@ -153,13 +155,13 @@ namespace ss {
         
         //  MEMBER FUNCTIONS
         
-        void add_listener(const string key, const std::function<void(const string)> callback);
+        void   add_listener(const string key, const std::function<void(const string)> callback);
         
-        void apply(const std::function<void(const bool)> cb);
+        void   apply(const std::function<void(const bool)> cb);
         
         string call(const string key, const size_t argc = 0, string* argv = NULL);
         
-        void consume(const string key);
+        void   consume(const string key);
         
         string evaluate(const string expression);
         
@@ -167,56 +169,42 @@ namespace ss {
         
         string get_string(const string key);
         
-        bool is_mutating(const string expression) const;
+        bool   is_mutating(const string expression) const;
         
-        void kill();
+        void   kill();
+                
+        void   remove_key(const string key);
         
-        void remove_listener(const string key);
+        void   save_state();
+
+        void   set_array(const string key, std::function<void(variable<ss::array<string>>*)> callback = [](variable<ss::array<string>>* value) { });
         
-        void remove_key(const string key);
+        void   set_array(const string key, const string value);
         
-        void save_state();
+        void   set_array(const string key, const size_t position, const string value);
         
-        void set_array(const string key, const string value);
-        
-        void set_array(const string key, const size_t index, const string value);
-        
-        void set_function(function_t* function);
+        void   set_function(function_t* function);
         
         // Begin Enhancement 1 - Thread safety - 2025-01-22
-        void set_paused();
+        void   set_paused();
         // End Enhancement 1
         
         // Begin Enhancement 1-1 - Thread safety - 2025-02-01
-        void set_paused(const bool value, std::function<void(command_processor*)> cb = [](command_processor* cp) {});
+        void   set_paused(const bool value, std::function<void(command_processor*)> cb = [](command_processor* cp) {});
         // End Enhancement 1-1
         
-        void set_read_only(const string key, const bool value);
+        void   set_readonly(const string key, const bool value);
         
-        void set_state();
+        void   set_state();
         
-        void set_state(const size_t state, bool verbose = true, bool update = true);
+        void   set_state(const size_t state, bool verbose = true, bool update = true);
         
-        void set_string(const string key, const string value);
+        void   set_string(const string key, const string value, std::function<void(variable<string>*)> callback = [](variable<string>* value) { });
         
-        void stack_push(function_t* function);
+        void   stack_push(function_t* function);
         
         string stack_trace();
     };
-
-    //  NON-MEMBER FUNCTIONS
-
-    bool evaluate(const string value);
-
-    size_t get_dictionary(string* destination, const string source);
-
-    int get_int(const string value);
-
-    double get_number(const string value);
-
-    string get_string(const string value);
-
-    size_t get_table(string* destination, const string source);
 }
 
 #endif /* command_processor_h */

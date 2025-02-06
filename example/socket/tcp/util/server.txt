@@ -14,13 +14,13 @@ include("@/array/table/getProperty")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got 0")
+        expectException("1 argument(s), got 0")
     end if
     
     backlog = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if subtypeOf backlog !== "integer"
-        typeExcept(subtypeOf backlog, "integer")
+        typeException(subtypeOf backlog, "integer")
     end if
     
     port = getProperty(env, "port")

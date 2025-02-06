@@ -28,7 +28,7 @@ namespace ss {
             expect_error("'catch'");
         
         if (!this->position)
-            logger_write("'try' statement has empty body\n");
+            logger_write("'try' statement has empty body");
         
         this->statementc = statementc;
         this->statementv = statementv;
@@ -54,7 +54,7 @@ namespace ss {
                 ++i;
             
             if (i != this->position)
-                logger_write("Unreachable code\n");
+                logger_write("Unreachable code");
         }
         
         for (size_t i = this->position; i < this->statementc; ++i)

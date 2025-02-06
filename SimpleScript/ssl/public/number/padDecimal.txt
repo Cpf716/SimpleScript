@@ -3,24 +3,24 @@
 //  File:   padDecimal.txt
 //
 
-include((dir = "@/exception/") + "expectExcept")
+include((dir = "@/exception/") + "expectException")
 include(dir + "rangeExcept")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
     
     num = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if typeOf num !== "number"
-        typeExcept(typeOf num, "number")
+        typeException(typeOf num, "number")
     end if
     
     len = ((argv row 1) slice 1, (argv cell 1, 0))
     
     if subtypeOf len !== "integer"
-        typeExcept(subtypeOf len, "integer")
+        typeException(subtypeOf len, "integer")
     end if
     
     if len < 0

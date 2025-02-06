@@ -9,13 +9,13 @@ include("@/search/string/split")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     date = (argv row 0) slice 1
     
     if typeOf date !== "string"
-        typeExcept(typeOf date, "string")
+        typeException(typeOf date, "string")
     end if
     
     if date === null

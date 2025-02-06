@@ -42,6 +42,33 @@ namespace ss {
         throw error("Out of range: " + message);
     }
 
+    std::string to_string(const data_t type) {
+        switch (type) {
+            case array_t:
+                return "array";
+            case char_t:
+                return "character";
+            case dictionary_t:
+                return "dictionary";
+            case int_t:
+                return "integer";
+            case item_t:
+                return "item";
+            case number_t:
+                return "number";
+            case string_t:
+                return "string";
+            case table_t:
+                return "table";
+        }
+        
+        return null();
+    }
+
+    void type_error(const data_t lhs, const data_t rhs) {
+        ss::type_error(to_string(lhs), to_string(rhs));
+    }
+
     void type_error(const std::string lhs, const std::string rhs) {
         throw error("Cannot convert from " + lhs + " to " + rhs);
     }

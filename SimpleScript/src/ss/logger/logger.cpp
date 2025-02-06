@@ -5,7 +5,6 @@
 //  Created by Corey Ferguson on 10/14/23.
 //
 
-#include "file_system.h"
 #include "logger.h"
 
 namespace ss {
@@ -82,7 +81,7 @@ namespace ss {
     }
 
     void logger_write(const std::string message) {
-        file << message;
+        file << message << std::endl;
         file.flush();
         
         if (file.fail())

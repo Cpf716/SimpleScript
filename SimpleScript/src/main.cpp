@@ -12,7 +12,9 @@ using namespace ss;
 //  NON-MEMBER FIELDS
 
 command_processor cp;
-//bool              return_flag = false;
+// Begin Bug 1 - ss::error on SIGINT - 2025-02-05
+atomic<bool>      return_flag = false;
+// End  Bug 1
 
 //  NON-MEMBER FUNCTIONS
 
@@ -27,11 +29,13 @@ void handle_signal(int signum) {
         
         ss::integration::socket_close();
         
-//        return_flag = true;
+        // Begin Bug 1 - ss::error on SIGINT - 2025-02-05
+        return_flag.store(true);
+        // End Bug 1
         
         cp.kill();
         
-        logger_write("^C\n");
+        logger_write("^C");
     }).detach();
 }
 
@@ -45,7 +49,7 @@ int main(int argc, char* argv[]) {
     
     //  build
     
-    logger_write("Building...\n");
+    logger_write("Building...");
     
     time_point<steady_clock> beg = steady_clock::now();;
     node<string>*            parent = new node<string>();
@@ -68,7 +72,7 @@ int main(int argc, char* argv[]) {
     
     double res = duration<double>(steady_clock::now() - beg).count();
     
-    logger_write("Done in " + to_string(res) + " s.\nRunning...\n");
+    logger_write("Done in " + to_string(res) + " s.\nRunning...");
     
     beg = steady_clock::now();
     
@@ -85,7 +89,7 @@ int main(int argc, char* argv[]) {
         } catch (::exception& e) {
             ostringstream ss;
             
-            ss << "EXCEPTION - " << e.what() << endl;
+            ss << "EXCEPTION - " << e.what();
             ss << cp.stack_trace();
             
             cout << ss.str();
@@ -93,16 +97,19 @@ int main(int argc, char* argv[]) {
             logger_write(ss.str());
         }
     } catch (error& e) {
-//        if (!return_flag) {
-            ostringstream ss;
-            
-            ss << "ERROR - " << e.what() << endl;
-            ss << cp.stack_trace();
-            
-            cout << ss.str();
-            
-            logger_write(ss.str());
-//        }
+        // Begin Bug 1 - ss::error on SIGINT - 2025-02-05
+        if (return_flag.load())
+            return 0;
+        // End Bug 1
+
+        ostringstream ss;
+        
+        ss << "ERROR - " << e.what();
+        ss << cp.stack_trace();
+        
+        cout << ss.str();
+        
+        logger_write(ss.str());
     }
     
     res = duration<double>(steady_clock::now() - beg).count();

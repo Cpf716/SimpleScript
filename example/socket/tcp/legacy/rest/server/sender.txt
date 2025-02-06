@@ -51,7 +51,7 @@ end func
 
 func main()
     if nrows(argv)
-        expectExcept("0 arugment(s), got {}" format nrows(argv))
+        expectException("0 arugment(s), got {}" format nrows(argv))
     end if
 
     if exists("/tmp/server.log")

@@ -12,17 +12,17 @@ end if
 
 func main()
     if !nrows(argv)
-        expectExcept("1 argument(s), got 0")
+        expectException("1 argument(s), got 0")
     end if
     
     if nrows(argv) >= 3
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
     
     str = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if typeOf str !== "string"
-        typeExcept(typeOf str, "string")
+        typeException(typeOf str, "string")
     end if
     
     array pat = SEP
@@ -31,7 +31,7 @@ func main()
         pat = ((argv row 1) slice 1, (argv cell 1, 0))
         
         if typeOf array(...pat) !== "string"
-            typeExcept(typeOf array(...pat), "string")
+            typeException(typeOf array(...pat), "string")
         end if
     end if
 

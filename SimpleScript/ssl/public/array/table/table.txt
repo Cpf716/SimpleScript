@@ -3,17 +3,17 @@
 //  File:   table.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
     
     `nrows` = ((argv row 0) slice 1, (argv cell 0, 0))
     
     if subtypeOf `nrows` !== "integer"
-        typeExcept(subtypeOf `nrows`, "integer")
+        typeException(subtypeOf `nrows`, "integer")
     end if
     
     if `nrows` < 0
@@ -23,7 +23,7 @@ func main()
     ncols = ((argv row 1) slice 1, (argv cell 1, 0))
     
     if subtypeOf ncols !== "integer"
-        typeExcept(subtypeOf ncols, "integer")
+        typeException(subtypeOf ncols, "integer")
     end if
     
     if ncols < 0

@@ -7,17 +7,17 @@ include("@/number/digits")
 
 func main()
     if !nrows(argv)
-        expectExcept("1 argument(s), got 0")
+        expectException("1 argument(s), got 0")
     end if
     
     if nrows(argv) >= 3
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
 
     num = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf num !== "number"
-        typeExcept(typeOf num, "number")
+        typeException(typeOf num, "number")
     end if
 
     padStr = ","
@@ -26,7 +26,7 @@ func main()
         padStr = ((argv row 1) slice 1, (argv cell 1, 0))
         
         if subtypeOf padStr !== "character"
-            typeExcept(subtypeOf padStr, "character")
+            typeException(subtypeOf padStr, "character")
         end if
     end if
 

@@ -2,11 +2,11 @@
 //  Date:   August 3, 2023
 //  File:   timezones.txt
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv)
-        expectExcept("0 argument(s), got {}" format nrows(argv))
+        expectException("0 argument(s), got {}" format nrows(argv))
     end if
     
     arr."Hawaii" = -660     //  N/A

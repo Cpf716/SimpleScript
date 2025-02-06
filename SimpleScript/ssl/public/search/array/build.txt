@@ -6,11 +6,11 @@ include("@/exception/rangeExcept")
 
 func main()
     if !nrows(argv)
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     if nrows(argv) >= 4
-        expectExcept("3 argument(s), got {}" format nrows(argv))
+        expectException("3 argument(s), got {}" format nrows(argv))
     end if
     
     array arr = ((argv row 0) slice 1, (argv cell 0, 0))
@@ -21,7 +21,7 @@ func main()
         beg = ((argv row 1) slice 1, (argv cell 1, 0))
         
         if subtypeOf beg !== "integer"
-            typeExcept(subtypeOf beg, "integer")
+            typeException(subtypeOf beg, "integer")
         end if
         
         if beg < 0 || beg > count arr
@@ -35,7 +35,7 @@ func main()
         end = ((argv row 2) slice 1, (argv cell 2, 0))
         
         if subtypeOf end !== "integer"
-            typeExcept(subtypeOf end, "integer")
+            typeException(subtypeOf end, "integer")
         end if
         
         if end < beg || end > count arr

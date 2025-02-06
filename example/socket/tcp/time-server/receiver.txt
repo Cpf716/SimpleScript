@@ -19,7 +19,7 @@ include("@/array/table/getProperty")
 
 func main()
     if nrows(argv) > 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
 
     array port = getProperty(env, "port")
@@ -28,7 +28,7 @@ func main()
         port = (argv row 0) slice 1
         
         if subtypeOf array(...port) !== "integer"
-            typeExcept(subtypeOf array(...port), "integer")
+            typeException(subtypeOf array(...port), "integer")
         end if
         
         if port < 0

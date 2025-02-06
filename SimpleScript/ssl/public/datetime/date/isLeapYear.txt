@@ -3,17 +3,17 @@
 //  File:   isLeapYear.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
 
     year = (argv row 0) slice 1
 
     if subtypeOf year !== "integer"
-        typeExcept(subtypeOf year, "integer")
+        typeException(subtypeOf year, "integer")
     end if
 
     if year < 1970

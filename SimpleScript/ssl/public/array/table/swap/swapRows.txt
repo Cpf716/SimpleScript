@@ -3,23 +3,23 @@
 //  File:   swapRows.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 3
-        expectExcept("3 argument(s), got {}" format nrows(argv))
+        expectException("3 argument(s), got {}" format nrows(argv))
     end if
 
     arr = ((argv row 0) slice 1, argv cell 0, 0)
 
     if typeOf arr !== "array"
-        typeExcept(typeOf arr, "array")
+        typeException(typeOf arr, "array")
     end if
 
     a = ((argv row 1) slice 1, argv cell 1, 0)
 
     if subtypeOf a !== "integer"
-        typeExcept(subtypeOf a, "integer")
+        typeException(subtypeOf a, "integer")
     end if
 
     if a < 0 || a >= (count arr - 1) / first arr
@@ -29,7 +29,7 @@ func main()
     b = ((argv row 2) slice 1, argv cell 2, 0)
 
     if subtypeOf b !== "integer"
-        typeExcept(subtypeOf b, "integer")
+        typeException(subtypeOf b, "integer")
     end if
 
     if b < 0 || b >= (count arr - 1) / first arr

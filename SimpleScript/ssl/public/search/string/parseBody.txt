@@ -13,13 +13,13 @@ end if
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     req = (argv row 0) slice 1
     
     if typeOf req !== "string"
-        typeExcept(typeOf req, "string")
+        typeException(typeOf req, "string")
     end if
     
     if req === null

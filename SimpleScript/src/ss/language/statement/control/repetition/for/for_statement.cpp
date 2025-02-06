@@ -68,7 +68,7 @@ namespace ss {
         assert(cp != NULL);
 #endif
         if (!this->statementc) {
-            logger_write("'for' statement has empty body\n");
+            logger_write("'for' statement has empty body");
             return false;
         }
         
@@ -77,13 +77,13 @@ namespace ss {
             ++i;
         
         if (i != this->statementc - 1)
-            logger_write("Unreachable code\n");
+            logger_write("Unreachable code");
                 
         if (this->statementv[i]->analyze(cp) &&
             (this->statementv[i]->compare(break_t) ||
              this->statementv[i]->compare(exit_t) ||
              this->statementv[i]->compare(return_t)))
-            logger_write("'for' statement will execute at most once\n");
+            logger_write("'for' statement will execute at most once");
         
         return false;
     }

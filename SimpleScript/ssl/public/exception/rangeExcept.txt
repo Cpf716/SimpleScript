@@ -3,16 +3,16 @@
 //  File:   rangeExcept.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 if nrows(argv) !== 1
-    expectExcept("1 argument(s), got {}" format nrows(argv))
+    expectException("1 argument(s), got {}" format nrows(argv))
 end if
 
 message = (argv row 0) slice 1
 
 if typeOf message !== "string"
-    typeExcept(typeOf message, "string")
+    typeException(typeOf message, "string")
 end if
 
 throw "Out of range: {}" format message

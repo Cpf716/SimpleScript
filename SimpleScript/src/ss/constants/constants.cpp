@@ -24,4 +24,8 @@ namespace ss {
         target[10] = "November";
         target[11] = "December";
     }
+
+    std::string null() {
+        return std::string();
+    }
 }

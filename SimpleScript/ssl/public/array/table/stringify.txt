@@ -15,13 +15,13 @@ end if
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
 
     array tab = (argv row 0) slice 1
 
     if subtypeOf tab !== "table"
-        typeExcept(subtypeOf tab, "table")
+        typeException(subtypeOf tab, "table")
     end if
 
     filename = "/tmp/" + uuid()

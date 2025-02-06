@@ -3,17 +3,17 @@
 //  File:   trimEnd.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 1
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
     str = (argv row 0) slice 1
 
     if typeOf str !== "string"
-        typeExcept(typeOf str, "string")
+        typeException(typeOf str, "string")
     end if
 
     if str === null

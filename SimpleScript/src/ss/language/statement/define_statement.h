@@ -71,7 +71,7 @@ namespace ss {
                 else
                     cp->set_number(key, stod(result));
                 
-                cp->set_read_only(key, true);
+                cp->set_readonly(key, true);
             });
             
             return null();

@@ -13,7 +13,9 @@
 namespace ss {
     // NON-MEMBER FUNCTIONS
 
-    void months(std::string* target);
+    void        months(std::string* target);
+
+    std::string null();
 }
 
 #endif /* constants_h */

@@ -32,7 +32,7 @@ end func
 
 func main()
     if nrows(argv) >= 2
-        expectExcept("1 argument(s), got {}" format nrows(argv))
+        expectException("1 argument(s), got {}" format nrows(argv))
     end if
     
 
@@ -42,7 +42,7 @@ func main()
         port = (argv row 0) slice 1
         
         if subtypeOf array(...port) !== "integer"
-            typeExcept(subtypeOf array(...port), "integer")
+            typeException(subtypeOf array(...port), "integer")
         end if
         
         if port < 0

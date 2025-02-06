@@ -79,7 +79,7 @@ namespace ss {
         assert(cp != NULL);
     #endif
         if (!this->statementc) {
-            logger_write("'case' statement has empty body\n");
+            logger_write("'case' statement has empty body");
             
             return false;
         }
@@ -89,7 +89,7 @@ namespace ss {
             ++i;
         
         if (i != this->statementc - 1)
-            logger_write("Unreachable code\n");
+            logger_write("Unreachable code");
         
         this->statementv[this->statementc - 1]->analyze(cp);
         

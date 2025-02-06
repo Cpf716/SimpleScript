@@ -15,9 +15,9 @@ namespace ss {
     class node {
         //  MEMBER FIELDS
         
-        ss::array<node*> children;
-        T _data;
-        node* _parent = NULL;
+        ss::array<node*> _children;
+        T                _data;
+        node*            _parent = NULL;
     public:
         //  CONSTRUCTORS
         
@@ -26,12 +26,12 @@ namespace ss {
             this->_parent = parent;
             
             if (this->parent() != NULL)
-                this->parent()->children.push(this);
+                this->parent()->_children.push(this);
         }
         
         void close() {
-            for (size_t i = 0; i < this->children.size(); ++i)
-                this->children[i]->close();
+            for (size_t i = 0; i < this->_children.size(); ++i)
+                this->_children[i]->close();
             
             delete this;
         }

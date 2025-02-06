@@ -5,19 +5,19 @@
 
 func main()
     if nrows(argv) !== 2
-        expectExcept("2 argument(s), got {}" format nrows(argv))
+        expectException("2 argument(s), got {}" format nrows(argv))
     end if
 
     timestamp = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if subtypeOf timestamp !== "integer"
-        typeExcept(subtypeOf timestamp, "integer")
+        typeException(subtypeOf timestamp, "integer")
     end if
 
     months = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if subtypeOf months !== "integer"
-        typeExcept(subtypeOf months, "integer")
+        typeException(subtypeOf months, "integer")
     end if
 
     timestamp += months * 2592000

@@ -11,9 +11,15 @@ namespace ss {
     //  NON-MEMBER FIELDS
 
     void load_file_system(command_processor* cp) {
-        cp->set_string("pathSeparator", encode(path_separator()));
-        cp->set_read_only("pathSeparator", true);
-        cp->consume("pathSeparator");
+        cp->set_string("cwd", encode(filesystem::current_path()), [](variable<string>* value) {
+            value->readonly() = true;
+            value->value();
+        });
+        
+        cp->set_string("pathSeparator", encode(path_separator()), [](variable<string>* value) {
+            value->readonly() = true;
+            value->value();
+        });
         
         cp->set_function(new ss::function("closeFile", [](const size_t argc, string* argv) {
             if (argc != 1)

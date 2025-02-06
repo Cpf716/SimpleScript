@@ -3,17 +3,17 @@
 //  File:   replace.txt
 //
 
-include("@/exception/expectExcept")
+include("@/exception/expectException")
 
 func main()
     if nrows(argv) !== 3
-        expectExcept("3 argument(s), got {}" format nrows(argv))
+        expectException("3 argument(s), got {}" format nrows(argv))
     end if
 
     text = ((argv row 0) slice 1, (argv cell 0, 0))
 
     if typeOf text !== "string"
-        typeExcept(typeOf text, "string")
+        typeException(typeOf text, "string")
     end if
 
     if text === null
@@ -23,7 +23,7 @@ func main()
     pattern = ((argv row 1) slice 1, (argv cell 1, 0))
 
     if typeOf pattern !== "string"
-        typeExcept(typeOf pattern, "string")
+        typeException(typeOf pattern, "string")
     end if
 
     if pattern === null
@@ -33,7 +33,7 @@ func main()
     newPat = ((argv row 2) slice 1, (argv cell 2, 0))
 
     if typeOf newPat !== "string"
-        typeExcept(typeOf newPat, "string")
+        typeException(typeOf newPat, "string")
     end if
 
     if newPat === null
