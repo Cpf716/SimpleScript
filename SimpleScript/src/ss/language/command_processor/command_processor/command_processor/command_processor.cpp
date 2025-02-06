@@ -229,7 +229,7 @@ namespace ss {
             functionv[i]->consume();
     }
 
-    string command_processor::element(const string val) {
+    string command_processor::get_item(const string val) {
         if (ss::is_array(val))
             type_error(array_t, item_t);
         
@@ -2700,7 +2700,7 @@ namespace ss {
                                     
                                     rhs = operands.pop();
                                     
-                                    rhs = element(rhs);
+                                    rhs = get_item(rhs);
                                     rhs = decode(rhs);
                                     
                                     rhs = text + rhs;
@@ -2752,7 +2752,7 @@ namespace ss {
                                         
                                         rhs = operands.pop();
                                         
-                                        rhs = element(rhs);
+                                        rhs = get_item(rhs);
                                         rhs = decode(rhs);
                                         
                                         rhs = text + rhs;
@@ -2814,7 +2814,7 @@ namespace ss {
                                         
                                         rhs = operands.pop();
                                         
-                                        rhs = element(rhs);
+                                        rhs = get_item(rhs);
                                         rhs = decode(rhs);
                                         
                                         rhs = text + rhs;
@@ -2861,7 +2861,7 @@ namespace ss {
                                     
                                     rhs = operands.pop();
                                     
-                                    rhs = element(rhs);
+                                    rhs = get_item(rhs);
                                     rhs = decode(rhs);
                                     
                                     rhs = text + rhs;
@@ -2940,7 +2940,7 @@ namespace ss {
                                         
                                         string ctr = encode(rhs);
                                         
-                                        rhs = element(operands.pop());
+                                        rhs = get_item(operands.pop());
                                         
                                         if (std::get<2>(* arrayv[k]).first)
                                             write_error(lhs);
@@ -2970,7 +2970,7 @@ namespace ss {
                                             if (ctr < 0 || ctr > std::get<1>(* arrayv[k]).size())
                                                 range_error("index " + encode(ctr) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
                                             
-                                            rhs = element(operands.pop());
+                                            rhs = get_item(operands.pop());
                                             
                                             if (std::get<2>(* arrayv[k]).first)
                                                 write_error(lhs);
@@ -2985,7 +2985,7 @@ namespace ss {
                                             if (ctr.length() == 2)
                                                 undefined_error(ctr);
                                             
-                                            rhs = element(operands.pop());
+                                            rhs = get_item(operands.pop());
                                             
                                             if (std::get<2>(* arrayv[k]).first)
                                                 write_error(lhs);
@@ -3010,7 +3010,7 @@ namespace ss {
                                         if (ctr < 0 || ctr > std::get<1>(* arrayv[k]).size())
                                             range_error("index " + encode(ctr) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
                                         
-                                        rhs = element(operands.pop());
+                                        rhs = get_item(operands.pop());
                                         
                                         if (std::get<2>(* arrayv[k]).first)
                                             write_error(lhs);
@@ -3053,7 +3053,7 @@ namespace ss {
                                     
                                     string ctr = rhs;
                                     
-                                    rhs = element(operands.pop());
+                                    rhs = get_item(operands.pop());
                                     
                                     size_t k = 0;
                                     while (k < (size_t)floor(valuec / 2) && valuev[k * 2] != ctr)
@@ -3095,7 +3095,7 @@ namespace ss {
                                             range_error("index " + encode(ctr) + ", count " + std::to_string(valuec));
                                         }
                                         
-                                        rhs = element(operands.top());
+                                        rhs = get_item(operands.top());
                                         
                                         if (ctr == valuec) {
                                             string* tmp = new string[valuec + 1];
@@ -3130,7 +3130,7 @@ namespace ss {
                                         
                                         string ctr = rhs;
                                         
-                                        rhs = element(operands.pop());
+                                        rhs = get_item(operands.pop());
                                         
                                         size_t l = 0;
                                         while (l < (size_t)floor(valuec / 2) && valuev[l * 2] != ctr)
@@ -3166,7 +3166,7 @@ namespace ss {
                                         range_error("index " + encode(ctr) + ", count " + std::to_string(valuec));
                                     }
                                     
-                                    rhs = element(operands.pop());
+                                    rhs = get_item(operands.pop());
                                     
                                     if (ctr == valuec) {
                                         string* tmp = new string[valuec + 1];
@@ -5891,13 +5891,13 @@ namespace ss {
                     }
                 }
                 
-                string pattern = element(rhs);
+                string pattern = get_item(rhs);
                 
                 std::get<2>(* arrayv[i]).second = true;
                 
                 return std::to_string(std::get<1>(* arrayv[i]).index_of(pattern));
             }
-            string pattern = element(rhs);
+            string pattern = get_item(rhs);
             
             size_t i = 0;
             while (i < valuec && valuev[i] != pattern)
@@ -7146,14 +7146,14 @@ namespace ss {
                     }
                 }
                 
-                string pattern = element(rhs);
+                string pattern = get_item(rhs);
                 
                 std::get<2>(* arrayv[i]).second = true;
                 
                 return std::to_string(std::get<1>(* arrayv[i]).index_of(pattern));
             }
             
-            string pattern = element(rhs);
+            string pattern = get_item(rhs);
             
             int i = 0;
             while (i < valuec && valuev[i] != pattern)
@@ -7552,14 +7552,14 @@ namespace ss {
                     return std::to_string(k);
                 }
                 
-                string pattern = element(rhs);
+                string pattern = get_item(rhs);
                 
                 std::get<2>(* arrayv[i]).second = true;
                 
                 return std::to_string(std::get<1>(* arrayv[i]).last_index_of(pattern));
             }
             
-            string pattern = element(rhs);
+            string pattern = get_item(rhs);
             
             int i = (int)valuec - 1;
             while (i >= 0 && valuev[i] != pattern)
