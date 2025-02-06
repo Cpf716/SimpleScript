@@ -68,7 +68,7 @@ namespace ss {
         size_t var_pos;
         
         size_t                                                       arrayc = 0;
-        tuple<string, ss::array<string>, pair<bool, bool>, size_t>** arrayv = NULL;
+        variable<ss::array<string>>**                                arrayv = NULL;
         size_t                                                       buocc;
         size_t*                                                      buocv = NULL;
         binary_universal_operator***                                 buov = NULL;
@@ -85,7 +85,7 @@ namespace ss {
         
         size_t statec = 0;
         
-        pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>** state_arrayv = NULL;
+        pair<size_t, variable<ss::array<string>*>**>** state_arrayv = NULL;
         
         pair<size_t, function_t**>** state_functionv = NULL;
         

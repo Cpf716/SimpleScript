@@ -34,18 +34,23 @@ namespace ss {
             
         });
         
-        set_array("types", 0, encode(to_string(array_t)));
-        set_array("types", 1, encode(to_string(char_t)));
-        set_array("types", 2, encode(to_string(dictionary_t)));
-        set_array("types", 3, encode(to_string(number_t)));
-        set_array("types", 4, encode(to_string(int_t)));
-        set_array("types", 5, encode(to_string(string_t)));
-        set_array("types", 6, encode(to_string(table_t)));
-        
-        int pos = find_array("types");
-        
-        std::get<1>(* arrayv[pos]).shrink_to_fit();
-        std::get<2>(* arrayv[pos]).first = true; 
+       this->set_array("types", [](variable<ss::array<string>>* value) {
+           std::function<string(data_t)> _to_string = [](data_t type) {
+               return encode(to_string(type));
+           };
+           
+           value->value().resize(7);
+           value->value()[0] = _to_string(array_t);
+           value->value()[1] = _to_string(char_t);
+           value->value()[2] = _to_string(dictionary_t);
+           value->value()[3] = _to_string(number_t);
+           value->value()[4] = _to_string(int_t);
+           value->value()[5] = _to_string(string_t);
+           value->value()[6] = _to_string(table_t);
+           
+//            value->readonly() = true;
+           value->value();
+       });
         
         save_state();
     }
@@ -120,7 +125,7 @@ namespace ss {
                 return (int)stringv[pos]->state();
             }
             
-            return (int)std::get<3>(* arrayv[pos]);
+            return (int)arrayv[pos]->state();
         }
         
         return -1;
@@ -134,36 +139,36 @@ namespace ss {
             if (is_defined(key))
                 defined_error(key);
 #endif
+            add_key(key);
+            
             if (is_pow(arrayc, 2)) {
-                tuple<string, ss::array<string>, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[arrayc * 2];
+                variable<ss::array<string>>** _arrayv = new variable<ss::array<string>>*[arrayc * 2];
                 
                 for (size_t j = 0; j < arrayc; ++j)
                     _arrayv[j] = arrayv[j];
                 
                 delete[] arrayv;
+                
                 arrayv = _arrayv;
             }
             
-            arrayv[arrayc] = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>(key, ss::array<string>(valuec), pair<bool, bool>(false, false), _statec);
+            arrayv[arrayc] = new variable<ss::array<string>>(key, ss::array<string>(valuec), _statec);
             
             size_t j;
-            for (j = arrayc++; j > 0 && std::get<0>(* arrayv[j]) < std::get<0>(* arrayv[j - 1]); --j)
+            for (j = arrayc++; j > 0 && arrayv[j]->key() < arrayv[j - 1]->key(); --j)
                 swap(arrayv[j], arrayv[j - 1]);
             
-            std::get<1>(* arrayv[j]).resize(valuec);
+            arrayv[j]->value().resize(valuec);
             
             for (size_t k = 0; k < valuec; ++k)
-                std::get<1>(* arrayv[j])[k] = valuev[k];
+                arrayv[j]->value()[k] = valuev[k];
             
-            add_key(key);
+            
         } else {
-            if (std::get<2>(* arrayv[i]).first)
-                write_error(key);
-            
-            std::get<1>(* arrayv[i]).resize(valuec);
+            arrayv[i]->value().resize(valuec);
             
             for (size_t j = 0; j < valuec; ++j)
-                std::get<1>(* arrayv[i])[j] = valuev[j];
+                arrayv[i]->value()[j] = valuev[j];
         }
     }
 
@@ -224,7 +229,7 @@ namespace ss {
                 else
                     stringv[i]->value();
             } else
-                std::get<2>(* arrayv[i]).second = true;
+                arrayv[i]->value();
         } else
             functionv[i]->consume();
     }
@@ -255,7 +260,7 @@ namespace ss {
 
     string command_processor::evaluate(const string expression) {
 #if DEBUG_LEVEL == 3
-        logger_write("(" + expression + "), ");
+        logger_write("(" + expression + ")");
         
         time_point<steady_clock> beg = steady_clock::now();;
 #endif
@@ -515,7 +520,7 @@ namespace ss {
                                         //  array != int
                                     
                                     if (rhs.empty()) {
-                                        if (is_dictionary(std::get<1>(* arrayv[k])))
+                                        if (is_dictionary(arrayv[k]->value()))
                                             null_error();
                                         
                                         type_error(string_t, int_t);
@@ -523,7 +528,7 @@ namespace ss {
                                     }
                                     
                                     if (is_string(rhs)) {
-                                        if (!is_dictionary(std::get<1>(* arrayv[k])))
+                                        if (!is_dictionary(arrayv[k]->value()))
                                             type_error(array_t, dictionary_t);
                                             //  array != dictionary
                                         
@@ -535,13 +540,13 @@ namespace ss {
                                         rhs = encode(rhs);
                                         
                                         size_t l = 0;
-                                        while (l < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[l * 2] != rhs)
+                                        while (l < (size_t)floor(arrayv[k]->value().size() / 2) && arrayv[k]->value()[l * 2] != rhs)
                                             ++l;
                                         
-                                        if (l == (size_t)floor(std::get<1>(* arrayv[k]).size() / 2))
+                                        if (l == (size_t)floor(arrayv[k]->value().size() / 2))
                                             undefined_error(rhs);
                                         
-                                        if (std::get<1>(* arrayv[k])[l * 2 + 1].empty() || is_string(std::get<1>(* arrayv[k])[l * 2 + 1]))
+                                        if (arrayv[k]->value()[l * 2 + 1].empty() || is_string(arrayv[k]->value()[l * 2 + 1]))
                                             type_error(string_t, number_t);
                                             //  string != double
                                         
@@ -577,13 +582,13 @@ namespace ss {
                                         } else
                                             b = parse_number(rhs);
                                         
-                                        double a = parse_number(std::get<1>(* arrayv[k])[l * 2 + 1]);
+                                        double a = parse_number(arrayv[k]->value()[l * 2 + 1]);
                                         
                                         a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                         
                                         rhs = encode(a);
                                         
-                                        std::get<1>(* arrayv[k])[l * 2 + 1] = rhs;
+                                        arrayv[k]->value()[l * 2 + 1] = rhs;
                                         
                                     } else if (is_key(rhs)) {
                                         if (find_array(rhs) != -1)
@@ -598,10 +603,10 @@ namespace ss {
                                                 type_error(number_t, int_t);
                                                 //  double != int
                                             
-                                            if (idx < 0 || idx >= std::get<1>(* arrayv[k]).size())
-                                                range_error("index " + encode(idx) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                            if (idx < 0 || idx >= arrayv[k]->value().size())
+                                                range_error("index " + encode(idx) + ", count " + std::to_string(arrayv[k]->value().size()));
                                             
-                                            if (std::get<1>(* arrayv[k])[(size_t)idx].empty() || is_string(std::get<1>(* arrayv[k])[(size_t)idx]))
+                                            if (arrayv[k]->value()[(size_t)idx].empty() || is_string(arrayv[k]->value()[(size_t)idx]))
                                                 type_error(string_t, number_t);
                                                 //  string != double
                                             
@@ -637,15 +642,15 @@ namespace ss {
                                             } else
                                                 b = parse_number(rhs);
                                             
-                                            double a = parse_number(std::get<1>(* arrayv[k])[(size_t)idx]);
+                                            double a = parse_number(arrayv[k]->value()[(size_t)idx]);
                                             
                                             a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                             
                                             rhs = encode(a);
                                             
-                                            std::get<1>(* arrayv[k])[(size_t)idx] = rhs;
+                                            arrayv[k]->value()[(size_t)idx] = rhs;
                                         } else {
-                                            if (!is_dictionary(std::get<1>(* arrayv[k])))
+                                            if (!is_dictionary(arrayv[k]->value()))
                                                 type_error(array_t, dictionary_t);
                                                 //  array != dictionary
                                             
@@ -658,13 +663,13 @@ namespace ss {
                                                 undefined_error(rhs);
                                             
                                             size_t m = 0;
-                                            while (m < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[m * 2] != rhs)
+                                            while (m < (size_t)floor(arrayv[k]->value().size() / 2) && arrayv[k]->value()[m * 2] != rhs)
                                                 ++m;
                                             
-                                            if (m == (size_t)floor(std::get<1>(* arrayv[k]).size() / 2))
+                                            if (m == (size_t)floor(arrayv[k]->value().size() / 2))
                                                 undefined_error(rhs);
                                             
-                                            if (std::get<1>(* arrayv[k])[m * 2 + 1].empty() || is_string(std::get<1>(* arrayv[k])[m * 2 + 1]))
+                                            if (arrayv[k]->value()[m * 2 + 1].empty() || is_string(arrayv[k]->value()[m * 2 + 1]))
                                                 type_error(string_t, number_t);
                                                 //  string != double
                                             
@@ -700,13 +705,13 @@ namespace ss {
                                             } else
                                                 b = parse_number(rhs);
                                             
-                                            double a = parse_number(std::get<1>(* arrayv[k])[m * 2 + 1]);
+                                            double a = parse_number(arrayv[k]->value()[m * 2 + 1]);
                                             
                                             a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                             
                                             rhs = encode(a);
                                             
-                                            std::get<1>(* arrayv[k])[m * 2 + 1] = rhs;
+                                            arrayv[k]->value()[m * 2 + 1] = rhs;
                                         }
                                     } else {
                                         double idx = parse_number(rhs);
@@ -715,10 +720,10 @@ namespace ss {
                                             type_error(number_t, int_t);
                                             //  double != int
                                         
-                                        if (idx < 0 || idx >= std::get<1>(* arrayv[k]).size())
-                                            range_error("index " + encode(idx) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                        if (idx < 0 || idx >= arrayv[k]->value().size())
+                                            range_error("index " + encode(idx) + ", count " + std::to_string(arrayv[k]->value().size()));
                                         
-                                        if (std::get<1>(* arrayv[k])[(size_t)idx].empty() || is_string(std::get<1>(* arrayv[k])[(size_t)idx]))
+                                        if (arrayv[k]->value()[(size_t)idx].empty() || is_string(arrayv[k]->value()[(size_t)idx]))
                                             type_error(string_t, number_t);
                                             //  string != double
                                         
@@ -754,13 +759,13 @@ namespace ss {
                                         } else
                                             b = parse_number(rhs);
                                         
-                                        double a = parse_number(std::get<1>(* arrayv[k])[(size_t)idx]);
+                                        double a = parse_number(arrayv[k]->value()[(size_t)idx]);
                                         
                                         a = ((binary_arithmetic_operator *)aov[j])->apply(a, b);
                                         
                                         rhs = encode(a);
                                         
-                                        std::get<1>(* arrayv[k])[(size_t)idx] = rhs;
+                                        arrayv[k]->value()[(size_t)idx] = rhs;
                                     }
                                 }
                             } else {
@@ -1131,13 +1136,11 @@ namespace ss {
                                     num = rhs.empty() ? 0 : !decode_raw(stringv[k]->value()).empty();
                                 }
                             } else {
-                                if (std::get<1>(* arrayv[k]).size() == 1) {
-                                    rhs = std::get<1>(* arrayv[k])[0];
+                                if (arrayv[k]->value().size() == 1) {
+                                    rhs = arrayv[k]->value()[0];
                                     num = rhs.empty() ? 0 : is_string(rhs) ? !decode_raw(rhs).empty() : parse_number(rhs);
                                 } else
                                     num = 1;
-                                
-                                std::get<2>(* arrayv[k]).second = true;
                             }
                         } else
                             num = parse_number(rhs);
@@ -1361,7 +1364,7 @@ namespace ss {
                                     
                                     stringv[find_string(lhs)]->value();
                                 } else {
-                                    array<string> arr = std::get<1>(* arrayv[k]);
+                                    array<string> arr = arrayv[k]->value();
                                     
                                     rhs = evaluate(operands.pop());
                                     
@@ -1418,8 +1421,6 @@ namespace ss {
                                         rhs = stringify(arr, (size_t)s, (size_t)e);
                                     } else
                                         rhs = stringify(arr, (size_t)s);
-                                    
-                                    std::get<2>(* arrayv[find_array(lhs)]).second = true;
                                 }
                             }
                         } else {
@@ -1521,7 +1522,7 @@ namespace ss {
                                 type_error(array_t, item_t);
                             
                             if (rhs.empty()) {
-                                if (is_dictionary(std::get<1>(* arrayv[k])))
+                                if (is_dictionary(arrayv[k]->value()))
                                     null_error();
                                 
                                 type_error(string_t, int_t);
@@ -1542,7 +1543,7 @@ namespace ss {
                                 if (data[l] == uov[sequencer_pos]->opcode())
                                     operation_error();
                                 
-                                if (!is_dictionary(std::get<1>(* arrayv[k])))
+                                if (!is_dictionary(arrayv[k]->value()))
                                     type_error(string_t, int_t);
                                     //  string != int
                                 
@@ -1554,25 +1555,25 @@ namespace ss {
                                 rhs = encode(rhs);
                                 
                                 l = 0;
-                                while (l < floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[l * 2] != rhs)
+                                while (l < floor(arrayv[k]->value().size() / 2) && arrayv[k]->value()[l * 2] != rhs)
                                     ++l;
                                 
-                                if (l == floor(std::get<1>(* arrayv[k]).size() / 2))
+                                if (l == floor(arrayv[k]->value().size() / 2))
                                     undefined_error(rhs);
                                 
-                                if (std::get<2>(* arrayv[k]).first)
+                                if (arrayv[k]->readonly())
                                     write_error(lhs);
                                 
                                 valuev = new string[valuec = 2];
                                 
                                 for (size_t m = 0; m < valuec; ++m) {
-                                    valuev[m] = std::get<1>(* arrayv[k])[l * 2];
+                                    valuev[m] = arrayv[k]->value()[l * 2];
                                     
-                                    std::get<1>(* arrayv[k]).remove(l * 2);
+                                    arrayv[k]->value().remove(l * 2);
                                 }
                                 
-                                if (!std::get<1>(* arrayv[k]).size())
-                                    std::get<1>(* arrayv[k]).push(null());
+                                if (!arrayv[k]->value().size())
+                                    arrayv[k]->value().push(null());
                                     
                                 rhs = stringify(valuec, valuev);
                                 
@@ -1583,8 +1584,8 @@ namespace ss {
                                 if (!is_int(s))
                                     type_error(number_t, int_t);
                                 
-                                if (s >= std::get<1>(* arrayv[k]).size())
-                                    range_error("start " + encode(s) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                if (s >= arrayv[k]->value().size())
+                                    range_error("start " + encode(s) + ", count " + std::to_string(arrayv[k]->value().size()));
                                 
                                 size_t m = i + 1;   int q = 1;
                                 do {
@@ -1615,20 +1616,20 @@ namespace ss {
                                     
                                     k = find_array(lhs);
                                     
-                                    if (l < 0 || s + l > std::get<1>(* arrayv[k]).size())
-                                        range_error("start " + encode(s) + ", length " + encode(l) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                    if (l < 0 || s + l > arrayv[k]->value().size()
+                                        )
+                                        range_error("start " + encode(s) + ", length " + encode(l) + ", count " + std::to_string(arrayv[k]->value().size()));
                                     
                                     valuec = (size_t)l;
                                     valuev = new string[valuec];
                                 } else {
-                                    valuec = std::get<1>(* arrayv[k]).size() - (size_t)s;
+                                    valuec = arrayv[k]->value().size() - (size_t)s;
                                     valuev = new string[valuec];
                                 }
                                 
                                 for (m = 0; m < valuec; ++m) {
-                                    valuev[m] = std::get<1>(* arrayv[k])[(size_t)s];
-                                    
-                                    std::get<1>(* arrayv[k]).remove((size_t)s);
+                                    valuev[m] = arrayv[k]->value()[(size_t)s];
+                                    arrayv[k]->value().remove((size_t)s);
                                 }
                                 
                                 rhs = stringify(valuec, valuev);
@@ -1904,8 +1905,8 @@ namespace ss {
                             
                             k = find_array(lhs);
                             
-                            if (s < 0 || s > std::get<1>(* arrayv[k]).size())
-                                range_error("start " + encode(s) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                            if (s < 0 || s > arrayv[k]->value().size())
+                                range_error("start " + encode(s) + ", count " + std::to_string(arrayv[k]->value().size()));
                             
                             size_t l = i + 1;   int p = 1;
                             do {
@@ -1940,30 +1941,26 @@ namespace ss {
                                 
                                 k = find_array(lhs);
                                 
-                                if (e < 0 || s + e > std::get<1>(* arrayv[k]).size())
-                                    range_error("start " + encode(s) + " length " + encode(e) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                if (e < 0 || s + e > arrayv[k]->value().size())
+                                    range_error("start " + encode(s) + " length " + encode(e) + ", count " + std::to_string(arrayv[k]->value().size()));
                                 
-                                valuev = new string[(size_t)(std::get<1>(* arrayv[k]).size() - e)];
+                                valuev = new string[(size_t)(arrayv[k]->value().size() - e)];
                                 valuec = 0;
                                 
                                 for (size_t m = 0; m < s; ++m)
-                                    valuev[valuec++] = std::get<1>(* arrayv[k])[m];
+                                    valuev[valuec++] = arrayv[k]->value()[m];
                                 
-                                for (size_t m = s + e; m < std::get<1>(* arrayv[k]).size(); ++m)
-                                    valuev[valuec++] = std::get<1>(* arrayv[k])[m];
-                                
-                                std::get<2>(* arrayv[k]).second = true;
+                                for (size_t m = s + e; m < arrayv[k]->value().size(); ++m)
+                                    valuev[valuec++] = arrayv[k]->value()[m];
                             } else {
-                                valuev = new string[std::get<1>(* arrayv[k]).size() - 1];
+                                valuev = new string[arrayv[k]->value().size() - 1];
                                 valuec = 0;
                                 
                                 for (size_t m = 0; m < s; ++m)
-                                    valuev[valuec++] = std::get<1>(* arrayv[k])[m];
+                                    valuev[valuec++] = arrayv[k]->value()[m];
                                 
-                                for (size_t m = s + 1; m < std::get<1>(* arrayv[k]).size(); ++m)
-                                    valuev[valuec++] = std::get<1>(* arrayv[k])[m];
-                                
-                                std::get<2>(* arrayv[k]).second = true;
+                                for (size_t m = s + 1; m < arrayv[k]->value().size(); ++m)
+                                    valuev[valuec++] = arrayv[k]->value()[m];
                             }
                         } else {
                             rhs = evaluate(operands.pop());
@@ -2157,7 +2154,7 @@ namespace ss {
                                 
                                 if (data[l] == uov[indexer_pos]->opcode()) {
                                     if (rhs.empty()) {
-                                        if (is_dictionary(std::get<1>(* arrayv[k])))
+                                        if (is_dictionary(arrayv[k]->value()))
                                             null_error();
                                         
                                         type_error(string_t, int_t);
@@ -2169,7 +2166,7 @@ namespace ss {
                                         //  array != int
                                     
                                     if (is_string(rhs)) {
-                                        if (!is_dictionary(std::get<1>(* arrayv[k])))
+                                        if (!is_dictionary(arrayv[k]->value()))
                                             type_error(string_t, int_t);
                                             //  string != int
                                         
@@ -2181,16 +2178,16 @@ namespace ss {
                                         rhs = encode(rhs);
                                         
                                         size_t m = 0;
-                                        while (m < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[m * 2] != rhs)
+                                        while (m < (size_t)floor(arrayv[k]->value().size() / 2) && arrayv[k]->value()[m * 2] != rhs)
                                             ++m;
                                         
-                                        if (m == (size_t)floor(std::get<1>(* arrayv[k]).size() / 2))
+                                        if (m == (size_t)floor(arrayv[k]->value().size() / 2))
                                             undefined_error(rhs);
                                         
-                                        if (std::get<2>(* arrayv[k]).first)
+                                        if (arrayv[k]->readonly())
                                             write_error(lhs);
                                         
-                                        lhs = std::get<1>(* arrayv[k])[m * 2 + 1];
+                                        lhs = arrayv[k]->value()[m * 2 + 1];
                                         
                                         if (lhs.empty())
                                             null_error();
@@ -2235,7 +2232,7 @@ namespace ss {
                                             rhs = lhs + rhs;
                                             rhs = encode(rhs);
                                             
-                                            std::get<1>(* arrayv[k])[m * 2 + 1] = rhs;
+                                            arrayv[k]->value()[m * 2 + 1] = rhs;
                                         } else {
                                             double d = parse_number(lhs);
                                             
@@ -2262,10 +2259,10 @@ namespace ss {
                                             
                                             rhs = encode(d);
                                             
-                                            if (std::get<2>(* arrayv[k]).first)
+                                            if (arrayv[k]->readonly())
                                                 write_error(lhs);
                                             
-                                            std::get<1>(* arrayv[k])[m * 2 + 1] = rhs;
+                                            arrayv[k]->value()[m * 2 + 1] = rhs;
                                         }
                                     } else if (is_key(rhs)) {
                                         if (find_array(rhs) != -1)
@@ -2280,13 +2277,13 @@ namespace ss {
                                                 type_error(number_t, int_t);
                                                 //  double != int
                                             
-                                            if (index < 0 || index >= std::get<1>(* arrayv[k]).size())
-                                                range_error("index " + encode(index) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                            if (index < 0 || index >= arrayv[k]->value().size())
+                                                range_error("index " + encode(index) + ", count " + std::to_string(arrayv[k]->value().size()));
                                             
-                                            if (std::get<2>(* arrayv[k]).first)
+                                            if (arrayv[k]->readonly())
                                                 write_error(lhs);
                                             
-                                            lhs = std::get<1>(* arrayv[k])[(size_t)index];
+                                            lhs = arrayv[k]->value()[(size_t)index];
                                             
                                             if (lhs.empty())
                                                 null_error();
@@ -2335,9 +2332,9 @@ namespace ss {
                                                 rhs = lhs + rhs;
                                                 rhs = encode(rhs);
                                                 
-                                                std::get<1>(* arrayv[k])[(size_t)index] = rhs;
+                                                arrayv[k]->value()[(size_t)index] = rhs;
                                             } else {
-                                                double d = parse_number(std::get<1>(* arrayv[k])[(size_t)index]);
+                                                double d = parse_number(arrayv[k]->value()[(size_t)index]);
                                                 
                                                 if (p != 1)
                                                     type_error(array_t, number_t);
@@ -2362,13 +2359,13 @@ namespace ss {
                                                 
                                                 rhs = encode(d);
                                                 
-                                                if (std::get<2>(* arrayv[k]).first)
+                                                if (arrayv[k]->readonly())
                                                     write_error(lhs);
                                                 
-                                                std::get<1>(* arrayv[k])[(size_t)index] = rhs;
+                                                arrayv[k]->value()[(size_t)index] = rhs;
                                             }
                                         } else {
-                                            if (!is_dictionary(std::get<1>(* arrayv[k])))
+                                            if (!is_dictionary(arrayv[k]->value()))
                                                 type_error(string_t, int_t);
                                                 //  string != int
                                             
@@ -2381,13 +2378,13 @@ namespace ss {
                                                 undefined_error(rhs);
                                             
                                             size_t q = 0;
-                                            while (q < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[q * 2] != rhs)
+                                            while (q < (size_t)floor(arrayv[k]->value().size() / 2) && arrayv[k]->value()[q * 2] != rhs)
                                                 ++q;
                                             
-                                            if (q == (size_t)floor(std::get<1>(* arrayv[k]).size() / 2))
+                                            if (q == (size_t)floor(arrayv[k]->value().size() / 2))
                                                 undefined_error(rhs);
                                             
-                                            lhs = std::get<1>(* arrayv[k])[q * 2 + 1];
+                                            lhs = arrayv[k]->value()[q * 2 + 1];
                                             
                                             if (lhs.empty())
                                                 null_error();
@@ -2399,6 +2396,7 @@ namespace ss {
                                             
                                             v = new string[rhs.length() + 1];
                                             p = parse(v, rhs);
+                                            
                                             delete[] v;
                                             
                                             if (is_string(lhs)) {
@@ -2436,7 +2434,7 @@ namespace ss {
                                                 rhs = lhs + rhs;
                                                 rhs = encode(rhs);
                                                 
-                                                std::get<1>(* arrayv[k])[q * 2 + 1] = rhs;
+                                                arrayv[k]->value()[q * 2 + 1] = rhs;
                                             } else {
                                                 double d = parse_number(lhs);
                                                 
@@ -2463,10 +2461,10 @@ namespace ss {
                                                 
                                                 rhs = encode(d);
                                                 
-                                                if (std::get<2>(* arrayv[k]).first)
+                                                if (arrayv[k]->readonly())
                                                     write_error(lhs);
                                                 
-                                                std::get<1>(* arrayv[k])[q * 2 + 1] = rhs;
+                                                arrayv[k]->value()[q * 2 + 1] = rhs;
                                             }
                                         }
                                     } else {
@@ -2476,13 +2474,13 @@ namespace ss {
                                             type_error(number_t, int_t);
                                             //  double != int
                                         
-                                        if (index < 0 || index >= std::get<1>(* arrayv[k]).size())
-                                            range_error("index " + encode(index) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                        if (index < 0 || index >= arrayv[k]->value().size())
+                                            range_error("index " + encode(index) + ", count " + std::to_string(arrayv[k]->value().size()));
                                         
-                                        if (std::get<2>(* arrayv[k]).first)
+                                        if (arrayv[k]->readonly())
                                             write_error(lhs);
                                         
-                                        lhs = std::get<1>(* arrayv[k])[(size_t)index];
+                                        lhs = arrayv[k]->value()[(size_t)index];
                                         
                                         if (lhs.empty())
                                             null_error();
@@ -2494,6 +2492,7 @@ namespace ss {
                                         
                                         v = new string[rhs.length() + 1];
                                         p = parse(v, rhs);
+                                        
                                         delete[] v;
                                         
                                         if (is_string(lhs)) {
@@ -2515,6 +2514,7 @@ namespace ss {
                                                     //  array != string
                                                 
                                                 int m = find_string(rhs);
+                                                
                                                 if (m == -1)
                                                     rhs = encode(get_number(rhs));
                                                 else {
@@ -2531,9 +2531,9 @@ namespace ss {
                                             rhs = lhs + rhs;
                                             rhs = encode(rhs);
                                             
-                                            std::get<1>(* arrayv[k])[(size_t)index] = rhs;
+                                            arrayv[k]->value()[(size_t)index] = rhs;
                                         } else {
-                                            double d = parse_number(std::get<1>(* arrayv[k])[(size_t)index]);
+                                            double d = parse_number(arrayv[k]->value()[(size_t)index]);
                                             
                                             if (p != 1)
                                                 type_error(array_t, number_t);
@@ -2558,18 +2558,18 @@ namespace ss {
                                             
                                             rhs = encode(d);
                                             
-                                            if (std::get<2>(* arrayv[k]).first)
+                                            if (arrayv[k]->readonly())
                                                 write_error(lhs);
                                             
-                                            std::get<1>(* arrayv[k])[(size_t)index] = rhs;
+                                            arrayv[k]->value()[(size_t)index] = rhs;
                                         }
                                     }
                                 } else {
                                     if (rhs.empty()) {
-                                        if (std::get<2>(* arrayv[k]).first)
+                                        if (arrayv[k]->readonly())
                                             write_error(lhs);
                                         
-                                        std::get<1>(* arrayv[k]).push(rhs);
+                                        arrayv[k]->value().push(rhs);
                                     } else {
                                         v = new string[rhs.length() + 1];
                                         p = parse(v, rhs);
@@ -2581,11 +2581,10 @@ namespace ss {
                                                 rhs = decode(rhs);
                                                 rhs = encode(rhs);
                                                 
-                                                if (std::get<2>(* arrayv[k]).first)
+                                                if (arrayv[k]->readonly())
                                                     write_error(lhs);
                                                 
-                                                std::get<2>(* arrayv[k]).second = true;
-                                                std::get<1>(* arrayv[k]).push(rhs);
+                                                arrayv[k]->value().push(rhs);
                                                 
                                             } else if (is_key(rhs)) {
                                                 int l = find_array(rhs);
@@ -2594,45 +2593,41 @@ namespace ss {
                                                     
                                                     rhs = l == -1 ? encode(get_number(rhs)) : stringv[l]->value();
                                                     
-                                                    if (std::get<2>(* arrayv[k]).first)
+                                                    if (arrayv[k]->readonly())
                                                         write_error(lhs);
                                                     
-                                                    std::get<2>(* arrayv[k]).second = true;
-                                                    std::get<1>(* arrayv[k]).push(rhs);
+                                                    arrayv[k]->value().push(rhs);
                                                 } else {
-                                                    if (std::get<2>(* arrayv[k]).first)
+                                                    if (arrayv[k]->readonly())
                                                         write_error(lhs);
                                                     
-                                                    rhs = stringify(std::get<1>(* arrayv[l]));
+                                                    rhs = stringify(arrayv[l]->value());
                                                     
-                                                    std::get<2>(* arrayv[l]).second = true;
-                                                    
-                                                    size_t m = std::get<1>(* arrayv[l]).size();
+                                                    size_t m = arrayv[l]->value().size();
                                                     
                                                     for (size_t q = 0; q < m; ++q)
-                                                        std::get<1>(* arrayv[k]).push(std::get<1>(* arrayv[l])[q]);
+                                                        arrayv[k]->value().push(arrayv[l]->value()[q]);
                                                 }
                                             } else {
-                                                if (std::get<2>(* arrayv[k]).first)
+                                                if (arrayv[k]->readonly())
                                                     write_error(lhs);
                                                 
                                                 rhs = encode(parse_number(rhs));
                                                 
-                                                std::get<2>(* arrayv[k]).second = true;
-                                                std::get<1>(* arrayv[k]).push(rhs);
+                                                arrayv[k]->value().push(rhs);
                                             }
                                         } else {
-                                            if (std::get<2>(* arrayv[k]).first)
+                                            if (arrayv[k]->readonly())
                                                 write_error(lhs);
                                                                                         
                                             for (size_t l = 0; l < p; ++l)
-                                                std::get<1>(* arrayv[k]).push(v[l]);
+                                                arrayv[k]->value().push(v[l]);
                                             
                                             delete[] v;
                                         }
                                     }
                                     
-                                    rhs = std::to_string(std::get<1>(* arrayv[k]).size());
+                                    rhs = std::to_string(arrayv[k]->value().size());
                                 }
                             }
                         } else {
@@ -2921,7 +2916,7 @@ namespace ss {
                                         //  array != int
                                     
                                     if (rhs.empty()) {
-                                        if (is_dictionary(std::get<1>(* arrayv[k])))
+                                        if (is_dictionary(arrayv[k]->value()))
                                             null_error();
                                         
                                         type_error(string_t, int_t);
@@ -2929,7 +2924,7 @@ namespace ss {
                                     }
                                     
                                     if (is_string(rhs)) {
-                                        if (!is_dictionary(std::get<1>(* arrayv[k])))
+                                        if (!is_dictionary(arrayv[k]->value()))
                                             type_error(array_t, dictionary_t);
                                             //  array != dictionary
                                         
@@ -2942,24 +2937,25 @@ namespace ss {
                                         
                                         rhs = get_item(operands.pop());
                                         
-                                        if (std::get<2>(* arrayv[k]).first)
+                                        if (arrayv[k]->readonly())
                                             write_error(lhs);
                                         
                                         size_t l = 0;
-                                        while (l < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[l * 2] != ctr)
+                                        while (l < (size_t)floor(arrayv[k]->value().size() / 2) && arrayv[k]->value()[l * 2] != ctr)
                                             ++l;
                                         
-                                        if (l == (size_t)floor(std::get<1>(* arrayv[k]).size() / 2)) {
-                                            std::get<1>(* arrayv[k]).push(ctr);
-                                            std::get<1>(* arrayv[k]).push(rhs);
+                                        if (l == (size_t)floor(arrayv[k]->value().size() / 2)) {
+                                            arrayv[k]->value().push(ctr);
+                                            arrayv[k]->value().push(rhs);
                                         } else
-                                            std::get<1>(* arrayv[k])[l * 2 + 1] = rhs;
+                                            arrayv[k]->value()[l * 2 + 1] = rhs;
                                     } else if (is_key(rhs)) {
                                         if (find_array(rhs) != -1)
                                             type_error(array_t, int_t);
                                             //  array != int
                                         
                                         int l = find_string(rhs);
+                                        
                                         if (l == -1) {
                                             double ctr = get_number(rhs);
                                             
@@ -2967,12 +2963,12 @@ namespace ss {
                                                 type_error(number_t, int_t);
                                                 //  double != int
                                             
-                                            if (ctr < 0 || ctr > std::get<1>(* arrayv[k]).size())
-                                                range_error("index " + encode(ctr) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                            if (ctr < 0 || ctr > arrayv[k]->value().size())
+                                                range_error("index " + encode(ctr) + ", count " + std::to_string(arrayv[k]->value().size()));
                                             
                                             rhs = get_item(operands.pop());
                                             
-                                            if (std::get<2>(* arrayv[k]).first)
+                                            if (arrayv[k]->readonly())
                                                 write_error(lhs);
                                             
                                             set_array(lhs, (int)ctr, rhs);
@@ -2987,18 +2983,18 @@ namespace ss {
                                             
                                             rhs = get_item(operands.pop());
                                             
-                                            if (std::get<2>(* arrayv[k]).first)
+                                            if (arrayv[k]->readonly())
                                                 write_error(lhs);
                                             
                                             size_t m = 0;
-                                            while (m < (size_t)floor(std::get<1>(* arrayv[k]).size() / 2) && std::get<1>(* arrayv[k])[m * 2] != ctr)
+                                            while (m < (size_t)floor(arrayv[k]->value().size() / 2) && arrayv[k]->value()[m * 2] != ctr)
                                                 ++m;
                                             
-                                            if (m == (size_t)floor(std::get<1>(* arrayv[k]).size() / 2)) {
-                                                std::get<1>(* arrayv[k]).push(ctr);
-                                                std::get<1>(* arrayv[k]).push(rhs);
+                                            if (m == (size_t)floor(arrayv[k]->value().size() / 2)) {
+                                                arrayv[k]->value().push(ctr);
+                                                arrayv[k]->value().push(rhs);
                                             } else
-                                                std::get<1>(* arrayv[k])[m * 2 + 1] = rhs;
+                                                arrayv[k]->value()[m * 2 + 1] = rhs;
                                         }
                                     } else {
                                         double ctr = parse_number(rhs);
@@ -3007,12 +3003,12 @@ namespace ss {
                                             type_error(number_t, int_t);
                                             //  double != int
                                         
-                                        if (ctr < 0 || ctr > std::get<1>(* arrayv[k]).size())
-                                            range_error("index " + encode(ctr) + ", count " + std::to_string(std::get<1>(* arrayv[k]).size()));
+                                        if (ctr < 0 || ctr > arrayv[k]->value().size())
+                                            range_error("index " + encode(ctr) + ", count " + std::to_string(arrayv[k]->value().size()));
                                         
                                         rhs = get_item(operands.pop());
                                         
-                                        if (std::get<2>(* arrayv[k]).first)
+                                        if (arrayv[k]->readonly())
                                             write_error(lhs);
                                         
                                         set_array(lhs, (size_t)ctr, rhs);
@@ -3231,18 +3227,16 @@ namespace ss {
                                                 set_array(lhs, 0, rhs);
                                             }
                                         } else {
-                                            set_array(lhs, 0, std::get<1>(* arrayv[l])[0]);
+                                            set_array(lhs, 0, arrayv[l]->value()[0]);
                                             
                                             l = find_array(rhs);
                                             
-                                            std::get<2>(* arrayv[l]).second = true;
+                                            for (size_t m = 1; m < arrayv[l]->value().size(); ++m)
+                                                set_array(lhs, m, arrayv[l]->value()[m]);
                                             
-                                            for (size_t m = 1; m < std::get<1>(* arrayv[l]).size(); ++m)
-                                                set_array(lhs, m, std::get<1>(* arrayv[l])[m]);
+                                            arrayv[find_array(lhs)]->value().shrink_to_fit();
                                             
-                                            std::get<1>(* arrayv[find_array(lhs)]).shrink_to_fit();
-                                            
-                                            rhs = stringify(std::get<1>(* arrayv[l]));
+                                            rhs = stringify(arrayv[l]->value());
                                         }
                                     } else {
                                         rhs = encode(parse_number(rhs));
@@ -3253,11 +3247,11 @@ namespace ss {
                                     for (size_t m = 0; m < valuec; ++m)
                                         set_array(lhs, m, valuev[m]);
                                     
-                                    std::get<1>(* arrayv[find_array(lhs)]).shrink_to_fit();
+                                    arrayv[find_array(lhs)]->value().shrink_to_fit();
                                 }
                                 
                                 if (data[i + 1] == uov[const_pos]->opcode())
-                                    std::get<2>(* arrayv[find_array(lhs)]).first = true;
+                                    arrayv[find_array(lhs)]->readonly() = true;
                             } else {
                                 bool handle = true;
                                 
@@ -3348,13 +3342,13 @@ namespace ss {
 //                                        if (data[i + 1] == uov[const_pos]->opcode())
 //                                            defined_error(lhs);
                                         
-                                        if (std::get<2>(* arrayv[k]).first)
+                                        if (arrayv[k]->readonly())
                                             write_error(lhs);
                                         
-                                        std::get<1>(* arrayv[k]).clear();
+                                        arrayv[k]->value().clear();
                                         
                                         if (rhs.empty())
-                                            std::get<1>(* arrayv[k]).push(rhs);
+                                            arrayv[k]->value().push(rhs);
                                         else {
                                             string valuev[rhs.length() + 1];
                                             size_t valuec = parse(valuev, rhs);
@@ -3364,7 +3358,7 @@ namespace ss {
                                                     rhs = decode(rhs);
                                                     rhs = encode(rhs);
                                                     
-                                                    std::get<1>(* arrayv[k]).push(rhs);
+                                                    arrayv[k]->value().push(rhs);
                                                     
                                                 } else if (is_key(rhs)) {
                                                     int l = find_array(rhs);
@@ -3373,25 +3367,23 @@ namespace ss {
                                                         
                                                         rhs = l == -1 ? encode(get_number(rhs)) : stringv[l]->value();
                                                         
-                                                        std::get<1>(* arrayv[k]).push(rhs);
+                                                        arrayv[k]->value().push(rhs);
                                                     } else {
-                                                        valuec = std::get<1>(* arrayv[l]).size();
+                                                        valuec = arrayv[l]->value().size();
                                                         
                                                         for (size_t m = 0; m < valuec; ++m)
-                                                            std::get<1>(* arrayv[k]).push(std::get<1>(* arrayv[l])[m]);
+                                                            arrayv[k]->value().push(arrayv[l]->value()[m]);
                                                         
-                                                        std::get<2>(* arrayv[l]).second = true;
-                                                        
-                                                        rhs = stringify(std::get<1>(* arrayv[k]));
+                                                        rhs = stringify(arrayv[k]->value());
                                                     }
                                                 } else {
                                                     rhs = encode(parse_number(rhs));
                                                     
-                                                    std::get<1>(* arrayv[k]).push(rhs);
+                                                    arrayv[k]->value().push(rhs);
                                                 }
                                             } else
                                                 for (size_t m = 0; m < valuec; ++m)
-                                                    std::get<1>(* arrayv[k]).push(valuev[m]);
+                                                    arrayv[k]->value().push(valuev[m]);
                                         }
                                     }
                                 } else
@@ -3438,17 +3430,17 @@ namespace ss {
                                                             stringv[find_string(lhs)]->readonly() = true;
                                                     }
                                                 } else {
-                                                    set_array(lhs, 0, std::get<1>(* arrayv[k])[0]);
+                                                    set_array(lhs, 0, arrayv[k]->value()[0]);
                                                     
                                                     k = find_array(rhs);
                                                     
-                                                    for (size_t l = 1; l < std::get<1>(* arrayv[k]).size(); ++l)
-                                                        set_array(lhs, l, std::get<1>(* arrayv[k])[l]);
+                                                    for (size_t l = 1; l < arrayv[k]->value().size(); ++l)
+                                                        set_array(lhs, l, arrayv[k]->value()[l]);
                                                     
                                                     if (data[i + 1] == uov[const_pos]->opcode()) {
                                                         k = find_array(lhs);
-                                                        std::get<1>(* arrayv[k]).shrink_to_fit();
-                                                        std::get<2>(* arrayv[k]).first = true;
+                                                        arrayv[k]->value().shrink_to_fit();
+                                                        arrayv[k]->readonly() = true;
                                                     }
                                                         
                                                 }
@@ -3466,7 +3458,7 @@ namespace ss {
                                             _set_array(lhs, valuec, valuev);
                                         
                                             if (data[i + 1] == uov[const_pos]->opcode())
-                                                std::get<2>(* arrayv[find_array(lhs)]).first = true;
+                                                arrayv[find_array(lhs)]->readonly() = true;
                                         }
                                     }
                                 }
@@ -3502,10 +3494,8 @@ namespace ss {
                                         }
                                     }
                                 } else {
-                                    std::get<2>(* arrayv[k]).second = true;
-                                    
-                                    if (std::get<1>(* arrayv[k]).size() == 1) {
-                                        lhs = std::get<1>(* arrayv[k])[0];
+                                    if (arrayv[k]->value().size() == 1) {
+                                        lhs = arrayv[k]->value()[0];
                                         
                                         if (lhs.empty())
                                             flag = 0;
@@ -3572,7 +3562,7 @@ namespace ss {
                     else
                         stringv[i]->value();
                 } else
-                    std::get<2>(* arrayv[i]).second = true;
+                    arrayv[i]->value();
                 
             }
             
@@ -3599,13 +3589,11 @@ namespace ss {
                 return stringv[i]->value();
             }
             
-            std::get<2>(* arrayv[i]).second = true;
-            
-            return stringify(std::get<1>(* arrayv[i]));;
+            return stringify(arrayv[i]->value());
         }
         
 #if DEBUG_LEVEL == 3
-        logger_write(std::to_string(duration<double>(steady_clock::now() - beg).count()) + "\n");
+        logger_write(std::to_string(duration<double>(steady_clock::now() - beg).count()));
 #endif
         return encode(parse_number(operands.pop()));
     }
@@ -3632,7 +3620,7 @@ namespace ss {
             
             //  resize arrays
             //  array value is a pointer, as its internal pointer will be deallocated otherwise when control exits the array's declaring scope
-            pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>** _state_arrayv = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>*[statec * 2];
+            pair<size_t, variable<ss::array<string>*>**>** _state_arrayv = new pair<size_t, variable<ss::array<string>*>**>*[statec * 2];
             
             for (size_t i = 0; i < statec; ++i)
                 _state_arrayv[i] = state_arrayv[i];
@@ -3656,18 +3644,12 @@ namespace ss {
         state_numberv[statec] = _state;
         
         //  get_state arrays
-        tuple<string, ss::array<string>*, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>*[pow2(arrayc)];
+        variable<ss::array<string>*>** _arrayv = new variable<ss::array<string>*>*[pow2(arrayc)];
         
-        for (size_t i = 0; i < arrayc; ++i) {
-            string key = std::get<0>(* arrayv[i]);
-            ss::array<string>* value = new ss::array<string>(std::get<1>(* arrayv[i]));
-            pair<bool, bool> flags = std::get<2>(* arrayv[i]);
-            size_t state = std::get<3>(* arrayv[i]);
-            
-            _arrayv[i] = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>(key, value, flags, state);
-        }
+        for (size_t i = 0; i < arrayc; ++i)
+            _arrayv[i] = new variable<ss::array<string>*>(arrayv[i]->key(), new ss::array<string>(arrayv[i]->value()), arrayv[i]->state());
         
-        state_arrayv[statec] = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>(arrayc, _arrayv);
+        state_arrayv[statec] = new pair<size_t, variable<ss::array<string>*>**>(arrayc, _arrayv);
         
         function_t** _functionv = new function_t*[pow2(functionc)];
 
@@ -3698,6 +3680,7 @@ namespace ss {
                 _state_numberv[i] = state_numberv[i];
             
             delete[] state_numberv;
+            
             state_numberv = _state_numberv;
             
             //  resize functions
@@ -3711,12 +3694,13 @@ namespace ss {
             
             //  resize arrays
             //  array value is a pointer, as its internal pointer will be deallocated otherwise when control exits the array's declaring scope
-            pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>** _state_arrayv = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>*[statec * 2];
+            pair<size_t, variable<ss::array<string>*>**>** _state_arrayv = new pair<size_t, variable<ss::array<string>*>**>*[statec * 2];
             
             for (size_t i = 0; i < statec; ++i)
                 _state_arrayv[i] = state_arrayv[i];
             
             delete[] state_arrayv;
+            
             state_arrayv = _state_arrayv;
             
             //  resize strings
@@ -3734,18 +3718,12 @@ namespace ss {
         
         state_numberv[statec] = state;
         
-        tuple<string, ss::array<string>*, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>*[pow2(arrayc)];
+        variable<ss::array<string>*>** _arrayv = new variable<ss::array<string>*>*[pow2(arrayc)];
         
-        for (size_t i = 0; i < arrayc; ++i) {
-            string key = std::get<0>(* arrayv[i]);
-            ss::array<string>* value = new ss::array<string>(std::get<1>(* arrayv[i]));
-            pair<bool, bool> flags = std::get<2>(* arrayv[i]);
-            size_t state = std::get<3>(* arrayv[i]);
-            
-            _arrayv[i] = new tuple<string, ss::array<string>*, pair<bool, bool>, size_t>(key, value, flags, state);
-        }
+        for (size_t i = 0; i < arrayc; ++i)
+            _arrayv[i] = new variable<ss::array<string>*>(arrayv[i]->key(), new ss::array<string>(arrayv[i]->value()), arrayv[i]->state());
         
-        state_arrayv[statec] = new pair<size_t, tuple<string, ss::array<string>*, pair<bool, bool>, size_t>**>(arrayc, _arrayv);
+        state_arrayv[statec] = new pair<size_t, variable<ss::array<string>*>**>(arrayc, _arrayv);
         
         function_t** _functionv = new function_t*[pow2(functionc)];
         
@@ -3815,9 +3793,7 @@ namespace ss {
                     return std::to_string(decode_raw(stringv[i]->value()).length());
                 }
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return std::to_string(std::get<1>(* arrayv[i]).size());
+                return std::to_string(arrayv[i]->value().size());
             }
             
             return std::to_string(valuec);
@@ -3849,9 +3825,7 @@ namespace ss {
                         undefined_error(rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
-                    return std::get<1>(* arrayv[i])[0];
+                    return arrayv[i]->value()[0];
                 }
                 
                 type_error(number_t, array_t);
@@ -3892,21 +3866,21 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                if (!is_table(std::get<1>(* arrayv[i])))
+                if (!is_table(arrayv[i]->value()))
                     type_error(array_t, table_t);
                     //  array != table
                 
-                size_t c = stoi(std::get<1>(* arrayv[i])[0]);
-                size_t r = (std::get<1>(* arrayv[i]).size() - 1) / c;
+                size_t c = stoi(arrayv[i]->value()[0]);
+                size_t r = (arrayv[i]->value().size() - 1) / c;
                 
-                data = new string[std::get<1>(* arrayv[i]).size()];
+                data = new string[arrayv[i]->value().size()];
                 n = 0;
                 
                 data[n++] = std::to_string(r);
                 
                 for (size_t j = 0; j < c; ++j)
                     for (size_t k = 0; k < r; ++k)
-                        data[n++] = std::get<1>(* arrayv[i])[j + (k * c) + 1];
+                        data[n++] = arrayv[i]->value()[j + (k * c) + 1];
                 
                 rhs = stringify(n, data);
                 
@@ -4213,19 +4187,17 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                if (!is_dictionary(std::get<1>(* arrayv[i])))
+                if (!is_dictionary(arrayv[i]->value()))
                     type_error(array_t, dictionary_t);
                     //  array != dictionary
-                
-                std::get<2>(* arrayv[i]).second = true;
                 
                 stringstream ss;
                 size_t j;
                 
-                for (j = 0; j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[j * 2] << separator();
+                for (j = 0; j < (size_t)floor(arrayv[i]->value().size() / 2) - 1; ++j)
+                    ss << arrayv[i]->value()[j * 2] << separator();
                 
-                ss << std::get<1>(* arrayv[i])[j * 2];
+                ss << arrayv[i]->value()[j * 2];
                 
                 return ss.str();
             }
@@ -4266,9 +4238,7 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return std::get<1>(* arrayv[i])[std::get<1>(* arrayv[i]).size() - 1];
+                return arrayv[i]->value()[arrayv[i]->value().size() - 1];
             }
             
             return valuev[valuec - 1];
@@ -4334,12 +4304,12 @@ namespace ss {
                 undefined_error(rhs);
             }
             
-            if (std::get<2>(* arrayv[i]).first)
+            if (arrayv[i]->readonly())
                 write_error(rhs);
             
-            rhs = std::to_string(std::get<1>(* arrayv[i]).capacity());
+            rhs = std::to_string(arrayv[i]->value().capacity());
             
-            std::get<1>(* arrayv[i]).shrink_to_fit();
+            arrayv[i]->value().shrink_to_fit();
                
             return rhs;
         });
@@ -4359,9 +4329,7 @@ namespace ss {
                 undefined_error(rhs);
             }
             
-            std::get<2>(* arrayv[i]).second = true;
-            
-            return std::to_string(std::get<1>(* arrayv[i]).capacity());
+            return std::to_string(arrayv[i]->value().capacity());
         });
         
         uov[uoc++] = new unary_universal_operator("subtypeof", [this](string rhs) {
@@ -4411,11 +4379,9 @@ namespace ss {
                     //  char : string
                 }
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return encode(is_table(std::get<1>(* arrayv[i])) ?
+                return encode(is_table(arrayv[i]->value()) ?
                               to_string(table_t) :
-                              is_dictionary(std::get<1>(* arrayv[i])) ?
+                              is_dictionary(arrayv[i]->value()) ?
                               to_string(dictionary_t) :
                               to_string(array_t));
                 //  array
@@ -4671,7 +4637,7 @@ namespace ss {
                     return encode(to_string(string_t));
                 }
                 
-                std::get<2>(* arrayv[pos]).second = true;
+                arrayv[pos]->value();
                 
                 return encode(to_string(array_t));
             }
@@ -4704,18 +4670,16 @@ namespace ss {
                     undefined_error(rhs);
                 }
                 
-                if (!is_dictionary(std::get<1>(* arrayv[i])))
+                if (!is_dictionary(arrayv[i]->value()))
                     type_error(array_t, dictionary_t);
                     //  array != dictionary
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
                 stringstream ss;
                 size_t j;
-                for (j = 0; j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[j * 2 + 1] << separator();
+                for (j = 0; j < (size_t)floor(arrayv[i]->value().size() / 2) - 1; ++j)
+                    ss << arrayv[i]->value()[j * 2 + 1] << separator();
                 
-                ss << std::get<1>(* arrayv[i])[j * 2 + 1];
+                ss << arrayv[i]->value()[j * 2 + 1];
                 
                 return ss.str();
             }
@@ -4857,7 +4821,7 @@ namespace ss {
                     //  array != int
                 
                 if (rhs.empty()) {
-                    if (is_dictionary(std::get<1>(* arrayv[i])))
+                    if (is_dictionary(arrayv[i]->value()))
                         null_error();
                     
                     type_error(array_t, dictionary_t);
@@ -4865,22 +4829,20 @@ namespace ss {
                 }
                 
                 if (is_string(rhs))  {
-                    if (!is_dictionary(std::get<1>(* arrayv[i])))
+                    if (!is_dictionary(arrayv[i]->value()))
                         type_error(array_t, dictionary_t);
                         //  array != dictionary
-                    
-                    std::get<2>(* arrayv[i]).second = true;
                     
                     rhs = encode(decode(rhs));
                     
                     size_t j = 0;
-                    while (j < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) && std::get<1>(* arrayv[i])[j * 2] != rhs)
+                    while (j < (size_t)floor(arrayv[i]->value().size() / 2) && arrayv[i]->value()[j * 2] != rhs)
                         ++j;
                     
-                    if (j == (size_t)floor(std::get<1>(* arrayv[i]).size() / 2))
+                    if (j == (size_t)floor(arrayv[i]->value().size() / 2))
                         return null();
                     
-                    return std::get<1>(* arrayv[i])[j * 2 + 1];
+                    return arrayv[i]->value()[j * 2 + 1];
                 }
                 
                 if (is_key(rhs)) {
@@ -4896,35 +4858,33 @@ namespace ss {
                             type_error(number_t, int_t);
                             //  double != int
                         
-                        if (num < 0 || num >= std::get<1>(* arrayv[i]).size())
-                            range_error("index " + encode(num) + ", count " + std::to_string(std::get<1>(* arrayv[i]).size()));
+                        if (num < 0 || num >= arrayv[i]->value().size())
+                            range_error("index " + encode(num) + ", count " + std::to_string(arrayv[i]->value().size()));
                         
-                        std::get<2>(* arrayv[i]).second = true;
-                        
-                        return std::get<1>(* arrayv[i])[(size_t)num];
+                        return arrayv[i]->value()[(size_t)num];
                     }
                     
                     rhs = stringv[j]->value();
                     
                     if (rhs.empty()) {
-                        if (is_dictionary(std::get<1>(* arrayv[i])))
+                        if (is_dictionary(arrayv[i]->value()))
                             null_error();
                         
                         type_error(array_t, dictionary_t);
                     }
                     
-                    if (!is_dictionary(std::get<1>(* arrayv[i])))
+                    if (!is_dictionary(arrayv[i]->value()))
                         type_error(array_t, dictionary_t);
                         //  array != dictionary
                     
                     size_t k = 0;
-                    while (k < (size_t)floor(std::get<1>(* arrayv[i]).size() / 2) && std::get<1>(* arrayv[i])[k * 2] != rhs)
+                    while (k < (size_t)floor(arrayv[i]->value().size() / 2) && arrayv[i]->value()[k * 2] != rhs)
                         ++k;
                     
-                    if (k == (size_t)floor(std::get<1>(* arrayv[i]).size() / 2))
+                    if (k == (size_t)floor(arrayv[i]->value().size() / 2))
                         return null();
                     
-                    return std::get<1>(* arrayv[i])[k * 2 + 1];
+                    return arrayv[i]->value()[k * 2 + 1];
                 }
                 
                 double num = parse_number(rhs);
@@ -4933,12 +4893,10 @@ namespace ss {
                     type_error(number_t, int_t);
                     //  double != int
                 
-                if (num < 0 || num >= std::get<1>(* arrayv[i]).size())
-                    range_error("index " + encode(num) + ", count " + std::to_string(std::get<1>(* arrayv[i]).size()));
+                if (num < 0 || num >= arrayv[i]->value().size())
+                    range_error("index " + encode(num) + ", count " + std::to_string(arrayv[i]->value().size()));
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return std::get<1>(* arrayv[i])[(size_t)num];
+                return arrayv[i]->value()[(size_t)num];
             }
             
             if (rhs.empty()) {
@@ -5170,18 +5128,14 @@ namespace ss {
                                     
                                     rhs = j == -1 ? encode(get_number(rhs)) : stringv[j]->value();
                                 } else {
-                                    std::get<2>(* arrayv[j]).second = true;
-                                    
-                                    rhs = stringify(std::get<1>(* arrayv[j]));
+                                    rhs = stringify(arrayv[j]->value());
                                 }
                             } else
                                 rhs = encode(parse_number(rhs));
                         }
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
-                    return stringify(std::get<1>(* arrayv[i])) + separator() + rhs;
+                    return stringify(arrayv[i]->value()) + separator() + rhs;
                 }
                 
                 double num = parse_number(lhs);
@@ -5223,9 +5177,7 @@ namespace ss {
                             
                             rhs = i == -1 ? encode(get_number(rhs)) : stringv[i]->value();
                         } else {
-                            rhs = stringify(std::get<1>(* arrayv[i]));
-                            
-                            std::get<2>(* arrayv[i]).second = true;
+                            rhs = stringify(arrayv[i]->value());
                         }
                     } else
                         rhs = encode(parse_number(rhs));
@@ -5294,11 +5246,11 @@ namespace ss {
                 if (is_defined(ctr))
                     remove_key(ctr);
                 
-                valuec = std::get<1>(* arrayv[i]).size();
+                valuec = arrayv[i]->value().size();
                 valuev = new string[valuec];
                 
                 for (size_t j = 0; j < valuec; ++j)
-                    valuev[j] = std::get<1>(* arrayv[i])[j];
+                    valuev[j] = arrayv[i]->value()[j];
                 
                 set_array(ctr, 0, valuev[0]);
                 
@@ -5317,13 +5269,11 @@ namespace ss {
                 
                 string result;
                 
-                result = std::get<1>(* arrayv[find_array(ctr)])[0];
+                result = arrayv[find_array(ctr)]->value()[0];
                 
                 remove_key(ctr);
                 
                 set_state(state);
-                
-                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 return result;
             }
@@ -5351,7 +5301,7 @@ namespace ss {
             
             string result;
             
-            result = std::get<1>(* arrayv[find_array(ctr)])[0];
+            result = arrayv[find_array(ctr)]->value()[0];
             
             remove_key(ctr);
             
@@ -5382,7 +5332,7 @@ namespace ss {
                     undefined_error(lhs);
                 }
                 
-                if (!is_table(std::get<1>(* arrayv[i])))
+                if (!is_table(arrayv[i]->value()))
                     type_error(array_t, table_t);
                     //  array != table
                 
@@ -5400,10 +5350,10 @@ namespace ss {
                     type_error(number_t, int_t);
                     //  double != int
                 
-                size_t c = stoi(std::get<1>(* arrayv[i])[0]);
+                size_t c = stoi(arrayv[i]->value()[0]);
                 
-                if (y < 0 || y >= (std::get<1>(* arrayv[i]).size() - 1) / c)
-                    range_error("index " + encode(y) + ", rows " + std::to_string((std::get<1>(* arrayv[i]).size() - 1) / c));
+                if (y < 0 || y >= (arrayv[i]->value().size() - 1) / c)
+                    range_error("index " + encode(y) + ", rows " + std::to_string((arrayv[i]->value().size() - 1) / c));
                 
                 if (ss::is_array(rhs))
                     type_error(array_t, int_t);
@@ -5422,9 +5372,7 @@ namespace ss {
                 if (x < 0 || x >= c)
                     range_error("index " + encode(x) + ", cols " + std::to_string(c));
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return std::get<1>(* arrayv[i])[(size_t)(y * c + x + 1)];
+                return arrayv[i]->value()[(size_t)(y * c + x + 1)];
             }
             
             if (!is_table(valuec, valuev))
@@ -5494,7 +5442,7 @@ namespace ss {
                     undefined_error(lhs);
                 }
                 
-                if (!is_table(std::get<1>(* arrayv[i])))
+                if (!is_table(arrayv[i]->value()))
                     type_error(array_t, table_t);
                 
                 if (ss::is_array(rhs))
@@ -5503,15 +5451,13 @@ namespace ss {
                 if (rhs.empty())
                     null_error();
                 
-                size_t c = stoi(std::get<1>(* arrayv[i])[0]);
+                size_t c = stoi(arrayv[i]->value()[0]);
                 
                 if (is_string(rhs)) {
-                    std::get<2>(* arrayv[i]).second = true;
-                    
                     rhs = encode(decode(rhs));
                     
                     size_t j = 0;
-                    while (j < c && std::get<1>(* arrayv[i])[j + 1] != rhs)
+                    while (j < c && arrayv[i]->value()[j + 1] != rhs)
                         ++j;
                     
                     if (j == c)
@@ -5520,12 +5466,12 @@ namespace ss {
                     
                     stringstream ss;
                     
-                    if ((std::get<1>(* arrayv[i]).size() - 1) / c != 1) {
+                    if ((arrayv[i]->value().size() - 1) / c != 1) {
                         size_t k;
-                        for (k = 1; k < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[k * c + j + 1] << separator();
+                        for (k = 1; k < (arrayv[i]->value().size() - 1) / c - 1; ++k)
+                            ss << arrayv[i]->value()[k * c + j + 1] << separator();
                         
-                        ss << std::get<1>(* arrayv[i])[k * c + j + 1];
+                        ss << arrayv[i]->value()[k * c + j + 1];
                     }
                     
                     return ss.str();
@@ -5545,15 +5491,13 @@ namespace ss {
                         if (idx < 0 || idx >= c)
                             range_error("index " + encode(idx) + ", cols " + std::to_string(c));
                         
-                        std::get<2>(* arrayv[i]).second = true;
-                        
                         stringstream ss;
                         
                         size_t k;
-                        for (k = 0; k < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[k * c + idx + 1] << separator();
+                        for (k = 0; k < (arrayv[i]->value().size() - 1) / c - 1; ++k)
+                            ss << arrayv[i]->value()[k * c + idx + 1] << separator();
                         
-                        ss << std::get<1>(* arrayv[i])[k * c + idx + 1];
+                        ss << arrayv[i]->value()[k * c + idx + 1];
                         
                         return ss.str();
                     }
@@ -5564,7 +5508,7 @@ namespace ss {
                         null_error();
                     
                     size_t k = 0;
-                    while (k < c && std::get<1>(* arrayv[i])[k + 1] != rhs)
+                    while (k < c && arrayv[i]->value()[k + 1] != rhs)
                         ++k;
                     
                     if (k == c)
@@ -5573,12 +5517,12 @@ namespace ss {
                     
                     stringstream ss;
                     
-                    if ((std::get<1>(* arrayv[i]).size() - 1) / c != 1) {
+                    if ((arrayv[i]->value().size() - 1) / c != 1) {
                         size_t l;
-                        for (l = 1; l < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++l)
-                            ss << std::get<1>(* arrayv[i])[l * c + k + 1] << separator();
+                        for (l = 1; l < (arrayv[i]->value().size() - 1) / c - 1; ++l)
+                            ss << arrayv[i]->value()[l * c + k + 1] << separator();
                         
-                        ss << std::get<1>(* arrayv[i])[l * c + k + 1];
+                        ss << arrayv[i]->value()[l * c + k + 1];
                     }
                     
                     return ss.str();
@@ -5592,15 +5536,13 @@ namespace ss {
                 if (idx < 0 || idx >= c)
                     range_error("index " + encode(idx) + ", cols " + std::to_string(c));
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
                 stringstream ss;
                 
                 size_t j;
-                for (j = 0; j < (std::get<1>(* arrayv[i]).size() - 1) / c - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[j * c + idx + 1] << separator();
+                for (j = 0; j < (arrayv[i]->value().size() - 1) / c - 1; ++j)
+                    ss << arrayv[i]->value()[j * c + idx + 1] << separator();
                 
-                ss << std::get<1>(* arrayv[i])[j * c + idx + 1];
+                ss << arrayv[i]->value()[j * c + idx + 1];
                 
                 return ss.str();
             }
@@ -5893,9 +5835,7 @@ namespace ss {
                 
                 string pattern = get_item(rhs);
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return std::to_string(std::get<1>(* arrayv[i]).index_of(pattern));
+                return std::to_string(arrayv[i]->value().index_of(pattern));
             }
             string pattern = get_item(rhs);
             
@@ -5940,9 +5880,7 @@ namespace ss {
                     //  string != array
                 }
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                n = std::get<1>(* arrayv[i]).size();
+                n = arrayv[i]->value().size();
                 v = new string[n];
             }
             
@@ -6011,11 +5949,11 @@ namespace ss {
                 if (is_defined(ctr))
                     remove_key(ctr);
                 
-                valuec = std::get<1>(* arrayv[i]).size();
+                valuec = arrayv[i]->value().size();
                 valuev = new string[valuec];
                 
                 for (size_t j = 0; j < valuec; ++j)
-                    valuev[j] = std::get<1>(* arrayv[i])[j];
+                    valuev[j] = arrayv[i]->value()[j];
                 
                 size_t j = 0;
                 while (j < valuec) {
@@ -6039,8 +5977,6 @@ namespace ss {
                 }
                 
                 set_state(state);
-                
-                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 string result = stringify(valuec, valuev);
                 
@@ -6119,11 +6055,11 @@ namespace ss {
                 if (is_defined(ctr))
                     remove_key(ctr);
                 
-                valuec = std::get<1>(* arrayv[i]).size();
+                valuec = arrayv[i]->value().size();
                 valuev = new string[valuec];
                 
-                for (size_t j = 0; j < std::get<1>(* arrayv[i]).size(); ++j)
-                    valuev[j] = std::get<1>(* arrayv[i])[j];
+                for (size_t j = 0; j < arrayv[i]->value().size(); ++j)
+                    valuev[j] = arrayv[i]->value()[j];
                 
                 string result;
                 
@@ -6144,7 +6080,7 @@ namespace ss {
                 
                 set_state(state);
                 
-                std::get<2>(* arrayv[find_array(lhs)]).second = true;
+                arrayv[find_array(lhs)]->value();
                 
                 if (j == valuec) {
                     delete[] valuev;
@@ -6229,11 +6165,11 @@ namespace ss {
                 if (is_defined(ctr))
                     remove_key(ctr);
                 
-                valuec = std::get<1>(* arrayv[i]).size();
+                valuec = arrayv[i]->value().size();
                 valuev = new string[valuec];
                 
-                for (size_t j = 0; j < std::get<1>(* arrayv[i]).size(); ++j)
-                    valuev[j] = std::get<1>(* arrayv[i])[j];
+                for (size_t j = 0; j < arrayv[i]->value().size(); ++j)
+                    valuev[j] = arrayv[i]->value()[j];
                 
                 string result;
                 
@@ -6254,7 +6190,7 @@ namespace ss {
                 
                 set_state(state);
                 
-                std::get<2>(* arrayv[find_array(lhs)]).second = true;
+                arrayv[find_array(lhs)]->value();
                 
                 if (j == valuec) {
                     delete[] valuev;
@@ -6476,8 +6412,6 @@ namespace ss {
                             return encode(string(str));
                         }
                         
-                        std::get<2>(* arrayv[i]).second = true;
-                        
                         size_t n = text.length() + 1;
                         char* str = new char[pow2(n)];
                         
@@ -6486,7 +6420,7 @@ namespace ss {
                         size_t j = 0;
                         for (int k = 0; k < (int)n - 1;) {
                             if (str[k] == '{' && str[k + 1] == '}') {
-                                if (j == std::get<1>(* arrayv[i]).size())
+                                if (j == arrayv[i]->value().size())
                                     break;
                                 
                                 for (size_t l = k; l < n - 1; ++l)
@@ -6499,7 +6433,7 @@ namespace ss {
                                 
                                 --n;
                                 
-                                string pattern = std::get<1>(* arrayv[i])[j++];
+                                string pattern = arrayv[i]->value()[j++];
                                 
                                 if (pattern.empty())
                                     pattern = "null";
@@ -6821,8 +6755,6 @@ namespace ss {
                         return encode(string(str));
                     }
                     
-                    std::get<2>(* arrayv[j]).second = true;
-                    
                     size_t n = text.length() + 1;
                     char* str = new char[pow2(n)];
                     
@@ -6831,7 +6763,7 @@ namespace ss {
                     size_t k = 0;
                     for (size_t l = 0; l < n - 1;) {
                         if (str[l] == '{' && str[l + 1] == '}') {
-                            if (k == std::get<1>(* arrayv[j]).size())
+                            if (k == arrayv[j]->value().size())
                                 break;
                             
                             for (size_t m = l; m < n - 1; ++m)
@@ -6844,7 +6776,7 @@ namespace ss {
                             
                             --n;
                             
-                            string pattern = std::get<1>(* arrayv[j])[k++];
+                            string pattern = arrayv[j]->value()[k++];
                             
                             if (pattern.empty())
                                 pattern = "null";
@@ -7148,9 +7080,7 @@ namespace ss {
                 
                 string pattern = get_item(rhs);
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return std::to_string(std::get<1>(* arrayv[i]).index_of(pattern));
+                return std::to_string(arrayv[i]->value().index_of(pattern));
             }
             
             string pattern = get_item(rhs);
@@ -7202,23 +7132,23 @@ namespace ss {
                     type_error(number_t, int_t);
                     //  double != int
                 
-                if (idx < 0 || idx > std::get<1>(* arrayv[i]).size())
-                    range_error("index " + encode(idx) + ", count " + std::to_string(std::get<1>(* arrayv[i]).size()));
+                if (idx < 0 || idx > arrayv[i]->value().size())
+                    range_error("index " + encode(idx) + ", count " + std::to_string(arrayv[i]->value().size()));
                 
-                if (std::get<2>(* arrayv[i]).first)
+                if (arrayv[i]->readonly())
                     write_error(lhs);
                 
                 valuev = new string[rhs.length() + 1];
                 valuec = parse(valuev, rhs);
                 
-                std::get<1>(* arrayv[i]).ensure_capacity(std::get<1>(* arrayv[i]).size() + valuec);
+                arrayv[i]->value().ensure_capacity(arrayv[i]->value().size() + valuec);
                 
                 for (size_t l = 0; l < valuec; ++l)
-                    std::get<1>(* arrayv[i]).insert((size_t)idx + l, valuev[l]);
+                    arrayv[i]->value().insert((size_t)idx + l, valuev[l]);
                 
                 delete[] valuev;
                 
-                return std::to_string(std::get<1>(* arrayv[i]).size());
+                return std::to_string(arrayv[i]->value().size());
             }
             
             if (ss::is_array(ctr))
@@ -7321,22 +7251,20 @@ namespace ss {
                 } else
                     rhs = encode(parse_number(rhs));
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
                 stringstream ss;
                 
                 size_t j;
-                for (j = 0; j < std::get<1>(* arrayv[i]).size() - 1; ++j) {
-                    if (std::get<1>(* arrayv[i])[j].empty())
+                for (j = 0; j < arrayv[i]->value().size() - 1; ++j) {
+                    if (arrayv[i]->value()[j].empty())
                         null_error();
                     
-                    ss << decode(std::get<1>(* arrayv[i])[j]) << rhs;
+                    ss << decode(arrayv[i]->value()[j]) << rhs;
                 }
                 
-                if (std::get<1>(* arrayv[i])[j].empty())
+                if (arrayv[i]->value()[j].empty())
                     null_error();
                 
-                ss << decode(std::get<1>(* arrayv[i])[j]);
+                ss << decode(arrayv[i]->value()[j]);
                 
                 return encode(ss.str());
             }
@@ -7554,9 +7482,7 @@ namespace ss {
                 
                 string pattern = get_item(rhs);
                 
-                std::get<2>(* arrayv[i]).second = true;
-                
-                return std::to_string(std::get<1>(* arrayv[i]).last_index_of(pattern));
+                return std::to_string(arrayv[i]->value().last_index_of(pattern));
             }
             
             string pattern = get_item(rhs);
@@ -7602,11 +7528,11 @@ namespace ss {
                 if (is_defined(ctr))
                     remove_key(ctr);
                 
-                valuec = std::get<1>(* arrayv[i]).size();
+                valuec = arrayv[i]->value().size();
                 valuev = new string[valuec];
                 
                 for (size_t j = 0; j < valuec; ++j)
-                    valuev[j] = std::get<1>(* arrayv[i])[j];
+                    valuev[j] = arrayv[i]->value()[j];
                 
                 for (size_t j = 0; j < valuec; ++j) {
                     if (valuev[j].empty() || is_string(valuev[j]))
@@ -7625,8 +7551,6 @@ namespace ss {
                 }
                 
                 set_state(state);
-                
-                std::get<2>(* arrayv[find_array(lhs)]).second = true;
                 
                 string result = stringify(valuec, valuev);
                 
@@ -7718,12 +7642,12 @@ namespace ss {
             if (num < 0)
                 range_error(std::to_string((int)num));
             
-            if (std::get<2>(* arrayv[i]).first)
+            if (arrayv[i]->readonly())
                 write_error(lhs);
             
-            string result = std::to_string(std::get<1>(* arrayv[i]).capacity());
+            string result = std::to_string(arrayv[i]->value().capacity());
             
-            std::get<1>(* arrayv[i]).ensure_capacity((size_t)num);
+            arrayv[i]->value().ensure_capacity((size_t)num);
             
             return result;
         });
@@ -7753,7 +7677,7 @@ namespace ss {
                     undefined_error(lhs);
                 }
                 
-                if (!is_table(std::get<1>(* arrayv[i])))
+                if (!is_table(arrayv[i]->value()))
                     type_error(array_t, table_t);
                 
                 if (ss::is_array(rhs))
@@ -7762,18 +7686,16 @@ namespace ss {
                 if (rhs.empty())
                     null_error();
                 
-                size_t c = stoi(std::get<1>(* arrayv[i])[0]);
+                size_t c = stoi(arrayv[i]->value()[0]);
                 
                 if (is_string(rhs)) {
-                    std::get<2>(* arrayv[i]).second = true;
-                    
                     rhs = encode(decode(rhs));
                     
                     size_t j = 0;
-                    while (j < (std::get<1>(* arrayv[i]).size() - 1) / c && std::get<1>(* arrayv[i])[j * c + 1] != rhs)
+                    while (j < (arrayv[i]->value().size() - 1) / c && arrayv[i]->value()[j * c + 1] != rhs)
                         ++j;
                     
-                    if (j == (std::get<1>(* arrayv[i]).size() - 1) / c)
+                    if (j == (arrayv[i]->value().size() - 1) / c)
                         return null();
                     
                     stringstream ss;
@@ -7781,9 +7703,9 @@ namespace ss {
                     if (c != 1) {
                         size_t k;
                         for (k = 1; k < c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[j * c + k + 1] << separator();
+                            ss << arrayv[i]->value()[j * c + k + 1] << separator();
                         
-                        ss << std::get<1>(* arrayv[i])[j * c + k + 1];
+                        ss << arrayv[i]->value()[j * c + k + 1];
                     }
                     
                     return ss.str();
@@ -7800,18 +7722,15 @@ namespace ss {
                         if (!is_int(idx))
                             type_error(number_t, int_t);
                         
-                        if (idx < 0 || idx >= (std::get<1>(* arrayv[i]).size() - 1) / c)
-                            range_error("index " + encode(idx) + ", rows " + std::to_string((std::get<1>(* arrayv[i]).size() - 1) / c));
-                        
-                        std::get<2>(* arrayv[i]).second = true;
-                        
+                        if (idx < 0 || idx >= (arrayv[i]->value().size() - 1) / c)
+                            range_error("index " + encode(idx) + ", rows " + std::to_string((arrayv[i]->value().size() - 1) / c));
                         stringstream ss;
                         
                         size_t k;
                         for (k = 0; k < c - 1; ++k)
-                            ss << std::get<1>(* arrayv[i])[idx * c + k + 1] << separator();
+                            ss << arrayv[i]->value()[idx * c + k + 1] << separator();
                         
-                        ss << std::get<1>(* arrayv[i])[idx * c + k + 1];
+                        ss << arrayv[i]->value()[idx * c + k + 1];
                         
                         return ss.str();
                     }
@@ -7822,10 +7741,10 @@ namespace ss {
                         null_error();
                     
                     size_t k = 0;
-                    while (k < (std::get<1>(* arrayv[i]).size() - 1) / c && std::get<1>(* arrayv[i])[k * c + 1] != rhs)
+                    while (k < (arrayv[i]->value().size() - 1) / c && arrayv[i]->value()[k * c + 1] != rhs)
                         ++k;
                     
-                    if (k == (std::get<1>(* arrayv[i]).size() - 1) / c)
+                    if (k == (arrayv[i]->value().size() - 1) / c)
                         return null();
                     
                     stringstream ss;
@@ -7833,9 +7752,9 @@ namespace ss {
                     if (c != 1) {
                         size_t l;
                         for (l = 1; l < c - 1; ++l)
-                            ss << std::get<1>(* arrayv[i])[k * c + l + 1] << separator();
+                            ss << arrayv[i]->value()[k * c + l + 1] << separator();
                         
-                        ss << std::get<1>(* arrayv[i])[k * c + l + 1];
+                        ss << arrayv[i]->value()[k * c + l + 1];
                     }
                     
                     return ss.str();
@@ -7846,34 +7765,34 @@ namespace ss {
                 if (!is_int(idx))
                     type_error(number_t, int_t);
                 
-                if (idx < 0 || idx >= (std::get<1>(* arrayv[i]).size() - 1) / c)
-                    range_error("index " + encode(idx) + ", rows " + std::to_string((std::get<1>(* arrayv[i]).size() - 1) / c));
-                
-                std::get<2>(* arrayv[i]).second = true;
-                
+                if (idx < 0 || idx >= (arrayv[i]->value().size() - 1) / c)
+                    range_error("index " + encode(idx) + ", rows " + std::to_string((arrayv[i]->value().size() - 1) / c));
                 stringstream ss;
                 
                 size_t j;
                 for (j = 0; j < c - 1; ++j)
-                    ss << std::get<1>(* arrayv[i])[idx * c + j + 1] << separator();
+                    ss << arrayv[i]->value()[idx * c + j + 1] << separator();
                 
-                ss << std::get<1>(* arrayv[i])[idx * c + j + 1];
+                ss << arrayv[i]->value()[idx * c + j + 1];
                 
                 return ss.str();
             }
             
             if (!is_table(valuec, valuev)) {
                 delete[] valuev;
+                
                 type_error(array_t, table_t);
             }
             
             if (ss::is_array(rhs)) {
                 delete[] valuev;
+                
                 type_error(array_t, item_t);
             }
             
             if (rhs.empty()) {
                 delete[] valuev;
+                
                 null_error();
             }
             
@@ -8041,12 +7960,12 @@ namespace ss {
                 if (num < 0)
                     range_error(std::to_string((int)num));
                 
-                string result = std::to_string(std::get<1>(* arrayv[i]).size());
+                string result = std::to_string(arrayv[i]->value().size());
                 
-                if (std::get<2>(*arrayv[i]).first)
+                if (arrayv[i]->readonly())
                     write_error(lhs);
                 
-                std::get<1>(* arrayv[i]).resize((int)num);
+                arrayv[i]->value().resize((int)num);
                 
                 return result;
             }
@@ -8184,10 +8103,8 @@ namespace ss {
                             return std::to_string(lhs <= rhs);
                         }
                         
-                        std::get<2>(* arrayv[i]).second = true;
-                        
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            rhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            rhs = arrayv[i]->value()[0];
                             
                             if (rhs.empty())
                                 null_error();
@@ -8239,10 +8156,8 @@ namespace ss {
                                     return std::to_string(lhs <= rhs);
                                 }
                                 
-                                std::get<2>(* arrayv[j]).second = true;
-                                
-                                if (std::get<1>(* arrayv[j]).size() == 1) {
-                                    rhs = std::get<1>(* arrayv[j])[0];
+                                if (arrayv[j]->value().size() == 1) {
+                                    rhs = arrayv[j]->value()[0];
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -8305,10 +8220,8 @@ namespace ss {
                                 return std::to_string(lhs <= rhs);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[j]).size() == 1) {
-                                rhs = std::get<1>(* arrayv[j])[0];
+                            if (arrayv[j]->value().size() == 1) {
+                                rhs = arrayv[j]->value()[0];
                                 
                                 if (rhs.empty())
                                     null_error();
@@ -8326,8 +8239,6 @@ namespace ss {
                         return std::to_string(lhs <= rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
                     valuev = new string[rhs.length() + 1];
                     valuec = parse(valuev, rhs);
                     
@@ -8335,8 +8246,8 @@ namespace ss {
                         delete[] valuev;
                         
                         if (is_string(rhs)) {
-                            if (std::get<1>(* arrayv[i]).size() == 1) {
-                                lhs = std::get<1>(* arrayv[i])[0];
+                            if (arrayv[i]->value().size() == 1) {
+                                lhs = arrayv[i]->value()[0];
                                 
                                 if (lhs.empty())
                                     null_error();
@@ -8355,8 +8266,8 @@ namespace ss {
                             if (j == -1) {
                                 j = find_string(rhs);
                                 if (j == -1) {
-                                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                                        lhs = std::get<1>(* arrayv[i])[0];
+                                    if (arrayv[i]->value().size() == 1) {
+                                        lhs = arrayv[i]->value()[0];
                                         
                                         if (lhs.empty())
                                             null_error();
@@ -8370,8 +8281,8 @@ namespace ss {
                                     return std::to_string(0);
                                 }
                                 
-                                if (std::get<1>(* arrayv[i]).size() == 1) {
-                                    lhs = std::get<1>(* arrayv[i])[0];
+                                if (arrayv[i]->value().size() == 1) {
+                                    lhs = arrayv[i]->value()[0];
                                     
                                     if (lhs.empty())
                                         null_error();
@@ -8390,24 +8301,22 @@ namespace ss {
                                 return std::to_string(0);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[i]).size() > std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() > arrayv[j]->value().size())
                                 return std::to_string(0);
                             
-                            if (std::get<1>(* arrayv[i]).size() < std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() < arrayv[j]->value().size())
                                 return std::to_string(1);
                             
-                            for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                                if (std::get<1>(* arrayv[i])[k].empty())
+                            for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                                if (arrayv[i]->value()[k].empty())
                                     null_error();
                                 
-                                if (std::get<1>(* arrayv[j])[k].empty())
+                                if (arrayv[j]->value()[k].empty())
                                     null_error();
                                 
-                                if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                                    lhs = decode(std::get<1>(* arrayv[i])[k]);
-                                    rhs = decode(std::get<1>(* arrayv[j])[k]);
+                                if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                                    lhs = decode(arrayv[i]->value()[k]);
+                                    rhs = decode(arrayv[j]->value()[k]);
                                     
                                     if (lhs > rhs)
                                         return std::to_string(0);
@@ -8415,8 +8324,8 @@ namespace ss {
                                     if (lhs < rhs)
                                         return std::to_string(1);
                                 } else {
-                                    double a = parse_number(std::get<1>(* arrayv[i])[k]);
-                                    double b = parse_number(std::get<1>(* arrayv[j])[k]);
+                                    double a = parse_number(arrayv[i]->value()[k]);
+                                    double b = parse_number(arrayv[j]->value()[k]);
                                     
                                     if (a > b)
                                         return std::to_string(0);
@@ -8429,8 +8338,8 @@ namespace ss {
                             return std::to_string(1);
                         }
                         
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            lhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            lhs = arrayv[i]->value()[0];
                             
                             if (lhs.empty())
                                 null_error();
@@ -8451,27 +8360,27 @@ namespace ss {
                         return std::to_string(0);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() > valuec) {
+                    if (arrayv[i]->value().size() > valuec) {
                         delete[] valuev;
                         
                         return std::to_string(0);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() < valuec) {
+                    if (arrayv[i]->value().size() < valuec) {
                         delete[] valuev;
                         
                         return std::to_string(1);
                     }
                     
-                    for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                        if (std::get<1>(* arrayv[i])[k].empty() || valuev[k].empty()) {
+                    for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                        if (arrayv[i]->value()[k].empty() || valuev[k].empty()) {
                             delete[] valuev;
                             
                             null_error();
                         }
                         
-                        if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                            lhs = decode(std::get<1>(* arrayv[i])[k]);
+                        if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                            lhs = decode(arrayv[i]->value()[k]);
                             rhs = decode(valuev[k]);
                             
                             if (lhs > rhs) {
@@ -8486,7 +8395,7 @@ namespace ss {
                                 return std::to_string(1);
                             }
                         } else {
-                            double a = parse_number(std::get<1>(* arrayv[i])[k]);
+                            double a = parse_number(arrayv[i]->value()[k]);
                             double b = parse_number(valuev[k]);
                             
                             if (a > b) {
@@ -8540,10 +8449,8 @@ namespace ss {
                         return std::to_string(lhs <= rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
-                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                        rhs = std::get<1>(* arrayv[i])[0];
+                    if (arrayv[i]->value().size() == 1) {
+                        rhs = arrayv[i]->value()[0];
                         
                         if (rhs.empty())
                             null_error();
@@ -8677,10 +8584,8 @@ namespace ss {
                             return std::to_string(lhs >= rhs);
                         }
                         
-                        std::get<2>(* arrayv[i]).second = true;
-                        
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            rhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            rhs = arrayv[i]->value()[0];
                             
                             if (rhs.empty())
                                 null_error();
@@ -8732,10 +8637,8 @@ namespace ss {
                                     return std::to_string(lhs >= rhs);
                                 }
                                 
-                                std::get<2>(* arrayv[j]).second = true;
-                                
-                                if (std::get<1>(* arrayv[j]).size() == 1) {
-                                    rhs = std::get<1>(* arrayv[j])[0];
+                                if (arrayv[j]->value().size() == 1) {
+                                    rhs = arrayv[j]->value()[0];
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -8798,10 +8701,8 @@ namespace ss {
                                 return std::to_string(lhs >= rhs);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[j]).size() == 1) {
-                                rhs = std::get<1>(* arrayv[j])[0];
+                            if (arrayv[j]->value().size() == 1) {
+                                rhs = arrayv[j]->value()[0];
                                 
                                 if (rhs.empty())
                                     null_error();
@@ -8819,8 +8720,6 @@ namespace ss {
                         return std::to_string(lhs >= rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
                     valuev = new string[rhs.length() + 1];
                     valuec = parse(valuev, rhs);
                     
@@ -8828,8 +8727,8 @@ namespace ss {
                         delete[] valuev;
                         
                         if (is_string(rhs)) {
-                            if (std::get<1>(* arrayv[i]).size() == 1) {
-                                lhs = std::get<1>(* arrayv[i])[0];
+                            if (arrayv[i]->value().size() == 1) {
+                                lhs = arrayv[i]->value()[0];
                                 
                                 if (lhs.empty())
                                     null_error();
@@ -8848,8 +8747,8 @@ namespace ss {
                             if (j == -1) {
                                 j = find_string(rhs);
                                 if (j == -1) {
-                                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                                        lhs = std::get<1>(* arrayv[i])[0];
+                                    if (arrayv[i]->value().size() == 1) {
+                                        lhs = arrayv[i]->value()[0];
                                         
                                         if (lhs.empty())
                                             null_error();
@@ -8864,8 +8763,8 @@ namespace ss {
                                     return std::to_string(1);
                                 }
                                 
-                                if (std::get<1>(* arrayv[i]).size() == 1) {
-                                    lhs = std::get<1>(* arrayv[i])[0];
+                                if (arrayv[i]->value().size() == 1) {
+                                    lhs = arrayv[i]->value()[0];
                                     
                                     if (lhs.empty())
                                         null_error();
@@ -8884,24 +8783,22 @@ namespace ss {
                                 return std::to_string(1);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[i]).size() > std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() > arrayv[j]->value().size())
                                 return std::to_string(1);
                             
-                            if (std::get<1>(* arrayv[i]).size() < std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() < arrayv[j]->value().size())
                                 return std::to_string(0);
                             
-                            for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                                if (std::get<1>(* arrayv[i])[k].empty())
+                            for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                                if (arrayv[i]->value()[k].empty())
                                     null_error();
                                 
-                                if (std::get<1>(* arrayv[j])[k].empty())
+                                if (arrayv[j]->value()[k].empty())
                                     null_error();
                                 
-                                if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                                    lhs = decode(std::get<1>(* arrayv[i])[k]);
-                                    rhs = decode(std::get<1>(* arrayv[j])[k]);
+                                if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                                    lhs = decode(arrayv[i]->value()[k]);
+                                    rhs = decode(arrayv[j]->value()[k]);
                                     
                                     if (lhs < rhs)
                                         return std::to_string(0);
@@ -8909,8 +8806,8 @@ namespace ss {
                                     if (lhs > rhs)
                                         return std::to_string(1);
                                 } else {
-                                    double a = parse_number(std::get<1>(* arrayv[i])[k]);
-                                    double b = parse_number(std::get<1>(* arrayv[j])[k]);
+                                    double a = parse_number(arrayv[i]->value()[k]);
+                                    double b = parse_number(arrayv[j]->value()[k]);
                                     
                                     if (a < b)
                                         return std::to_string(0);
@@ -8923,8 +8820,8 @@ namespace ss {
                             return std::to_string(1);
                         }
                         
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            lhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            lhs = arrayv[i]->value()[0];
                             
                             if (lhs.empty())
                                 null_error();
@@ -8945,27 +8842,27 @@ namespace ss {
                         return std::to_string(1);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() > valuec) {
+                    if (arrayv[i]->value().size() > valuec) {
                         delete[] valuev;
                         
                         return std::to_string(1);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() < valuec) {
+                    if (arrayv[i]->value().size() < valuec) {
                         delete[] valuev;
                         
                         return std::to_string(0);
                     }
                     
-                    for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                        if (std::get<1>(* arrayv[i])[k].empty() || valuev[k].empty()) {
+                    for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                        if (arrayv[i]->value()[k].empty() || valuev[k].empty()) {
                             delete[] valuev;
                             
                             null_error();
                         }
                         
-                        if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                            lhs = decode(std::get<1>(* arrayv[i])[k]);
+                        if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                            lhs = decode(arrayv[i]->value()[k]);
                             rhs = decode(valuev[k]);
                             
                             if (lhs < rhs) {
@@ -8980,7 +8877,7 @@ namespace ss {
                                 return std::to_string(1);
                             }
                         } else {
-                            double a = parse_number(std::get<1>(* arrayv[i])[k]);
+                            double a = parse_number(arrayv[i]->value()[k]);
                             double b = parse_number(valuev[k]);
                             
                             if (a < b) {
@@ -9034,10 +8931,8 @@ namespace ss {
                         return std::to_string(lhs >= rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
-                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                        rhs = std::get<1>(* arrayv[i])[0];
+                    if (arrayv[i]->value().size() == 1) {
+                        rhs = arrayv[i]->value()[0];
                         
                         if (rhs.empty())
                             null_error();
@@ -9171,10 +9066,8 @@ namespace ss {
                             return std::to_string(lhs < rhs);
                         }
                         
-                        std::get<2>(* arrayv[i]).second = true;
-                        
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            rhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            rhs = arrayv[i]->value()[0];
                             
                             if (rhs.empty())
                                 null_error();
@@ -9226,10 +9119,8 @@ namespace ss {
                                     return std::to_string(lhs < rhs);
                                 }
                                 
-                                std::get<2>(* arrayv[j]).second = true;
-                                
-                                if (std::get<1>(* arrayv[j]).size() == 1) {
-                                    rhs = std::get<1>(* arrayv[j])[0];
+                                if (arrayv[j]->value().size() == 1) {
+                                    rhs = arrayv[j]->value()[0];
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -9292,10 +9183,8 @@ namespace ss {
                                 return std::to_string(lhs < rhs);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[j]).size() == 1) {
-                                rhs = std::get<1>(* arrayv[j])[0];
+                            if (arrayv[j]->value().size() == 1) {
+                                rhs = arrayv[j]->value()[0];
                                 
                                 if (rhs.empty())
                                     null_error();
@@ -9313,8 +9202,6 @@ namespace ss {
                         return std::to_string(lhs < rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
                     valuev = new string[rhs.length() + 1];
                     valuec = parse(valuev, rhs);
                     
@@ -9322,8 +9209,8 @@ namespace ss {
                         delete[] valuev;
                         
                         if (is_string(rhs)) {
-                            if (std::get<1>(* arrayv[i]).size() == 1) {
-                                lhs = std::get<1>(* arrayv[i])[0];
+                            if (arrayv[i]->value().size() == 1) {
+                                lhs = arrayv[i]->value()[0];
                                 
                                 if (lhs.empty())
                                     null_error();
@@ -9342,8 +9229,8 @@ namespace ss {
                             if (j == -1) {
                                 j = find_string(rhs);
                                 if (j == -1) {
-                                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                                        lhs = std::get<1>(* arrayv[i])[0];
+                                    if (arrayv[i]->value().size() == 1) {
+                                        lhs = arrayv[i]->value()[0];
                                         
                                         if (lhs.empty())
                                             null_error();
@@ -9358,8 +9245,8 @@ namespace ss {
                                     return std::to_string(0);
                                 }
                                 
-                                if (std::get<1>(* arrayv[i]).size() == 1) {
-                                    lhs = std::get<1>(* arrayv[i])[0];
+                                if (arrayv[i]->value().size() == 1) {
+                                    lhs = arrayv[i]->value()[0];
                                     
                                     if (lhs.empty())
                                         null_error();
@@ -9378,24 +9265,22 @@ namespace ss {
                                 return std::to_string(0);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[i]).size() > std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() > arrayv[j]->value().size())
                                 return std::to_string(0);
                             
-                            if (std::get<1>(* arrayv[i]).size() < std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() < arrayv[j]->value().size())
                                 return std::to_string(1);
                             
-                            for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                                if (std::get<1>(* arrayv[i])[k].empty())
+                            for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                                if (arrayv[i]->value()[k].empty())
                                     null_error();
                                 
-                                if (std::get<1>(* arrayv[j])[k].empty())
+                                if (arrayv[j]->value()[k].empty())
                                     null_error();
                                 
-                                if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                                    lhs = decode(std::get<1>(* arrayv[i])[k]);
-                                    rhs = decode(std::get<1>(* arrayv[j])[k]);
+                                if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                                    lhs = decode(arrayv[i]->value()[k]);
+                                    rhs = decode(arrayv[j]->value()[k]);
                                     
                                     if (lhs > rhs)
                                         return std::to_string(0);
@@ -9403,8 +9288,8 @@ namespace ss {
                                     if (lhs < rhs)
                                         return std::to_string(1);
                                 } else {
-                                    double a = parse_number(std::get<1>(* arrayv[i])[k]);
-                                    double b = parse_number(std::get<1>(* arrayv[j])[k]);
+                                    double a = parse_number(arrayv[i]->value()[k]);
+                                    double b = parse_number(arrayv[j]->value()[k]);
                                     
                                     if (a > b)
                                         return std::to_string(0);
@@ -9417,8 +9302,8 @@ namespace ss {
                             return std::to_string(0);
                         }
                         
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            lhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            lhs = arrayv[i]->value()[0];
                             
                             if (lhs.empty())
                                 null_error();
@@ -9439,27 +9324,27 @@ namespace ss {
                         return std::to_string(0);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() > valuec) {
+                    if (arrayv[i]->value().size() > valuec) {
                         delete[] valuev;
                         
                         return std::to_string(0);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() < valuec) {
+                    if (arrayv[i]->value().size() < valuec) {
                         delete[] valuev;
                         
                         return std::to_string(1);
                     }
                     
-                    for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                        if (std::get<1>(* arrayv[i])[k].empty() || valuev[k].empty()) {
+                    for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                        if (arrayv[i]->value()[k].empty() || valuev[k].empty()) {
                             delete[] valuev;
                             
                             null_error();
                         }
                         
-                        if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                            lhs = decode(std::get<1>(* arrayv[i])[k]);
+                        if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                            lhs = decode(arrayv[i]->value()[k]);
                             rhs = decode(valuev[k]);
                             
                             if (lhs > rhs) {
@@ -9474,7 +9359,7 @@ namespace ss {
                                 return std::to_string(1);
                             }
                         } else {
-                            double a = parse_number(std::get<1>(* arrayv[i])[k]);
+                            double a = parse_number(arrayv[i]->value()[k]);
                             double b = parse_number(valuev[k]);
                             
                             if (a > b) {
@@ -9528,10 +9413,8 @@ namespace ss {
                         return std::to_string(lhs < rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
-                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                        rhs = std::get<1>(* arrayv[i])[0];
+                    if (arrayv[i]->value().size() == 1) {
+                        rhs = arrayv[i]->value()[0];
                         
                         if (rhs.empty())
                             null_error();
@@ -9664,10 +9547,8 @@ namespace ss {
                             return std::to_string(lhs > rhs);
                         }
                         
-                        std::get<2>(* arrayv[i]).second = true;
-                        
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            rhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            rhs = arrayv[i]->value()[0];
                             
                             if (rhs.empty())
                                 null_error();
@@ -9719,10 +9600,8 @@ namespace ss {
                                     return std::to_string(lhs > rhs);
                                 }
                                 
-                                std::get<2>(* arrayv[j]).second = true;
-                                
-                                if (std::get<1>(* arrayv[j]).size() == 1) {
-                                    rhs = std::get<1>(* arrayv[j])[0];
+                                if (arrayv[j]->value().size() == 1) {
+                                    rhs = arrayv[j]->value()[0];
                                     
                                     if (rhs.empty())
                                         null_error();
@@ -9785,10 +9664,8 @@ namespace ss {
                                 return std::to_string(lhs > rhs);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[j]).size() == 1) {
-                                rhs = std::get<1>(* arrayv[j])[0];
+                            if (arrayv[j]->value().size() == 1) {
+                                rhs = arrayv[j]->value()[0];
                                 
                                 if (rhs.empty())
                                     null_error();
@@ -9806,7 +9683,7 @@ namespace ss {
                         return std::to_string(lhs > rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
+                    arrayv[i]->value();
                     
                     valuev = new string[rhs.length() + 1];
                     valuec = parse(valuev, rhs);
@@ -9815,8 +9692,8 @@ namespace ss {
                         delete[] valuev;
                         
                         if (is_string(rhs)) {
-                            if (std::get<1>(* arrayv[i]).size() == 1) {
-                                lhs = std::get<1>(* arrayv[i])[0];
+                            if (arrayv[i]->value().size() == 1) {
+                                lhs = arrayv[i]->value()[0];
                                 
                                 if (lhs.empty())
                                     null_error();
@@ -9835,8 +9712,8 @@ namespace ss {
                             if (j == -1) {
                                 j = find_string(rhs);
                                 if (j == -1) {
-                                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                                        lhs = std::get<1>(* arrayv[i])[0];
+                                    if (arrayv[i]->value().size() == 1) {
+                                        lhs = arrayv[i]->value()[0];
                                         
                                         if (lhs.empty())
                                             null_error();
@@ -9851,8 +9728,8 @@ namespace ss {
                                     return std::to_string(1);
                                 }
                                 
-                                if (std::get<1>(* arrayv[i]).size() == 1) {
-                                    lhs = std::get<1>(* arrayv[i])[0];
+                                if (arrayv[i]->value().size() == 1) {
+                                    lhs = arrayv[i]->value()[0];
                                     
                                     if (lhs.empty())
                                         null_error();
@@ -9871,24 +9748,22 @@ namespace ss {
                                 return std::to_string(1);
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[i]).size() > std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() > arrayv[j]->value().size())
                                 return std::to_string(1);
                             
-                            if (std::get<1>(* arrayv[i]).size() < std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() < arrayv[j]->value().size())
                                 return std::to_string(0);
                             
-                            for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                                if (std::get<1>(* arrayv[i])[k].empty())
+                            for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                                if (arrayv[i]->value()[k].empty())
                                     null_error();
                                 
-                                if (std::get<1>(* arrayv[j])[k].empty())
+                                if (arrayv[j]->value()[k].empty())
                                     null_error();
                                 
-                                if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                                    lhs = decode(std::get<1>(* arrayv[i])[k]);
-                                    rhs = decode(std::get<1>(* arrayv[j])[k]);
+                                if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                                    lhs = decode(arrayv[i]->value()[k]);
+                                    rhs = decode(arrayv[j]->value()[k]);
                                     
                                     if (lhs < rhs)
                                         return std::to_string(0);
@@ -9896,8 +9771,8 @@ namespace ss {
                                     if (lhs > rhs)
                                         return std::to_string(1);
                                 } else {
-                                    double a = parse_number(std::get<1>(* arrayv[i])[k]);
-                                    double b = parse_number(std::get<1>(* arrayv[j])[k]);
+                                    double a = parse_number(arrayv[i]->value()[k]);
+                                    double b = parse_number(arrayv[j]->value()[k]);
                                     
                                     if (a < b)
                                         return std::to_string(0);
@@ -9910,8 +9785,8 @@ namespace ss {
                             return std::to_string(0);
                         }
                         
-                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                            lhs = std::get<1>(* arrayv[i])[0];
+                        if (arrayv[i]->value().size() == 1) {
+                            lhs = arrayv[i]->value()[0];
                             
                             if (lhs.empty())
                                 null_error();
@@ -9932,25 +9807,25 @@ namespace ss {
                         return std::to_string(1);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() > valuec) {
+                    if (arrayv[i]->value().size() > valuec) {
                         delete[] valuev;
                         return std::to_string(1);
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() < valuec) {
+                    if (arrayv[i]->value().size() < valuec) {
                         delete[] valuev;
                         return std::to_string(0);
                     }
                     
-                    for (size_t k = 0; k < std::get<1>(* arrayv[i]).size(); ++k) {
-                        if (std::get<1>(* arrayv[i])[k].empty() || valuev[k].empty()) {
+                    for (size_t k = 0; k < arrayv[i]->value().size(); ++k) {
+                        if (arrayv[i]->value()[k].empty() || valuev[k].empty()) {
                             delete[] valuev;
                             
                             null_error();
                         }
                         
-                        if (is_string(std::get<1>(* arrayv[i])[k]) || is_string(std::get<1>(* arrayv[i])[k])) {
-                            lhs = decode(std::get<1>(* arrayv[i])[k]);
+                        if (is_string(arrayv[i]->value()[k]) || is_string(arrayv[i]->value()[k])) {
+                            lhs = decode(arrayv[i]->value()[k]);
                             rhs = decode(valuev[k]);
                             
                             if (lhs < rhs) {
@@ -9963,7 +9838,7 @@ namespace ss {
                                 return std::to_string(1);
                             }
                         } else {
-                            double a = parse_number(std::get<1>(* arrayv[i])[k]);
+                            double a = parse_number(arrayv[i]->value()[k]);
                             double b = parse_number(valuev[k]);
                             
                             if (a < b) {
@@ -10015,10 +9890,8 @@ namespace ss {
                         return std::to_string(lhs > rhs);
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
-                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                        rhs = std::get<1>(* arrayv[i])[0];
+                    if (arrayv[i]->value().size() == 1) {
+                        rhs = arrayv[i]->value()[0];
                         
                         if (rhs.empty())
                             null_error();
@@ -10141,8 +10014,6 @@ namespace ss {
                         //  null === string
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
-                    
                     return std::to_string(0);
                     // null === array
                 }
@@ -10204,7 +10075,8 @@ namespace ss {
                             //  (string) === string
                         }
                         
-                        std::get<2>(* arrayv[i]).second = true;
+                        arrayv[i]->value();
+                        
                         return std::to_string(0);
                         //  (string) === array
                     }
@@ -10233,7 +10105,8 @@ namespace ss {
                             if (is_key(rhs)) {
                                 i = find_array(rhs);
                                 if (i != -1) {
-                                    std::get<2>(* arrayv[i]).second = true;
+                                    arrayv[i]->value();
+                                    
                                     return std::to_string(0);
                                     //  double === array
                                 }
@@ -10319,7 +10192,8 @@ namespace ss {
                         if (is_key(rhs)) {
                             int j = find_array(rhs);
                             if (j != -1) {
-                                std::get<2>(* arrayv[j]).second = true;
+                                arrayv[j]->value();
+                                
                                 return std::to_string(0);
                                 //  str === array
                             }
@@ -10349,7 +10223,7 @@ namespace ss {
                         //  str === (double)
                     }
                     
-                    std::get<2>(* arrayv[i]).second = true;
+                    arrayv[i]->value();
                     
                     if (rhs.empty())
                         return std::to_string(0);
@@ -10383,17 +10257,15 @@ namespace ss {
                                 //  array === string
                             }
                             
-                            std::get<2>(* arrayv[j]).second = true;
-                            
-                            if (std::get<1>(* arrayv[i]).size() != std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() != arrayv[j]->value().size())
                                 return std::to_string(0);
                                 //  array === array
                             
                             size_t k = 0;
-                            while (k < std::get<1>(* arrayv[i]).size() && std::get<1>(* arrayv[i])[k] == std::get<1>(* arrayv[j])[k])
+                            while (k < arrayv[i]->value().size() && arrayv[i]->value()[k] == arrayv[j]->value()[k])
                                 ++k;
                             
-                            return std::to_string(k == std::get<1>(* arrayv[i]).size() ? 1 : 0);
+                            return std::to_string(k == arrayv[i]->value().size() ? 1 : 0);
                             //  array === array
                         }
                         
@@ -10401,14 +10273,14 @@ namespace ss {
                         //  array === (double)
                     }
                         
-                    if (std::get<1>(* arrayv[i]).size() != n) {
+                    if (arrayv[i]->value().size() != n) {
                         delete[] v;
                         return std::to_string(0);
                         //  array === (array)
                     }
                     
                     size_t j = 0;
-                    while (j < n && std::get<1>(* arrayv[i])[j] == v[j])
+                    while (j < n && arrayv[i]->value()[j] == v[j])
                         ++j;
                     
                     delete[] v;
@@ -10489,14 +10361,14 @@ namespace ss {
                         //  (array) === string
                     }
                     
-                    if (n != std::get<1>(* arrayv[i]).size()) {
+                    if (n != arrayv[i]->value().size()) {
                         delete[] v;
                         return std::to_string(0);
                         //  (array) === array
                     }
                     
                     size_t j = 0;
-                    while (j < n && v[j] == std::get<1>(* arrayv[i])[j])
+                    while (j < n && v[j] == arrayv[i]->value()[j])
                         ++j;
                     
                     delete[] v;
@@ -10780,15 +10652,15 @@ namespace ss {
                                 //  array !== string
                             }
                             
-                            if (std::get<1>(* arrayv[i]).size() != std::get<1>(* arrayv[j]).size())
+                            if (arrayv[i]->value().size() != arrayv[j]->value().size())
                                 return std::to_string(1);
                                 //  array !== array
                             
                             size_t k = 0;
-                            while (k < std::get<1>(* arrayv[i]).size() && std::get<1>(* arrayv[i])[k] == std::get<1>(* arrayv[j])[k])
+                            while (k < arrayv[i]->value().size() && arrayv[i]->value()[k] == arrayv[j]->value()[k])
                                 ++k;
                             
-                            return std::to_string(k == std::get<1>(* arrayv[i]).size() ? 0 : 1);
+                            return std::to_string(k == arrayv[i]->value().size() ? 0 : 1);
                             //  array !== array
                         }
                         
@@ -10796,14 +10668,14 @@ namespace ss {
                         //  array !== (double)
                     }
                     
-                    if (std::get<1>(* arrayv[i]).size() != n) {
+                    if (arrayv[i]->value().size() != n) {
                         delete[] v;
                         return std::to_string(1);
                         //  array !== (array)
                     }
                     
                     size_t j = 0;
-                    while (j < n && std::get<1>(* arrayv[i])[j] == v[j])
+                    while (j < n && arrayv[i]->value()[j] == v[j])
                         ++j;
                     
                     delete[] v;
@@ -10883,14 +10755,14 @@ namespace ss {
                         //  (array) !== string
                     }
                     
-                    if (n != std::get<1>(* arrayv[i]).size()) {
+                    if (n != arrayv[i]->value().size()) {
                         delete[] v;
                         return std::to_string(1);
                         //  (array) !== array
                     }
                     
                     size_t j = 0;
-                    while (j < n && v[j] == std::get<1>(* arrayv[i])[j])
+                    while (j < n && v[j] == arrayv[i]->value()[j])
                         ++j;
                     
                     delete[] v;
@@ -10956,8 +10828,8 @@ namespace ss {
                             //  null == string
                         }
                         
-                        return std::to_string(std::get<1>(* arrayv[i]).size() == 1
-                                         && std::get<1>(* arrayv[i])[0].empty()
+                        return std::to_string(arrayv[i]->value().size() == 1
+                                         && arrayv[i]->value()[0].empty()
                                          ? 1 : 0);
                         //  null == array
                     }
@@ -11020,8 +10892,8 @@ namespace ss {
                                             //  null == string
                                         }
                                         
-                                        return std::to_string(std::get<1>(* arrayv[j]).size() == 1
-                                                         && std::get<1>(* arrayv[j])[0].empty()
+                                        return std::to_string(arrayv[j]->value().size() == 1
+                                                         && arrayv[j]->value()[0].empty()
                                                          ? 1 : 0);
                                         //  null == array
                                     }
@@ -11038,8 +10910,8 @@ namespace ss {
                         }
                     } else {
                         if (rhs.empty())
-                            return std::to_string(std::get<1>(* arrayv[i]).size() == 1
-                                             && std::get<1>(* arrayv[i])[0].empty()
+                            return std::to_string(arrayv[i]->value().size() == 1
+                                             && arrayv[i]->value()[0].empty()
                                              ? 1 : 0);
                             //  array == null
                         
@@ -11050,8 +10922,8 @@ namespace ss {
                             delete[] v;
                             
                             if (is_string(rhs)) {
-                                if (std::get<1>(* arrayv[i]).size() == 1) {
-                                    lhs = std::get<1>(* arrayv[i])[0];
+                                if (arrayv[i]->value().size() == 1) {
+                                    lhs = arrayv[i]->value()[0];
                                     
                                     if (lhs.empty())
                                         return std::to_string(0);
@@ -11073,8 +10945,8 @@ namespace ss {
                                 if (j == -1) {
                                     j = find_string(rhs);
                                     if (j == -1) {
-                                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                                            lhs = std::get<1>(* arrayv[i])[0];
+                                        if (arrayv[i]->value().size() == 1) {
+                                            lhs = arrayv[i]->value()[0];
                                             
                                             if (lhs.empty())
                                                 return std::to_string(0);
@@ -11094,8 +10966,8 @@ namespace ss {
                                         undefined_error(rhs);
                                     }
                                     
-                                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                                        lhs = std::get<1>(* arrayv[i])[0];
+                                    if (arrayv[i]->value().size() == 1) {
+                                        lhs = arrayv[i]->value()[0];
                                         rhs = stringv[j]->value();
                                         
                                         return std::to_string(lhs == rhs ? 1 : 0);
@@ -11106,20 +10978,20 @@ namespace ss {
                                     //  array == string
                                 }
                                 
-                                if (std::get<1>(* arrayv[i]).size() != std::get<1>(* arrayv[j]).size())
+                                if (arrayv[i]->value().size() != arrayv[j]->value().size())
                                     return std::to_string(0);
                                     //  array == array
                                 
                                 size_t k = 0;
-                                while (k < std::get<1>(* arrayv[i]).size() && std::get<1>(* arrayv[i])[k] == std::get<1>(* arrayv[j])[k])
+                                while (k < arrayv[i]->value().size() && arrayv[i]->value()[k] == arrayv[j]->value()[k])
                                     ++k;
                             
-                                return std::to_string(k == std::get<1>(* arrayv[i]).size() ? 1 : 0);
+                                return std::to_string(k == arrayv[i]->value().size() ? 1 : 0);
                                 //  array == array
                             }
                             
-                            if (std::get<1>(* arrayv[i]).size() == 1) {
-                                lhs = std::get<1>(* arrayv[i])[0];
+                            if (arrayv[i]->value().size() == 1) {
+                                lhs = arrayv[i]->value()[0];
                                 
                                 if (lhs.empty())
                                     return std::to_string(0);
@@ -11136,14 +11008,14 @@ namespace ss {
                             //  array == (double)
                         }
                         
-                        if (std::get<1>(* arrayv[i]).size() != n) {
+                        if (arrayv[i]->value().size() != n) {
                             delete[] v;
                             return std::to_string(0);
                             //  array == (array)
                         }
                         
                         size_t j = 0;
-                        while (j < n && std::get<1>(* arrayv[i])[j] == v[j])
+                        while (j < n && arrayv[i]->value()[j] == v[j])
                             ++j;
                         
                         delete[] v;
@@ -11183,11 +11055,11 @@ namespace ss {
                                 rhs = decode(rhs);
                             }
                         } else {
-                            if (std::get<1>(* arrayv[i]).size() != 1)
+                            if (arrayv[i]->value().size() != 1)
                                 return std::to_string(0);
                                 //  (string) == array
                             
-                            rhs = std::get<1>(* arrayv[i])[0];
+                            rhs = arrayv[i]->value()[0];
                             
                             if (rhs.empty())
                                 return std::to_string(0);
@@ -11240,7 +11112,7 @@ namespace ss {
                         //  (array) == str
                     }
                     
-                    if (n != std::get<1>(* arrayv[i]).size()) {
+                    if (n != arrayv[i]->value().size()) {
                         delete[] v;
                         
                         return std::to_string(0);
@@ -11248,7 +11120,7 @@ namespace ss {
                     }
                     
                     size_t j = 0;
-                    while (j < n && v[j] == std::get<1>(* arrayv[i])[j])
+                    while (j < n && v[j] == arrayv[i]->value()[j])
                         ++j;
                     
                     delete[] v;
@@ -11316,8 +11188,8 @@ namespace ss {
                             //  null != string
                         }
                         
-                        return std::to_string(std::get<1>(* arrayv[i]).size() == 1
-                                         && std::get<1>(* arrayv[i])[0].empty()
+                        return std::to_string(arrayv[i]->value().size() == 1
+                                         && arrayv[i]->value()[0].empty()
                                          ? 0 : 1);
                         //  null != array
                     }
@@ -11380,8 +11252,8 @@ namespace ss {
                                             //  null != string
                                         }
                                         
-                                        return std::to_string(std::get<1>(* arrayv[j]).size() == 1
-                                                         && std::get<1>(* arrayv[j])[0].empty()
+                                        return std::to_string(arrayv[j]->value().size() == 1
+                                                         && arrayv[j]->value()[0].empty()
                                                          ? 0 : 1);
                                         //  null != array
                                     }
@@ -11398,8 +11270,8 @@ namespace ss {
                         }
                     } else {
                         if (rhs.empty())
-                            return std::to_string(std::get<1>(* arrayv[i]).size() == 1
-                                             && std::get<1>(* arrayv[i])[0].empty()
+                            return std::to_string(arrayv[i]->value().size() == 1
+                                             && arrayv[i]->value()[0].empty()
                                              ? 0 : 1);
                             //  array != null
                         
@@ -11410,8 +11282,8 @@ namespace ss {
                             delete[] v;
                             
                             if (is_string(rhs)) {
-                                if (std::get<1>(* arrayv[i]).size() == 1) {
-                                    lhs = std::get<1>(* arrayv[i])[0];
+                                if (arrayv[i]->value().size() == 1) {
+                                    lhs = arrayv[i]->value()[0];
                                     
                                     if (lhs.empty())
                                         return std::to_string(1);
@@ -11433,8 +11305,8 @@ namespace ss {
                                 if (j == -1) {
                                     j = find_string(rhs);
                                     if (j == -1) {
-                                        if (std::get<1>(* arrayv[i]).size() == 1) {
-                                            lhs = std::get<1>(* arrayv[i])[0];
+                                        if (arrayv[i]->value().size() == 1) {
+                                            lhs = arrayv[i]->value()[0];
                                             
                                             if (lhs.empty())
                                                 return std::to_string(1);
@@ -11454,8 +11326,8 @@ namespace ss {
                                         undefined_error(rhs);
                                     }
                                     
-                                    if (std::get<1>(* arrayv[i]).size() == 1) {
-                                        lhs = std::get<1>(* arrayv[i])[0];
+                                    if (arrayv[i]->value().size() == 1) {
+                                        lhs = arrayv[i]->value()[0];
                                         rhs = stringv[j]->value();
                                         
                                         return std::to_string(lhs != rhs ? 1 : 0);
@@ -11466,21 +11338,21 @@ namespace ss {
                                     //  array != string
                                 }
                                 
-                                if (std::get<1>(* arrayv[i]).size() != std::get<1>(* arrayv[j]).size())
+                                if (arrayv[i]->value().size() != arrayv[j]->value().size())
                                     return std::to_string(1);
                                     //  array != array
                                 
                                 size_t k = 0;
-                                while (k < std::get<1>(* arrayv[i]).size()
-                                       && std::get<1>(* arrayv[i])[k] == std::get<1>(* arrayv[j])[k])
+                                while (k < arrayv[i]->value().size()
+                                       && arrayv[i]->value()[k] == arrayv[j]->value()[k])
                                     ++k;
                                 
-                                return std::to_string(k == std::get<1>(* arrayv[i]).size() ? 0 : 1);
+                                return std::to_string(k == arrayv[i]->value().size() ? 0 : 1);
                                 //  array != array
                             }
                             
-                            if (std::get<1>(* arrayv[i]).size() == 1) {
-                                lhs = std::get<1>(* arrayv[i])[0];
+                            if (arrayv[i]->value().size() == 1) {
+                                lhs = arrayv[i]->value()[0];
                                 
                                 if (lhs.empty())
                                     return std::to_string(1);
@@ -11497,14 +11369,14 @@ namespace ss {
                             //  array != (double)
                         }
                         
-                        if (std::get<1>(* arrayv[i]).size() != n) {
+                        if (arrayv[i]->value().size() != n) {
                             delete[] v;
                             return std::to_string(1);
                             //  array != (array)
                         }
                         
                         size_t j = 0;
-                        while (j < n && std::get<1>(* arrayv[i])[j] == v[j])
+                        while (j < n && arrayv[i]->value()[j] == v[j])
                             ++j;
                         
                         return std::to_string(j == n ? 0 : 1);
@@ -11541,11 +11413,11 @@ namespace ss {
                                 rhs = decode_raw(rhs);
                             }
                         } else {
-                            if (std::get<1>(* arrayv[i]).size() != 1)
+                            if (arrayv[i]->value().size() != 1)
                                 return std::to_string(1);
                                 //  (string) != array
                             
-                            rhs = std::get<1>(* arrayv[i])[0];
+                            rhs = arrayv[i]->value()[0];
                             
                             if (rhs.empty())
                                 return std::to_string(1);
@@ -11598,14 +11470,14 @@ namespace ss {
                         //  (array) != string
                     }
                     
-                    if (n != std::get<1>(* arrayv[i]).size()) {
+                    if (n != arrayv[i]->value().size()) {
                         delete[] v;
                         
                         return std::to_string(1);
                     }
                     
                     size_t j = 0;
-                    while (j < n && v[j] == std::get<1>(* arrayv[i])[j])
+                    while (j < n && v[j] == arrayv[i]->value()[j])
                         ++j;
                     
                     delete[] v;
@@ -11852,11 +11724,11 @@ namespace ss {
                                                           //  ,
         //  END OPERATORS
         
-        arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[1];
+        arrayv = new variable<ss::array<string>>*[1];
         functionv = new function_t*[1];
         stringv = new variable<string>*[1];
         
-        state_arrayv = new pair<size_t, tuple<string, ss::array<string>*,  pair<bool, bool>, size_t>**>*[1];
+        state_arrayv = new pair<size_t, variable<ss::array<string>*>**>*[1];
         state_functionv = new pair<size_t, function_t**>*[1];
         state_numberv = new size_t[1];
         state_stringv = new pair<size_t, variable<string>**>*[1];
@@ -11888,10 +11760,10 @@ namespace ss {
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* arrayv[start + len]) == key)
+        if (arrayv[start + len]->key() == key)
             return (int)(start + len);
         
-        if (std::get<0>(* arrayv[start + len]) > key)
+        if (arrayv[start + len]->key() > key)
             return find_array(key, start, start + len);
         
         return find_array(key, start + len + 1, end);
@@ -11945,10 +11817,10 @@ namespace ss {
         
         size_t len = floor((end - start) / 2);
         
-        if (std::get<0>(* state_arrayv[state]->second[start + len]) == key)
+        if (state_arrayv[state]->second[start + len]->key() == key)
             return (int)(start + len);
         
-        if (std::get<0>(* state_arrayv[state]->second[start + len]) > key)
+        if (state_arrayv[state]->second[start + len]->key() > key)
             return find_state_array(state, key, start, start + len);
         
         return find_state_array(state, key, start + len + 1, end);
@@ -12030,10 +11902,19 @@ namespace ss {
 
     void command_processor::kill() {
         // Begin Enhancement 1-1 - Thread safety - 2025-02-05
-        this->interrupt([](function_t* cb) {
-            cb->kill();
-        });
+//        this->interrupt([](function_t* cb) {
+//            cb->kill();
+//        });
         // End Enhancement 1-1
+        
+        this->mutex.lock();
+        
+        while (this->stack.size() > 1)
+            this->stack.pop();
+        
+        this->stack.top()->kill();
+        
+        this->mutex.unlock();
     }
 
     int command_processor::merge(int n, string* data) const {
@@ -12958,17 +12839,19 @@ namespace ss {
             null_error(std::to_string(state));
 #endif
         for (size_t j = 0; j < arrayc; ++j) {
-            int k = find_state_array(i, std::get<0>(* arrayv[j]));
+            int k = find_state_array(i, arrayv[j]->key());
             
-            if (k == -1 || (std::get<3>(* state_arrayv[i]->second[k]) != std::get<3>(* arrayv[j]))) {
+            if (k == -1 || state_arrayv[i]->second[k]->state() != arrayv[j]->state()) {
                 if (verbose)
-                    if (!std::get<2>(* arrayv[j]).second)
-                        logger_write("Unused " + string(std::get<2>(* arrayv[j]).first ? "constant" : "variable") + " '" + std::get<0>(* arrayv[j]) + "'\n");
+                    if (!arrayv[j]->suppressed())
+                        logger_write("Unused " + string(arrayv[j]->readonly() ? "constant" : "variable") + " '" + arrayv[j]->key() + "'");
             } else if (update) {
-                delete std::get<1>(* state_arrayv[i]->second[k]);
+                delete state_arrayv[i]->second[k]->value();
                 
-                std::get<1>(* state_arrayv[i]->second[k]) = new ss::array<string>(std::get<1>(* arrayv[j]));
-                std::get<2>(* state_arrayv[i]->second[k]).second = std::get<2>(* arrayv[j]).second;
+                state_arrayv[i]->second[k]->set_value(new ss::array<string>(arrayv[j]->value()));
+                
+                if (arrayv[j]->suppressed())
+                    state_arrayv[i]->second[k]->value();
             }
         }
         
@@ -12978,17 +12861,12 @@ namespace ss {
         delete[] arrayv;
         
         arrayc = state_arrayv[i]->first;
-        arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[pow2(arrayc)];
+        arrayv = new variable<ss::array<string>>*[pow2(arrayc)];
         
         for (size_t j = 0; j < arrayc; ++j) {
-            string key = std::get<0>(* state_arrayv[i]->second[j]);
-            ss::array<string> value = *std::get<1>(* state_arrayv[i]->second[j]);
-            pair<bool, bool> flags = std::get<2>(* state_arrayv[i]->second[j]);
-            size_t state = std::get<3>(* state_arrayv[i]->second[j]);
+            arrayv[j] = new variable<ss::array<string>>(state_arrayv[i]->second[j]->key(), *state_arrayv[i]->second[j]->value(), state_arrayv[i]->second[j]->state());
             
-            arrayv[j] = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>(key, value, flags, state);
-            
-            delete std::get<1>(* state_arrayv[i]->second[j]);
+            delete state_arrayv[i]->second[j]->value();
             delete state_arrayv[i]->second[j];
         }
         
@@ -13003,7 +12881,7 @@ namespace ss {
                 int k = find_state_function(i, functionv[j]->name());
                 
                 if (k == -1 && !functionv[j]->count())
-                    logger_write("Unused function '" + functionv[j]->name() + "'\n");
+                    logger_write("Unused function '" + functionv[j]->name() + "'");
             }
         }
         
@@ -13032,7 +12910,7 @@ namespace ss {
             if (k == -1 || state_stringv[i]->second[k]->state() != stringv[j]->state()) {
                 if (verbose)
                     if (!stringv[j]->suppressed())
-                        logger_write("Unused " + string(stringv[j]->readonly() ? "constant" : "variable") + " '" + stringv[j]->key() + "'\n");
+                        logger_write("Unused " + string(stringv[j]->readonly() ? "constant" : "variable") + " '" + stringv[j]->key() + "'");
                 
             } else if (update) {
                 if (!state_stringv[i]->second[k]->readonly())
@@ -13062,6 +12940,51 @@ namespace ss {
         --statec;
     }
 
+    void command_processor::set_array(const string key, std::function<void(variable<ss::array<string>>*)> callback) {
+    #if DEBUG_LEVEL
+        if (!is_key(key))
+            expect_error("key: " + key);
+        
+        if (!value.empty() && !is_string(value) && !is_number(value))
+            throw error("Unexpected token: " + value);
+    #endif
+        int pos = find_array(key);
+        
+        if (pos == -1) {
+    #if DEBUG_LEVEL
+            if (is_defined(key))
+                defined_error(key);
+    #endif
+            if (is_pow(arrayc, 2)) {
+                variable<ss::array<string>>** _arrayv = new variable<ss::array<string>>*[arrayc * 2];
+                
+                for (size_t j = 0; j < arrayc; ++j)
+                    _arrayv[j] = arrayv[j];
+                
+                delete[] arrayv;
+                
+                arrayv = _arrayv;
+            }
+            
+            arrayv[arrayc] = new variable<ss::array<string>>(key, ss::array<string>(), _statec);
+            
+            arrayv[arrayc]->value().push(null());
+            
+            add_key(key);
+            
+            size_t j;
+            for (j = arrayc++; j > 0 && arrayv[j]->key() < arrayv[j - 1]->key(); j--)
+                swap(arrayv[j], arrayv[j - 1]);
+            
+            callback(arrayv[j]);
+        } else {
+            callback(arrayv[pos]);
+            
+            if (!arrayv[pos]->value().size())
+                throw error("Underflow");
+        }
+    }
+
     void command_processor::set_array(const string key, const size_t index, const string value) {
 #if DEBUG_LEVEL
         if (!is_key(key))
@@ -13070,43 +12993,44 @@ namespace ss {
         if (!value.empty() && !is_string(value) && !is_number(value))
             throw error("Unexpected token: " + value);
 #endif
-        int i = find_array(key);
+        int pos = find_array(key);
         
-        if (i == -1) {
+        if (pos == -1) {
 #if DEBUG_LEVEL
             if (is_defined(key))
                 defined_error(key);
 #endif
             if (is_pow(arrayc, 2)) {
-                tuple<string, ss::array<string>, pair<bool, bool>, size_t>** _arrayv = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>*[arrayc * 2];
+                variable<ss::array<string>>** _arrayv = new variable<ss::array<string>>*[arrayc * 2];
                 
                 for (size_t j = 0; j < arrayc; ++j)
                     _arrayv[j] = arrayv[j];
                 
                 delete[] arrayv;
+                
                 arrayv = _arrayv;
             }
             
-            arrayv[arrayc] = new tuple<string, ss::array<string>, pair<bool, bool>, size_t>(key, ss::array<string>(), pair<bool, bool>(false, false), _statec);
+            add_key(key);
+            
+            arrayv[arrayc] = new variable<ss::array<string>>(key, ss::array<string>(), _statec);
+
+            arrayv[arrayc]->value().push(value);
             
             size_t j;
-            for (j = arrayc++; j > 0 && std::get<0>(* arrayv[j]) < std::get<0>(* arrayv[j - 1]); --j)
+            for (j = arrayc++; j > 0 && arrayv[j]->key() < arrayv[j - 1]->key(); j--)
                 swap(arrayv[j], arrayv[j - 1]);
-            
-            std::get<1>(* arrayv[j]).push(value);
-            
-            add_key(key);
         } else {
-            if (std::get<2>(* arrayv[i]).first)
+            if (arrayv[pos]->readonly())
                 write_error(key);
             
-            if (index > std::get<1>(* arrayv[i]).size())
+            if (index > arrayv[pos]->value().size())
                 range_error(std::to_string(index));
             
-            if (index == std::get<1>(* arrayv[i]).size())
-                std::get<1>(* arrayv[i]).push(value);
+            if (index == arrayv[pos]->value().size())
+                arrayv[pos]->value().push(value);
             else
-                std::get<1>(* arrayv[i])[index] = value;
+                arrayv[pos]->value()[index] = value;
         }
     }
 
@@ -13191,11 +13115,11 @@ namespace ss {
         int i;
         if ((i = find_array(key)) == -1) {
             if ((i = find_string(key)) == -1)
-                logic::set_readonly(key, false);
+                logic::set_readonly(key, value);
             else
                 stringv[i]->readonly() = value;
         } else
-            std::get<2>(* arrayv[i]).first = value;
+            arrayv[i]->readonly() = value;
     }
 
     void command_processor::stack_push(function_t* function) {

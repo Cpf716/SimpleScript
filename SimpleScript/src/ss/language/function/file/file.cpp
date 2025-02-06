@@ -1011,15 +1011,15 @@ namespace ss {
                     expect_error("'end while'");
                 
                 statement_t** _dst = new statement_t*[k - i - 1];
-                size_t _s = build(_dst, source, i + 1, k);
+                size_t        _s = build(_dst, source, i + 1, k);
                 
                 target[s++] = new while_statement(trim_start(source[i].substr(5)), _s, _dst);
                 i = k + 1;
             } else {
                 if (tokenv[0] == "assert") {
                     delete[] tokenv;
-                    target[s] = new assert_statement(trim_start(source[i].substr(6)));
                     
+                    target[s] = new assert_statement(trim_start(source[i].substr(6)));
                 } else if (tokenv[0] == "break") {
                     delete[] tokenv;
                     
@@ -1027,11 +1027,10 @@ namespace ss {
                         expect_error("';' after expression");
                     
                     target[s] = new break_statement();
-                    
                 } else if (tokenv[0] == "goto") {
                     delete[] tokenv;
-                    target[s] = new goto_statement(trim_start(source[i].substr(4)));
                     
+                    target[s] = new goto_statement(trim_start(source[i].substr(4)));
                 } else if (tokenv[0] == "continue") {
                     delete[] tokenv;
                     
@@ -1039,15 +1038,14 @@ namespace ss {
                         expect_error("';' after expression");
                     
                     target[s] = new continue_statement();
-                    
                 } else if (tokenv[0] == "define") {
                     delete[] tokenv;
-                    target[s] = new define_statement(trim_start(source[i].substr(6)));
                     
+                    target[s] = new define_statement(trim_start(source[i].substr(6)));
                 } else if (tokenv[0] == "echo") {
                     delete[] tokenv;
-                    target[s] = new echo_statement(trim_start(source[i].substr(4)));
                     
+                    target[s] = new echo_statement(trim_start(source[i].substr(4)));
                 } else if (tokenv[0] == "exit") {
                     delete[] tokenv;
                     
@@ -1055,11 +1053,10 @@ namespace ss {
                         expect_error("';' after expression");
                     
                     target[s] = new exit_statement();
-                    
                 } else if (tokenv[0] == "return") {
                     delete[] tokenv;
-                    target[s] = new return_statement(trim_start(source[i].substr(6)));
                     
+                    target[s] = new return_statement(trim_start(source[i].substr(6)));
                 } else if (tokenv[0] == "suppress") {
                     delete[] tokenv;
                     
@@ -1067,13 +1064,14 @@ namespace ss {
                         expect_error("';' after expression");
                     
                     target[s] = new suppress_statement(trim_start(source[i].substr(8)));
-                    
                 } else if (tokenv[0] == "throw") {
                     delete[] tokenv;
+                    
                     target[s] = new throw_statement(trim_start(source[i].substr(5)));
                     
                 } else {
                     delete[] tokenv;
+                    
                     target[s] = new statement(source[i]);
                 }
                 
@@ -1118,10 +1116,10 @@ namespace ss {
         
         ss::array<string> arr = this->marshall(argc, argv);
         
-//        this->cp->set_array("argv", [&arr](variable<ss::array<string>>* value) {
-//            value->set_value(arr);
-//            value->value();
-//        });
+        this->cp->set_array("argv", [&arr](variable<ss::array<string>>* value) {
+            value->set_value(arr);
+            value->value();
+        });
         
         this->is_paused.store(false);
         

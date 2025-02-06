@@ -8,5 +8,3 @@ func main()
 end func
 
 main()
-
-

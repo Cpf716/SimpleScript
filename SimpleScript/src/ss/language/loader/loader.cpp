@@ -78,8 +78,10 @@ namespace ss {
             string filev[1024];
             size_t filec = read(filev, environment() + "/environment", separator());
             
-            for (size_t i = 0; i < filec; ++i)
-                cp->set_array("env", stringify(filec, filev));
+            cp->set_array("env", [filec, &filev](variable<ss::array<string>>* value) {
+                value->set_value(ss::array(filec, filev));
+                // value->readonly() = true;
+            });
         } catch (file_system_exception& e) { }
         
         // array
@@ -308,7 +310,7 @@ namespace ss {
                 } catch (error& e) {
                     flag = false;
                     
-                    cout << e.what() << endl;
+//                    cout << e.what() << endl;
                 }
                 
                 delete[] _argv;

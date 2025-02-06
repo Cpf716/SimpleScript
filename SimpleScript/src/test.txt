@@ -2,4 +2,33 @@
 
 // sleep(10_000)
 
-throw "Hello, world!"
+/*
+func onExit(signum)
+    echo "Are you sure? (y/N) "
+    
+    if toLower(input() ?? "") === "y"
+        exit
+    end if
+end func
+
+func a()
+    func b()
+        func c()
+            while true
+                continue
+            end while
+        end func
+        
+        return c()
+    end func
+    
+    return b()
+end func
+
+var value = null
+
+if !(value = a())
+    echo string(value ?? "") + "\n"
+
+    throw value
+end if

@@ -57,7 +57,7 @@ namespace ss {
             return this->_suppressed;
         }
         
-        T value() {
+        T& value() {
             this->_suppressed = true;
             
             return this->_value;

@@ -3,13 +3,13 @@
 //  File:   main.txt
 //
 
-        stopwatch = start()
+stopwatch = start()
 
 func onMessage(workerId, message)
     echo "Worker {} returned in {} s.\n" format array(workerId + 1, lap(stopwatch))
 end func
 
-for i = 0; i < 10; i += 1
+for var i = 0; i < 10; i += 1
     worker("/Library/Application Support/SimpleScript/example/worker/worker_2.txt")
 end for
 

@@ -34,14 +34,14 @@ namespace ss {
                 this->_data[i] = data._data[i];
         }
         
-        array(const size_t length, T* source) {
-            this->_capacity = length;
-            this->_data = new T[this->capacity()];
-            this->_size = length;
-            
-            for (size_t i = 0; i < this->size(); ++i)
-                this->_data[i] = source[i];
-        }
+       array(const size_t length, T* source) {
+           this->_capacity = length;
+           this->_data = new T[this->capacity()];
+           this->_size = length;
+           
+           for (size_t i = 0; i < this->size(); ++i)
+               this->_data[i] = source[i];
+       }
         
         array(const size_t capacity) {
             this->_data = new T[this->_capacity = capacity];
